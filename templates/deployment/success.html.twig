@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Site Déployé avec Succès - Web Forge{% endblock %}
+
+{% block body %}
+<div class="min-h-screen transition-colors duration-200">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
+            <div class="mb-8">
+                <svg class="mx-auto h-16 w-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Site Déployé avec Succès !</h1>
+            
+            <p class="text-lg text-gray-600 dark:text-gray-300 mb-6">
+                Votre site est maintenant en ligne et accessible à l'adresse :
+            </p>
+            
+            <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 mb-8">
+                <a href="https://{{ domain }}" target="_blank" class="text-xl text-blue-600 dark:text-blue-400 hover:underline">
+                    {{ domain }}
+                </a>
+            </div>
+
+            <div class="flex justify-center space-x-4">
+                <a href="{{ path('app_my_sites') }}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200">
+                    Retour à mes sites
+                </a>
+                <a href="https://{{ domain }}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200">
+                    Visiter le site
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

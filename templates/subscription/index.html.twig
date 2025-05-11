@@ -1,0 +1,61 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Web Forge - Abonnement Premium{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-12">
+    <div class="container mx-auto px-4">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">Abonnement Premium Web Forge AI</h1>
+            <p class="text-xl text-gray-600 dark:text-gray-300">Libérez tout le potentiel de la création de sites web avec l'IA</p>
+        </div>
+
+        <div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+            <div class="p-8">
+                <div class="flex items-center justify-center mb-8">
+                    <span class="text-5xl font-bold text-gray-900 dark:text-white">{{ subscription_price }}€</span>
+                    <span class="text-gray-500 dark:text-gray-400 ml-2">/mois</span>
+                </div>
+
+                <div class="space-y-6">
+                    {% for feature in features %}
+                    <div class="flex items-center">
+                        <svg class="h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span class="ml-3 text-gray-700 dark:text-gray-300">{{ feature }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="mt-10">
+                    {% if app.user %}
+                        <button id="subscribe-button" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-8 rounded-lg transition duration-200 flex items-center justify-center">
+                            <a href="{{ path('pay') }}"><span>S'abonner maintenant</span></a>
+                            <svg class="ml-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                            </svg>
+                        </button>
+                    {% else %}
+                        <div class="text-center">
+                            <p class="text-gray-600 dark:text-gray-400 mb-4">Connectez-vous pour souscrire à l'abonnement</p>
+                            <div class="space-x-4">
+                                <a href="{{ path('app_login') }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Se connecter</a>
+                                <a href="{{ path('app_register') }}" class="inline-block bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">S'inscrire</a>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="bg-gray-50 dark:bg-gray-700 px-8 py-6">
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                    <p class="mb-2">✓ Facturation mensuelle</p>
+                    <p class="mb-2">✓ Annulation à tout moment</p>
+                    <p>✓ Paiement sécurisé</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

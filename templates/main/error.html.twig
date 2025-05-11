@@ -1,0 +1,42 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Échec du Paiement ❌{% endblock %}
+
+{% block body %}
+<div class="text-white min-h-screen flex flex-col items-center justify-center from-red-200 via-white to-red-100 p-6 animate-fade-in">
+    <div class="bg-transparent shadow-2xl rounded-2xl p-10 text-center max-w-md w-full animate-slide-up">
+        <svg class="w-10 h-10 mx-auto text-danger animate-pop" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        <p class="text-3xl fs-1 font-bold text-light mb-4">Échec du paiement</p>
+        <p class="text-light mb-6">Oups... La transaction n'a pas pu être effectuée. Vérifiez vos infos et réessayez.</p>
+        <a href="{{ path('app_home') }}" class="link2 w-50 mx-auto register5">Retour</a>
+    </div>
+</div>
+
+<style>
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes slide-up {
+    from { transform: translateY(40px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+@keyframes pop {
+    0% { transform: scale(0); opacity: 0; }
+    70% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); }
+}
+
+.animate-fade-in {
+    animation: fade-in 0.8s ease-out both;
+}
+.animate-slide-up {
+    animation: slide-up 0.6s ease-out both;
+}
+.animate-pop {
+    animation: pop 0.5s ease-out both;
+}
+</style>
+{% endblock %}

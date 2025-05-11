@@ -1,0 +1,7 @@
+parameters:
+    stripe_secret_key: '%env(STRIPE_SECRET_KEY)%'
+
+services:
+    App\Service\StripeService:
+        arguments:
+            $params: '@parameter_bag'

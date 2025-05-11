@@ -1,0 +1,28 @@
+.info-item:hover {
+    transform: translateY(-3px);
+}
+
+.info-item i {
+    font-size: 1.2rem;
+    color: #4a9eff;
+}
+
+.info-item {
+    width: 100%;
+    cursor: pointer;
+    background: transparent;
+    text-align: center;
+    padding: 1.3rem;
+    border-radius: 12px;
+    transition: transform 0.3s ease;
+    text-decoration: none;
+    outline: none;
+    border: none;
+    color: #fff;
+    font-weight: bold;
+}
+
+.bordershadowoutlinenone{
+    border: none;
+    outline: none;
+}
