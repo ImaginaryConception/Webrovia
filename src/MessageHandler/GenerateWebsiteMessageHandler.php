@@ -3,7 +3,7 @@
 namespace App\MessageHandler;
 
 use App\Entity\Prompt;
-use App\Service\GeminiService;
+use App\Service\AIService;
 use App\Repository\PromptRepository;
 use App\Message\GenerateWebsiteMessage;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,7 +19,7 @@ class GenerateWebsiteMessageHandler
     public function __construct(
         private PromptRepository $promptRepository,
         private EntityManagerInterface $entityManager,
-        private GeminiService $geminiService
+        private AIService $aiService
     ) {}
 
     public function __invoke(GenerateWebsiteMessage $message)
@@ -50,7 +50,7 @@ class GenerateWebsiteMessageHandler
 
         do {
             try {
-                $files = $this->geminiService->makeRequest($promptContent);
+                $files = $this->aiService->makeRequest($promptContent);
                 $this->validateGeneratedFiles($files, $existingFiles);
 
                 $prompt->setGeneratedFiles($files);

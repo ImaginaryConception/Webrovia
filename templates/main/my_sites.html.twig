@@ -424,165 +424,6 @@
 
 {% block javascripts %}
     {{ parent() }}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/markdown/markdown.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/brace-fold.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/xml-fold.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/markdown-fold.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/comment-fold.min.js"></script>
-    <script src="/js/file-explorer.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Gestionnaire pour les boutons de fichiers
-            document.querySelectorAll('.file-btn').forEach(btn => {
-                btn.addEventListener('click', async function() {
-                    const promptId = this.dataset.promptId;
-                    const filePath = this.dataset.filePath;
-                    
-                    try {
-                        const response = await fetch(`/api/file-content/${promptId}?path=${encodeURIComponent(filePath)}`);
-                        const data = await response.json();
-                        
-                        if (data.success) {
-                            // Mettre à jour l'éditeur avec le contenu du fichier
-                            const mode = filePath.endsWith('.twig') ? 'twig' : 
-                                        filePath.endsWith('.css') ? 'css' : 
-                                        filePath.endsWith('.js') ? 'javascript' : 'xml';
-                            
-                            editor.setOption('mode', mode);
-                            editor.setValue(data.content);
-                            
-                            // Activer le bouton correspondant
-                            document.querySelectorAll('.tab-btn').forEach(tab => {
-                                tab.classList.remove('active');
-                                if (tab.dataset.file === mode) {
-                                    tab.classList.add('active');
-                                }
-                            });
-                        }
-                    } catch (error) {
-                        console.error('Erreur lors du chargement du fichier:', error);
-                    }
-                });
-            });
-        });
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Gestionnaire pour les boutons de restauration de version
-            // Fonction pour afficher les messages d'erreur
-            function showError(message) {
-                const errorAlert = document.getElementById('error-alert');
-                const errorMessage = document.getElementById('error-message');
-                errorMessage.textContent = message;
-                errorAlert.classList.remove('hidden');
-                setTimeout(() => {
-                    errorAlert.classList.add('hidden');
-                }, 5000);
-            }
-
-            // Gestionnaire pour fermer l'alerte d'erreur
-            document.getElementById('close-error')?.addEventListener('click', function() {
-                document.getElementById('error-alert').classList.add('hidden');
-            });
-
-            document.querySelectorAll('.restore-version-btn').forEach(button => {
-                button.addEventListener('click', async function() {
-                    const promptId = this.dataset.promptId;
-                    const restoreUrl = this.dataset.restoreUrl;
-                    const buttonText = this.textContent;
-                    this.textContent = 'Restauration en cours...';
-                    this.disabled = true;
-
-                    try {
-                        const response = await fetch(restoreUrl, {
-                            method: 'POST',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'Content-Type': 'application/json'
-                            },
-                            credentials: 'same-origin'
-                        });
-
-                        if (!response.ok) {
-                            throw new Error(`Erreur HTTP: ${response.status}`);
-                        }
-
-                        const data = await response.json();
-                        
-                        if (data.success) {
-                            window.location.reload();
-                        } else {
-                            throw new Error(data.message || 'Une erreur est survenue lors de la restauration');
-                        }
-                    } catch (error) {
-                        showError(error.message || 'Une erreur est survenue lors de la restauration de la version');
-                    } finally {
-                        this.textContent = buttonText;
-                        this.disabled = false;
-                        });
-
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-
-                        const data = await response.json();
-
-                        if (data.success) {
-                            // Recharger la page pour afficher la version restaurée
-                            window.location.reload();
-                        } else {
-                            showError(data.error || 'Une erreur est survenue lors de la restauration de la version');
-                        }
-                    } catch (error) {
-                        console.error('Erreur:', error);
-                        showError('Une erreur est survenue lors de la restauration de la version');
-                    }
-                });
-            });
-
-            // Gestionnaire pour fermer l'alerte d'erreur
-            document.getElementById('close-error')?.addEventListener('click', function() {
-                document.getElementById('error-alert').classList.add('hidden');
-            });
-
-            function showError(message) {
-                const errorAlert = document.getElementById('error-alert');
-                const errorMessage = document.getElementById('error-message');
-                errorMessage.textContent = message;
-                errorAlert.classList.remove('hidden');
-            }
-
-            // Fermeture de l'alerte d'erreur
-            document.getElementById('close-error')?.addEventListener('click', function() {
-                document.getElementById('error-alert').classList.add('hidden');
-            });
-
-            async function pollPromptStatus(promptId) {
-                try {
-                    const response = await fetch(`/prompt/${promptId}`);
-                    const data = await response.json();
-
-                    if (data.status === 'completed') {
-                        window.location.reload();
-                    } else if (data.status === 'error') {
-                        showError(data.error || 'Une erreur est survenue lors de la génération');
-                    } else {
-                        setTimeout(() => pollPromptStatus(promptId), 2000);
-                    }
-                } catch (error) {
-                    console.error('Erreur lors du polling:', error);
-                    showError('Une erreur est survenue lors de la vérification du statut');
-                }
-            }
-        });
-    </script>
     <style>
         .tab-btn {
             padding: 0.5rem 1rem;
@@ -610,201 +451,410 @@
             background: #1F2937;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/brace-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/xml-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/markdown-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/comment-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="/js/file-explorer.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // La restauration des versions est maintenant gérée par des formulaires HTML standards
+        // --- Variables Globales et Utilitaires ---
+        const editors = {}; // Stocke les instances de CodeMirror par promptId
+        const currentFiles = {}; // Stocke le contenu des fichiers par promptId
+        const ERROR_DISPLAY_DURATION = 5000; // Durée d'affichage des erreurs en ms
 
-            // Fonction de validation du nom de domaine
-            function isValidDomain(domain) {
-                const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]$/;
-                return domainRegex.test(domain);
+        /**
+         * Affiche un message d'erreur.
+         * @param {string} message Le message d'erreur à afficher.
+         */
+        function showError(message) {
+            const errorAlert = document.getElementById('error-alert');
+            const errorMessage = document.getElementById('error-message');
+
+            if (errorAlert && errorMessage) {
+                errorMessage.textContent = message;
+                errorAlert.classList.remove('hidden');
+
+                setTimeout(() => {
+                    errorAlert.classList.add('hidden');
+                }, ERROR_DISPLAY_DURATION);
+            } else {
+                console.error("Élément d'erreur introuvable. Message:", message);
             }
+        }
 
-            // Fonction pour mettre à jour l'état du bouton de publication
-            function updateDeployButton(inputElement, extensionSelect) {
-                const deployBtn = inputElement.closest('.flex-col').querySelector('.deploy-btn');
-                const domain = inputElement.value.trim();
-                const domainPreview = deployBtn.querySelector('.domain-preview');
-                const fullDomain = domain + extensionSelect.value;
-                domainPreview.textContent = fullDomain;
-                deployBtn.disabled = !isValidDomain(domain);
-                deployBtn.classList.toggle('opacity-50', !isValidDomain(domain));
-                deployBtn.classList.toggle('cursor-not-allowed', !isValidDomain(domain));
-            }
+        // Ferme l'alerte d'erreur.  Utilisation de optional chaining (?.) pour éviter les erreurs si l'élément n'existe pas.
+        document.getElementById('close-error')?.addEventListener('click', () => {
+            document.getElementById('error-alert')?.classList.add('hidden');
+        });
 
-            // Gestionnaire d'événements pour les champs de domaine et boutons de déploiement
-            document.querySelectorAll('.custom-domain-input').forEach(input => {
-                const extensionSelect = input.nextElementSibling;
-                const deployBtn = input.closest('.flex-col').querySelector('.deploy-btn');
+        // --- Gestionnaire de fichiers (Chargement dans l'éditeur) ---
+        document.querySelectorAll('.file-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const promptId = this.dataset.promptId;
+                const filePath = this.dataset.filePath;
 
-                input.addEventListener('input', () => updateDeployButton(input, extensionSelect));
-                extensionSelect.addEventListener('change', () => updateDeployButton(input, extensionSelect));
-                
-                // Gestionnaire de clic pour le bouton de déploiement
-                deployBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const domainName = input.value.trim();
-                    const domainExtension = extensionSelect.value;
-                    const baseUrl = this.dataset.deployUrl.replace('/temp', '');
-                    const url = `${baseUrl}?domain_name=${encodeURIComponent(domainName)}&domain_extension=${encodeURIComponent(domainExtension)}`;
-                    window.location.href = url;
-                });
+                try {
+                    const response = await fetch(`/api/file-content/${promptId}?path=${encodeURIComponent(filePath)}`);
 
-                // Initialiser l'état du bouton
-                updateDeployButton(input, extensionSelect);
-            });
-
-            const editors = {};
-            const currentFiles = {};
-
-            // Initialiser les éditeurs pour chaque prompt
-            document.querySelectorAll('.editor-container').forEach(container => {
-                const promptId = container.dataset.promptId;
-                editors[promptId] = CodeMirror(container, {
-                    mode: 'xml',
-                    theme: 'monokai',
-                    lineNumbers: true,
-                    autoCloseTags: true,
-                    autoCloseBrackets: true,
-                    matchBrackets: true,
-                    indentUnit: 4,
-                    lineWrapping: true,
-                    readOnly: false
-                });
-
-                // Ajouter un gestionnaire d'événements pour les modifications du code
-                editors[promptId].on('change', function(editor) {
-                    const fileType = editor.getOption('mode');
-                    const content = editor.getValue();
-                    
-                    // Mettre à jour le contenu du fichier actuel
-                    const fileName = fileType === 'xml' ? 'index.html' :
-                                    fileType === 'css' ? 'styles.css' : 'script.js';
-                    currentFiles[promptId][fileName] = content;
-                    
-                    // Mettre à jour l'aperçu si nécessaire
-                    if (fileType === 'xml') {
-                        updatePreview(promptId, content);
-                    } else {
-                        updatePreview(promptId, currentFiles[promptId]['index.html'] || '');
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`); // Amélioration du message d'erreur
                     }
-                });
 
-                // Charger le contenu initial
-                fetch(`/prompt/${promptId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.files) {
-                            currentFiles[promptId] = data.files;
-                            const htmlContent = data.files['index.html'] || '';
-                            editors[promptId].setValue(htmlContent);
-                            updatePreview(promptId, htmlContent);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const content = data.content;
+                        let mode;
+
+                        if (filePath.endsWith('.twig')) {
+                            mode = 'twig';
+                        } else if (filePath.endsWith('.css')) {
+                            mode = 'css';
+                        } else if (filePath.endsWith('.js')) {
+                            mode = 'javascript';
+                        } else {
+                            mode = 'xml'; // Default to XML
                         }
-                    });
-            });
 
-            // Gestionnaire d'onglets
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const promptId = this.dataset.promptId;
-                    const fileType = this.dataset.file;
-                    const tabsContainer = this.closest('.tabs');
-                    
-                    tabsContainer.querySelectorAll('.tab-btn').forEach(tab => {
-                        tab.classList.remove('active');
-                    });
-                    this.classList.add('active');
+                        setEditorContent(promptId, content, mode);
+                        setActiveTab(promptId, mode);
 
-                    const fileName = fileType === 'html' ? 'index.html' :
-                                fileType === 'css' ? 'styles.css' : 'script.js';
-                    const mode = fileType === 'html' ? 'xml' : fileType;
-                    
-                    editors[promptId].setOption('mode', mode);
-                    editors[promptId].setValue(currentFiles[promptId][fileName] || '');
-                    
-                    // Mettre à jour l'aperçu avec le nouveau contenu
-                    if (fileType === 'html') {
-                        updatePreview(promptId, currentFiles[promptId][fileName] || '');
+
                     } else {
-                        updatePreview(promptId, currentFiles[promptId]['index.html'] || '');
+                        throw new Error(data.message || 'Erreur lors du chargement du fichier.');
+                    }
+                } catch (error) {
+                    console.error('Erreur lors du chargement du fichier:', error);
+                    showError(`Erreur lors du chargement du fichier: ${error.message}`); // Affichage de l'erreur à l'utilisateur
+                }
+            });
+        });
+
+        /**
+         * Définit le contenu de l'éditeur et son mode.
+         * @param {string} promptId L'identifiant du prompt.
+         * @param {string} content Le contenu à afficher dans l'éditeur.
+         * @param {string} mode Le mode de l'éditeur (twig, css, javascript, xml).
+         */
+        function setEditorContent(promptId, content, mode) {
+            if (editors[promptId]) {
+                editors[promptId].setOption('mode', mode);
+                editors[promptId].setValue(content);
+            } else {
+                console.warn(`Éditeur non trouvé pour le promptId: ${promptId}`);
+                //Optionnel: Afficher une erreur a l'utilisateur si l'éditeur n'existe pas.
+            }
+        }
+
+        /**
+         * Active l'onglet correspondant au mode de l'éditeur.
+         * @param {string} promptId L'identifiant du prompt.
+         * @param {string} mode Le mode de l'éditeur (twig, css, javascript, xml).
+         */
+        function setActiveTab(promptId, mode) {
+            const tabsContainer = document.querySelector(`.tabs[data-prompt-id="${promptId}"]`); //Sélection du container des tabs avec le promptId
+
+            if(tabsContainer){
+                tabsContainer.querySelectorAll('.tab-btn').forEach(tab => {
+                    tab.classList.remove('active');
+                    if (tab.dataset.file === mode) {
+                        tab.classList.add('active');
                     }
                 });
+            }
+            else{
+                console.warn(`Container d'onglets non trouvé pour le promptId: ${promptId}`);
+                //Optionnel: Afficher une erreur a l'utilisateur si le container n'existe pas.
+            }
+        }
+
+
+        // --- Gestionnaire de restauration de version ---
+        document.querySelectorAll('.restore-version-btn').forEach(button => {
+            button.addEventListener('click', async function() {
+                const promptId = this.dataset.promptId;
+                const restoreUrl = this.dataset.restoreUrl;
+                const buttonText = this.textContent;
+                this.textContent = 'Restauration en cours...';
+                this.disabled = true;
+
+                try {
+                    const response = await fetch(restoreUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'same-origin'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        throw new Error(data.message || 'Une erreur est survenue lors de la restauration');
+                    }
+                } catch (error) {
+                    showError(error.message || 'Une erreur est survenue lors de la restauration de la version');
+                } finally {
+                    this.textContent = buttonText;
+                    this.disabled = false;
+                }
+            });
+        });
+
+        // --- Polling du statut ---
+        async function pollPromptStatus(promptId) {
+            try {
+                const response = await fetch(`/prompt/${promptId}`);
+
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.status === 'completed') {
+                    window.location.reload();
+                } else if (data.status === 'error') {
+                    showError(data.error || 'Une erreur est survenue lors de la génération');
+                } else {
+                    setTimeout(() => pollPromptStatus(promptId), 2000);
+                }
+            } catch (error) {
+                showError(error.message || 'Erreur lors du suivi du statut');
+            }
+        }
+
+        // --- Validation du nom de domaine et gestion des boutons de déploiement ---
+        function isValidDomain(domain) {
+            const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]$/;
+            return domainRegex.test(domain);
+        }
+
+        function updateDeployButton(inputElement, extensionSelect) {
+            const deployBtn = inputElement.closest('.flex-col').querySelector('.deploy-btn');
+            const domain = inputElement.value.trim();
+            const domainPreview = deployBtn.querySelector('.domain-preview');
+            const fullDomain = domain + extensionSelect.value;
+            domainPreview.textContent = fullDomain;
+            const isValid = isValidDomain(domain);  //Variable pour stocker la validité du domaine
+            deployBtn.disabled = !isValid;
+            deployBtn.classList.toggle('opacity-50', !isValid);
+            deployBtn.classList.toggle('cursor-not-allowed', !isValid);
+        }
+
+        document.querySelectorAll('.custom-domain-input').forEach(input => {
+            const extensionSelect = input.nextElementSibling;
+            const deployBtn = input.closest('.flex-col').querySelector('.deploy-btn');
+
+            const updateButtonState = () => updateDeployButton(input, extensionSelect); // Fonction pour éviter la duplication de code
+
+            input.addEventListener('input', updateButtonState);
+            extensionSelect.addEventListener('change', updateButtonState);
+
+            deployBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const domainName = input.value.trim();
+                const domainExtension = extensionSelect.value;
+                const baseUrl = this.dataset.deployUrl.replace('/temp', '');
+                const url = `${baseUrl}?domain_name=${encodeURIComponent(domainName)}&domain_extension=${encodeURIComponent(domainExtension)}`;
+                window.location.href = url;
             });
 
-            // Fonction de mise à jour de l'aperçu
-            function updatePreview(promptId, htmlContent) {
-                const iframe = document.querySelector(`.preview-frame[data-prompt-id="${promptId}"]`);
-                const cssContent = currentFiles[promptId]['styles.css'] || '';
-                const jsContent = currentFiles[promptId]['script.js'] || '';
-                
-                // Créer le contenu HTML complet avec CSS et JavaScript intégrés
-                const fullContent = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <style>${cssContent}</style>
-                    </head>
-                    <body>
-                        ${htmlContent}
-                    </body>
-                    </html>
-                `;
-                
-                // Mettre à jour le contenu de l'iframe de manière sécurisée
+            updateButtonState(); // Initialiser l'état du bouton
+        });
+
+
+        // --- Initialisation des éditeurs CodeMirror ---
+        document.querySelectorAll('.editor-container').forEach(container => {
+            const promptId = container.dataset.promptId;
+            const editor = CodeMirror(container, {
+                mode: 'xml',
+                theme: 'monokai',
+                lineNumbers: true,
+                autoCloseTags: true,
+                autoCloseBrackets: true,
+                matchBrackets: true,
+                indentUnit: 4,
+                lineWrapping: true,
+                readOnly: false
+            });
+
+            editors[promptId] = editor; // Stockage de l'instance de CodeMirror
+
+            editor.on('change', () => handleEditorChange(promptId)); // Simplification de l'appel de fonction
+        });
+
+
+        // --- Gestion des changements dans l'éditeur ---
+        function handleEditorChange(promptId) {
+            const editor = editors[promptId];
+            if (!editor) {
+                console.warn(`Éditeur non trouvé pour le promptId: ${promptId}`);
+                return;
+            }
+
+            const fileType = editor.getOption('mode');
+            const content = editor.getValue();
+
+            let fileName;
+            switch (fileType) {
+                case 'xml':
+                    fileName = 'index.html';
+                    break;
+                case 'css':
+                    fileName = 'styles.css';
+                    break;
+                case 'javascript':
+                    fileName = 'script.js';
+                    break;
+                default:
+                    fileName = 'index.html';
+                    break;
+            }
+
+            if (!currentFiles[promptId]) {
+                currentFiles[promptId] = {};
+            }
+
+            currentFiles[promptId][fileName] = content;
+
+            if (fileType === 'xml') {
+                updatePreview(promptId, content);
+            } else {
+                updatePreview(promptId, currentFiles[promptId]['index.html'] || '');
+            }
+        }
+
+        // --- Chargement initial du contenu des fichiers ---
+        Object.keys(editors).forEach(promptId => { // Utilisation des clés de l'objet editors pour itérer
+            fetch(`/prompt/${promptId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.files) {
+                        currentFiles[promptId] = data.files;
+                        const htmlContent = data.files['index.html'] || '';
+                        setEditorContent(promptId, htmlContent, 'xml'); // Assure que l'éditeur est initialisé avec le HTML
+                        updatePreview(promptId, htmlContent);
+                    }
+                })
+                .catch(error => {
+                    console.error(`Erreur lors du chargement initial du prompt ${promptId}:`, error);
+                    showError(`Erreur lors du chargement initial: ${error.message}`);
+                });
+        });
+
+        // --- Gestion des onglets ---
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const promptId = this.dataset.promptId;
+                const fileType = this.dataset.file;
+
+                const tabsContainer = this.closest('.tabs');
+                tabsContainer.querySelectorAll('.tab-btn').forEach(tab => tab.classList.remove('active'));
+                this.classList.add('active');
+
+                let fileName;
+                let mode;
+                switch (fileType) {
+                    case 'html':
+                        fileName = 'index.html';
+                        mode = 'xml';
+                        break;
+                    case 'css':
+                        fileName = 'styles.css';
+                        mode = 'css';
+                        break;
+                    case 'javascript':
+                        fileName = 'script.js';
+                        mode = 'javascript';
+                        break;
+                    default:
+                        fileName = 'index.html';
+                        mode = 'xml';
+                        break;
+                }
+
+                setEditorContent(promptId, currentFiles[promptId][fileName] || '', mode);
+
+                if (fileType === 'html') {
+                    updatePreview(promptId, currentFiles[promptId][fileName] || '');
+                } else {
+                    updatePreview(promptId, currentFiles[promptId]['index.html'] || '');
+                }
+            });
+        });
+
+        // --- Mise à jour de l'aperçu ---
+        function updatePreview(promptId, htmlContent) {
+            const iframe = document.querySelector(`.preview-frame[data-prompt-id="${promptId}"]`);
+            if (!iframe) {
+                console.warn(`Iframe de prévisualisation non trouvé pour le promptId: ${promptId}`);
+                return;
+            }
+
+            const cssContent = currentFiles[promptId]['styles.css'] || '';
+            const jsContent = currentFiles[promptId]['script.js'] || '';
+
+            const fullContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>${cssContent}</style>
+                </head>
+                <body>
+                    ${htmlContent}
+                </body>
+                </html>
+            `;
+
+            try {
                 const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
                 iframeDoc.open();
                 iframeDoc.write(fullContent);
                 iframeDoc.close();
+            } catch (error) {
+                console.error("Erreur lors de la mise à jour de l'iframe:", error);
+                showError("Erreur lors de la mise à jour de l'aperçu.");
             }
+        }
 
-            // Gestionnaire de déploiement
-            document.querySelectorAll('.deploy-btn').forEach(btn => {
-                btn.addEventListener('click', async function() {
-                    const promptId = this.dataset.promptId;
-                    const customDomain = document.querySelector(`.custom-domain-input[data-prompt-id="${promptId}"]`).value.trim();
-                    const files = currentFiles[promptId];
-                    
-                    try {
-                        const response = await fetch('/deploy', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                promptId,
-                                files,
-                                customDomain
-                            })
-                        });
-                        
-                        if (!response.ok) {
-                            throw new Error('Erreur lors du déploiement');
-                        }
-                        
-                        const result = await response.json();
-                        // Afficher un message de succès ou rediriger vers le site déployé
-                        window.location.href = result.deployedUrl;
-                    } catch (error) {
-                        const errorAlert = document.getElementById('error-alert');
-                        const errorMessage = document.getElementById('error-message');
-                        errorMessage.textContent = error.message;
-                        errorAlert.classList.remove('hidden');
-                    }
-                });
-            });
+        // --- Téléchargement ---
+        document.querySelectorAll('.download-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const promptId = this.dataset.promptId;
+                const files = currentFiles[promptId];
 
-            // Gestionnaire de téléchargement
-            document.querySelectorAll('.download-btn').forEach(btn => {
-                btn.addEventListener('click', async function() {
-                    const promptId = this.dataset.promptId;
-                    const files = currentFiles[promptId];
-                    
+                try {
                     const zip = new JSZip();
                     for (const [filename, content] of Object.entries(files)) {
                         zip.file(filename, content);
                     }
-                    
-                    const blob = await zip.generateAsync({type: 'blob'});
+
+                    const blob = await zip.generateAsync({
+                        type: 'blob'
+                    });
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
@@ -813,147 +863,177 @@
                     a.click();
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
-                });
+                } catch (error) {
+                    console.error("Erreur lors de la création ou du téléchargement du fichier ZIP:", error);
+                    showError("Erreur lors du téléchargement du fichier ZIP.");
+                }
             });
-
-            // Gestionnaire de déploiement
-            document.querySelectorAll('.deploy-btn').forEach(btn => {
-                btn.addEventListener('click', async function() {
-                    const promptId = this.dataset.promptId;
-                    
-                    try {
-                        // Désactiver le bouton et afficher le chargement
-                        this.disabled = true;
-                        const originalText = this.innerHTML;
-                        this.innerHTML = '<span class="inline-flex items-center"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042s(`/deploy/${promptId}`, {
-                            method: 'POST',
-             eplo           headers: {
-                                'Content-Type': 'application/json',
-          ();
-                        
-                        if (resujse  r lmessage de succès
-         }lert = document.createElement            successAlert.c-green-100 border border-gc0e rdela      <span class="block sm:ine">Le site a été déplyccès. URL: <a href="${resultef     hN/Supprieaprès 5 secondes
-                            setTimeout(() => {
-                                successAlert.remove();
-                            }, 5000);
-                        } else {
-                            throw new Error(result.error || 'Une erreur est survenue lors du déploiement');
-                        }
-                    } catch (error) {
-                        // Afficher l'erreur
-                        const errorAlert = document.querySelector('#error-alert');
-                        const errorMessage = document.querySelector('#error-message');
-                        errorMessage.textContent = error.message;
-                        errorAlert.classList.remove('hidden');
-                        
-                        // Masquer l'erreur après 5 secondes
-                        setTimeout(() => {
-                            errorAlert.classList.add('hidden');
-                        }, 5000);
-                    } finally {
-                        // Réactiver le bouton et restaurer le texte original
-                        this.disabled = false;
-                        this.innerHTML = 'Publier le site';
-                    }
-                });
-            });
-
-            // Gestionnaire de modifications
-            document.querySelectorAll('.modify-btn').forEach(btn => {
-                btn.addEventListener('click', async function() {
-                    const promptId = this.dataset.promptId;
-                    const textarea = document.querySelector(`.modification-prompt[data-prompt-id="${promptId}"]`);
-                    const content = textarea.value.trim();
-                    
-                    // Désactiver le bouton et afficher le spinner
-                    this.disabled = true;
-                    this.innerHTML = `
-                        <span class="inline-flex items-center">
-                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Modification en cours...
-                        </span>
-                    `;
-
-                    if (!content) {
-                        showError('Veuillez décrire les modifications souhaitées');
-                        return;
-                    }
-
-                    try {
-                        const response = await fetch(`/modify/${promptId}`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: `content=${encodeURIComponent(content)}`
-                        });
-
-                        const data = await response.json();
-                        if (response.ok && data.success) {
-                            location.reload();
-                        } else {
-                            throw new Error(data.error || 'Une erreur est survenue');
-                        }
-                    } catch (error) {
-                        showError('Erreur: ' + error.message);
-                    } finally {
-                        // Réactiver le bouton et restaurer son texte original
-                        this.disabled = false;
-                        this.innerHTML = 'Appliquer les modifications';
-                    }
-                });
-            });
-
-            // Gestionnaire de plein écran pour l'éditeur
-            document.querySelectorAll('.editor-fullscreen-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const container = this.closest('.bg-white').querySelector('.editor-container');
-                    const editor = editors[container.dataset.promptId];
-                    
-                    if (!document.fullscreenElement) {
-                        container.requestFullscreen().then(() => {
-                            container.style.height = '90vh';
-                            editor.setSize(null, '90vh');
-                            editor.refresh();
-                        });
-                    } else {
-                        document.exitFullscreen().then(() => {
-                            container.style.height = '24rem';
-                            editor.setSize(null, '24rem');
-                            editor.refresh();
-                        });
-                    }
-                });
-            });
-
-            // Gestionnaire de plein écran pour l'aperçu
-            document.querySelectorAll('.preview-fullscreen-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const container = this.closest('.bg-white').querySelector('.preview-container');
-                    if (!document.fullscreenElement) {
-                        container.requestFullscreen();
-                    } else {
-                        document.exitFullscreen();
-                    }
-                });
-            });
-
-            // Gestionnaire pour fermer l'alerte d'erreur
-            document.getElementById('close-error')?.addEventListener('click', function() {
-                document.getElementById('error-alert').classList.add('hidden');
-            });
-
-            // Fonction pour afficher les erreurs
-            function showError(message) {
-                const errorAlert = document.getElementById('error-alert');
-                const errorMessage = document.getElementById('error-message');
-                errorMessage.textContent = message;
-                errorAlert.classList.remove('hidden');
-            }
         });
+
+        // --- Déploiement ---
+        document.querySelectorAll('.deploy-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const promptId = this.dataset.promptId;
+                const customDomain = document.querySelector(`.custom-domain-input[data-prompt-id="${promptId}"]`).value.trim();
+                const domainExtension = document.querySelector('.domain-extension').value;
+
+                try {
+                    this.disabled = true;
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<span class="inline-flex items-center"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Déploiement en cours...</span>';
+
+                    const response = await fetch(`/deploy/${promptId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            domain_name: customDomain,
+                            domain_extension: domainExtension
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        window.location.href = result.redirect_url;
+                    } else {
+                        throw new Error(result.error || 'Une erreur est survenue lors du déploiement');
+                    }
+                } catch (error) {
+                    console.error('Erreur de déploiement:', error);
+                    showError(error.message || 'Une erreur est survenue lors du déploiement');
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                }
+            });
+        });
+
+        // --- Redéploiement ---
+        document.querySelectorAll('.redeploy-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const promptId = this.dataset.promptId;
+                const deployUrl = this.dataset.deployUrl;
+
+                try {
+                    this.disabled = true;
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<span class="inline-flex items-center"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Redéploiement en cours...</span>';
+
+                    const response = await fetch(deployUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        window.location.href = result.redirect_url;
+                    } else {
+                        throw new Error(result.error || 'Une erreur est survenue lors du redéploiement');
+                    }
+                } catch (error) {
+                    console.error('Erreur de redéploiement:', error);
+                    showError(error.message || 'Une erreur est survenue lors du redéploiement');
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                }
+            });
+        });
+
+        // --- Modification ---
+        document.querySelectorAll('.modify-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const promptId = this.dataset.promptId;
+                const textarea = document.querySelector(`.modification-prompt[data-prompt-id="${promptId}"]`);
+                const content = textarea.value.trim();
+
+                this.disabled = true;
+                this.innerHTML = `
+                    <span class="inline-flex items-center">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Modification en cours...
+                    </span>
+                `;
+
+                if (!content) {
+                    showError('Veuillez décrire les modifications souhaitées');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/modify/${promptId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: `content=${encodeURIComponent(content)}`
+                    });
+
+                    const data = await response.json();
+                    if (response.ok && data.success) {
+                        location.reload();
+                    } else {
+                        throw new Error(data.error || 'Une erreur est survenue');
+                    }
+                } catch (error) {
+                    showError('Erreur: ' + error.message);
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = 'Appliquer les modifications';
+                }
+            });
+        });
+
+        // --- Gestion du plein écran pour l'éditeur ---
+        document.querySelectorAll('.editor-fullscreen-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const container = this.closest('.bg-white').querySelector('.editor-container');
+                const editor = editors[container.dataset.promptId];
+
+                if (!document.fullscreenElement) {
+                    container.requestFullscreen().then(() => {
+                        container.style.height = '90vh';
+                        editor.setSize(null, '90vh');
+                        editor.refresh();
+                    });
+                } else {
+                    document.exitFullscreen().then(() => {
+                        container.style.height = '24rem';
+                        editor.setSize(null, '24rem');
+                        editor.refresh();
+                    });
+                }
+            });
+        });
+
+        // --- Gestion du plein écran pour l'aperçu ---
+        document.querySelectorAll('.preview-fullscreen-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const container = this.closest('.bg-white').querySelector('.preview-container');
+                if (!document.fullscreenElement) {
+                    container.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+        });
+    });
     </script>
 {% endblock %}
