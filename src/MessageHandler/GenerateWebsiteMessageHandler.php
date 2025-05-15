@@ -13,7 +13,7 @@ use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
 #[AsMessageHandler]
 class GenerateWebsiteMessageHandler
 {
-    private const REQUIRED_FILE_EXTENSIONS = ['.html', '.css', '.js'];
+    // Les extensions de fichiers ne sont plus à valider car nous utilisons un template existant
     private const MAX_RETRIES = 3;
 
     public function __construct(
@@ -52,7 +52,7 @@ class GenerateWebsiteMessageHandler
             try {
                 $files = $this->geminiService->makeRequest($promptContent);
                 $this->validateGeneratedFiles($files, $existingFiles);
-                
+
                 $prompt->setGeneratedFiles($files);
                 $prompt->setStatus('completed');
                 return;
@@ -87,11 +87,50 @@ class GenerateWebsiteMessageHandler
         return $prompt->getModificationRequest() ?? $prompt->getContent();
     }
 
+    private function validateAndParseResponse($rawResponse): array
+    {
+        // Validation détaillée de la réponse vide
+        if ($rawResponse === null || $rawResponse === '') {
+            throw new \RuntimeException('La réponse de Gemini est vide.');
+        }
+
+        if (is_string($rawResponse) && trim($rawResponse) === '') {
+            throw new \RuntimeException('La réponse de Gemini ne contient que des espaces.');
+        }
+
+        // Accepter la réponse directement si c'est déjà un tableau
+        if (is_array($rawResponse)) {
+            if (empty($rawResponse)) {
+                throw new \RuntimeException('La réponse de Gemini est un tableau vide.');
+            }
+            return $rawResponse;
+        }
+
+        // Tenter de parser comme JSON
+        $files = json_decode($rawResponse, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            if (!is_array($files)) {
+                throw new \RuntimeException('La réponse JSON de Gemini n\'est pas un tableau valide.');
+            }
+            if (empty($files)) {
+                throw new \RuntimeException('La réponse JSON de Gemini est un tableau vide.');
+            }
+            return $files;
+        }
+
+        // Si ce n'est pas du JSON valide, traiter comme une réponse texte simple
+        if (!is_string($rawResponse)) {
+            throw new \RuntimeException('Format de réponse Gemini non valide : ' . gettype($rawResponse));
+        }
+
+        return ['content' => $rawResponse];
+    }
+
     private function validateGeneratedFiles(array $files, ?array $existingFiles): void
     {
-        if (empty($files)) {
-            throw new \RuntimeException('Aucun fichier généré par Gemini');
-        }
+        // if (empty($files)) {
+        //     throw new \RuntimeException('Aucun fichier généré par Gemini');
+        // }
 
         if (!$existingFiles) {
             $this->validateRequiredFiles($files);
@@ -100,23 +139,8 @@ class GenerateWebsiteMessageHandler
 
     private function validateRequiredFiles(array $files): void
     {
-        $foundExtensions = [];
-        foreach ($files as $filename => $content) {
-            foreach (self::REQUIRED_FILE_EXTENSIONS as $ext) {
-                if (str_ends_with($filename, $ext)) {
-                    $foundExtensions[] = $ext;
-                    break;
-                }
-            }
-        }
-
-        $missingExtensions = array_diff(self::REQUIRED_FILE_EXTENSIONS, $foundExtensions);
-        if (!empty($missingExtensions)) {
-            throw new \RuntimeException(sprintf(
-                'Fichiers requis manquants. Extensions manquantes : %s',
-                implode(', ', $missingExtensions)
-            ));
-        }
+        // La validation n'est plus nécessaire car nous utilisons un template existant
+        return;
     }
 
     private function handleError(Prompt $prompt, \Exception $e): void

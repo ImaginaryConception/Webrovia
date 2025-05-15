@@ -44,28 +44,6 @@
 
             <div id="result-section" class="hidden max-w-5xl mx-auto">
                 <div class="gap-6">
-                    {# <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Code généré</h3>
-                        <div class="flex justify-between items-center mb-4">
-                            <div class="tabs flex space-x-4">
-                                <button class="tab-btn active" data-file="html">HTML</button>
-                                <button class="tab-btn" data-file="css">CSS</button>
-                                <button class="tab-btn" data-file="js">JavaScript</button>
-                                <button class="tab-btn" data-file="php">PHP</button>
-                            </div>
-                            <button id="editor-copy-btn" class="text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
-                            </div>
-                            <button id="editor-fullscreen-btn" class="text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5m-7 11h4m-4 0v4m0-4l5 5m5-9v4m0-4h4m-4 0l5 5-5-5z" />
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="editor-container" class="h-96 relative"></div>
-                        <button id="download-btn" class="mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200">
-                            Télécharger le site
-                        </button>
-                    </div> #}
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Aperçu en direct</h3>
@@ -79,12 +57,10 @@
                             <iframe id="preview-frame" class="w-full h-full"></iframe>
                         </div>
                         <div class="mt-4">
-                            {# <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Modifier le site</h4> #}
-                            {# <textarea id="modification-prompt" class="w-full h-24 p-2 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600" placeholder="Décrivez les modifications que vous souhaitez apporter au site..."></textarea> #}
-                            {# <button id="modify-btn" data-id="{{ prompt is not null ? prompt.id : '' }}" class="mt-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200">
-                                Modifier avec IA
-                            </button> #}
-                            <a href="{{ path('app_my_sites') }}" id="modify-btn" class="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                            <button id="download-btn" class="me-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                                Télécharger le site
+                            </button>
+                            <a href="{{ path('app_my_sites') }}" id="modify-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200">
                                 Modifier avec IA
                             </a>
                         </div>
@@ -227,20 +203,30 @@
             }
 
             function displayResults(files) {
+                // S'assurer que files est un objet JSON valide
+                if (typeof files === 'string') {
+                    try {
+                        files = JSON.parse(files);
+                    } catch (e) {
+                        console.error('Erreur lors du parsing JSON:', e);
+                        return;
+                    }
+                }
+
                 currentFiles = files;
                 resultSection.classList.remove('hidden');
 
-                if (!editor) {
-                    editor = CodeMirror(document.getElementById('editor-container'), {
-                        mode: 'xml',
-                        theme: 'monokai',
-                        lineNumbers: true,
-                        readOnly: true
-                    });
-                }
+                // Créer un blob URL pour le fichier HTML généré
+                const htmlContent = files['index.html'] || '';
+                const blob = new Blob([htmlContent], { type: 'text/html' });
+                const blobUrl = URL.createObjectURL(blob);
 
-                showFile('html');
-                updatePreview();
+                // Mettre à jour l'iframe avec le contenu généré
+                const previewFrame = document.getElementById('preview-frame');
+                previewFrame.src = blobUrl;
+
+                // Nettoyer l'URL du blob lorsque l'iframe est chargé
+                previewFrame.onload = () => URL.revokeObjectURL(blobUrl);
 
                 document.querySelectorAll('.tab-btn').forEach(btn => {
                     btn.addEventListener('click', () => showFile(btn.dataset.file));
@@ -329,9 +315,9 @@
             }
 
             // Gestionnaires d'événements pour les boutons plein écran
-            document.getElementById('editor-fullscreen-btn')?.addEventListener('click', () => {
-                toggleFullScreen(document.getElementById('editor-container'));
-            });
+            // document.getElementById('editor-fullscreen-btn')?.addEventListener('click', () => {
+            //     toggleFullScreen(document.getElementById('editor-container'));
+            // });
 
             document.getElementById('preview-fullscreen-btn')?.addEventListener('click', () => {
                 toggleFullScreen(document.getElementById('preview-container'));
@@ -348,8 +334,8 @@
                 const content = currentFiles[fileName] || '';
 
                 // Nettoyer le conteneur de l'éditeur
-                const container = document.getElementById('editor-container');
-                container.innerHTML = '';
+                // const container = document.getElementById('editor-container');
+                // container.innerHTML = '';
 
                 // Supprimer l'ancien éditeur
                 if (editor) {
@@ -358,13 +344,13 @@
                 }
 
                 // Créer un nouvel éditeur
-                editor = CodeMirror(container, {
-                    mode: type === 'html' ? 'xml' : type,
-                    theme: 'monokai',
-                    lineNumbers: true,
-                    readOnly: false,
-                    value: content
-                });
+                // editor = CodeMirror(container, {
+                //     mode: type === 'html' ? 'xml' : type,
+                //     theme: 'monokai',
+                //     lineNumbers: true,
+                //     readOnly: false,
+                //     value: content
+                // });
 
                 // Ajouter le nouvel écouteur d'événements
                 editor.on('change', () => {
