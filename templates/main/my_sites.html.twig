@@ -120,7 +120,7 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="flex flex-col gap-6">
                             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Code généré</h3>
                                 <div class="flex justify-end mb-4">
@@ -130,7 +130,7 @@
                                         </svg>
                                     </button>
                                 </div>
-                                <div class="editor-container h-96 relative" data-prompt-id="{{ prompt.id }}"></div>
+                                <div class="editor-container h-[600px] relative" data-prompt-id="{{ prompt.id }}"></div>
                                 <div class="flex space-x-4 mt-4">
                                     <button class="download-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
                                         Télécharger le site
@@ -173,7 +173,7 @@
                                         </svg>
                                     </button>
                                 </div>
-                                <div class="preview-container h-96 w-full bg-white border rounded-lg overflow-hidden relative" data-prompt-id="{{ prompt.id }}">
+                                <div class="preview-container h-[500px] w-full bg-white border rounded-lg overflow-hidden relative" data-prompt-id="{{ prompt.id }}">
                                     <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}"></iframe>
                                 </div>
                                 <div class="mt-4">
@@ -308,7 +308,7 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="flex flex-col gap-6">
                             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Code généré</h3>
                                 <div class="flex justify-end mb-4">
@@ -318,7 +318,7 @@
                                         </svg>
                                     </button>
                                 </div>
-                                <div class="editor-container h-96 relative" data-prompt-id="{{ prompt.id }}"></div>
+                                <div class="editor-container h-[600px] relative" data-prompt-id="{{ prompt.id }}"></div>
                                 <div class="flex space-x-4 mt-4">
                                     <button class="download-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
                                         Télécharger le site
@@ -350,7 +350,7 @@
                                         </svg>
                                     </button>
                                 </div>
-                                <div class="preview-container h-96 w-full bg-white border rounded-lg overflow-hidden relative" data-prompt-id="{{ prompt.id }}">
+                                <div class="preview-container h-[500px] w-full bg-white border rounded-lg overflow-hidden relative" data-prompt-id="{{ prompt.id }}">
                                     <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}"></iframe>
                                 </div>
                                 <div class="mt-4">
@@ -1008,17 +1008,9 @@
                 const editor = editors[container.dataset.promptId];
 
                 if (!document.fullscreenElement) {
-                    container.requestFullscreen().then(() => {
-                        container.style.height = '90vh';
-                        editor.setSize(null, '90vh');
-                        editor.refresh();
-                    });
+                    container.requestFullscreen();
                 } else {
-                    document.exitFullscreen().then(() => {
-                        container.style.height = '24rem';
-                        editor.setSize(null, '24rem');
-                        editor.refresh();
-                    });
+                    document.exitFullscreen();
                 }
             });
         });

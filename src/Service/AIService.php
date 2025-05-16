@@ -3,162 +3,151 @@
 namespace App\Service;
 
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
 class AIService
 {
     private HttpClientInterface $client;
     private FilesystemAdapter $cache;
-    private const TEMPLATE_DIR = __DIR__ . '/../../WebForgeSymfonyProject/generator-template';
-    private const OLLAMA_URL = 'http://localhost:11434/api/generate';
-    private const MODEL_NAME = 'codellama:13b-instruct';
+    private const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
+    private const API_KEY = 'ESoQIWE9LvoI7tEcPYoZxACk7j1kF6Mt';
+    private const MODEL = 'mistral-small-latest';
 
     public function __construct(HttpClientInterface $client)
     {
         $this->client = $client;
-        $this->cache = new FilesystemAdapter('ollama', 3600, __DIR__ . '/../../var/cache/ollama');
+        $this->cache = new FilesystemAdapter('mistral', 3600, __DIR__ . '/../../var/cache/mistral');
     }
 
     public function makeRequest(string $prompt): array
     {
         try {
-            $this->validateTemplateStructure();
-            $templateStructure = $this->getTemplateStructure();
+            $structure = <<<TEXT
+Structure des fichiers à respecter :
 
-            $promptContent = "Tu es un expert Symfony spécialisé dans la modification de projets existants. Voici la structure complète d'un projet Symfony avec tous ses fichiers : \n" . 
-                json_encode($templateStructure, JSON_PRETTY_PRINT) . 
-                "\n\nModifie cette structure selon la demande suivante, en conservant la même organisation mais en adaptant le contenu des fichiers. Retourne la structure modifiée au format JSON avec le même format que l'entrée. Règle importante : Ne supprime aucun fichier existant, modifie uniquement leur contenu ou ajoute de nouveaux fichiers si nécessaire. Assure-toi que chaque fichier a un contenu valide et complet. Voici la demande de site que tu dois refaire : " . $prompt;
-            $response = $this->client->request('POST', self::OLLAMA_URL, [
+config/packages/cache.yaml  
+config/packages/doctrine.yaml  
+config/packages/doctrine_migrations.yaml  
+config/packages/framework.yaml  
+config/packages/mailer.yaml  
+config/packages/messenger.yaml  
+config/packages/monolog.yaml  
+config/packages/notifier.yaml  
+config/packages/routing.yaml  
+config/packages/security.yaml  
+config/packages/translation.yaml  
+config/packages/twig.yaml  
+config/packages/validator.yaml  
+config/routes/framework.yaml  
+config/routes/security.yaml  
+config/bundles.php  
+config/preload.php  
+config/routes.yaml  
+config/services.yaml  
+public/index.php  
+templates/base.html.twig  
+src/Kernel.php  
+src/Controller  
+src/Entity  
+src/Form  
+src/Repository  
+.env  
+composer.json  
+composer.lock  
+symfony.lock  
+TEXT;
+
+$promptContent = <<<PROMPT
+Tu es un expert Symfony. Génère un projet Symfony complet et fonctionnel sous forme de JSON.
+
+Règles à suivre STRICTEMENT :
+
+1. Chaque **clé** = chemin absolu d’un fichier ou dossier dans un projet Symfony
+2. Chaque **valeur** = 
+   - vide `""` si c’est un dossier
+   - contenu exact du fichier si c’est un fichier (PHP, YAML, Twig, JSON, etc.)
+3. ⚠️ Tu ne dois jamais écrire `"null"` (ni en texte, ni en valeur JSON), jamais ! Si tu ne sais pas quoi mettre, mets `""` (une chaîne vide) pour un fichier vide, ou alors du vrai code par défaut
+4. Aucune explication, aucun commentaire, juste un JSON valide
+
+Demande utilisateur : "$prompt"
+
+Voici la structure à respecter :
+$structure
+PROMPT;
+
+            $response = $this->client->request('POST', self::MISTRAL_API_URL, [
                 'headers' => [
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json'
+                    'Authorization' => 'Bearer ' . self::API_KEY,
+                    'Content-Type' => 'application/json',
                 ],
                 'json' => [
-                    'model' => self::MODEL_NAME,
-                    'prompt' => $promptContent,
-                    'stream' => false
+                    'model' => self::MODEL,
+                    'messages' => [
+                        ['role' => 'user', 'content' => $promptContent]
+                    ],
+                    'temperature' => 0.7,
                 ],
                 'timeout' => 2000,
             ]);
 
-            file_put_contents('prompt.txt', $promptContent);
-
-            $content = $response->getContent(false);
-            if (empty($content)) {
-                error_log('Réponse vide reçue de l\'API Ollama');
-                throw new \RuntimeException('Réponse vide reçue de l\'API Ollama');
+            $raw = $response->getContent(false);
+            if (!$raw) {
+                throw new \RuntimeException('Réponse vide de Mistral.');
             }
 
-            file_put_contents('ollamaResponse.json', $content);
-
-            $responseData = json_decode($content, true);
-            if (!isset($responseData['response'])) {
-                error_log('Structure de réponse Ollama invalide');
-                throw new \RuntimeException('Format de réponse Ollama invalide');
+            $data = json_decode($raw, true);
+            if (!isset($data['choices'][0]['message']['content'])) {
+                throw new \RuntimeException('Structure de réponse invalide de Mistral.');
             }
 
-            return $this->parseJsonResponse($responseData['response']);
+            return $this->parseJsonResponse($data['choices'][0]['message']['content']);
 
-        } catch (HttpExceptionInterface $e) {
-            error_log('Erreur HTTP lors de la requête à l\'API Ollama : ' . $e->getMessage());
+        } catch (\Exception $e) {
+            error_log('Erreur Mistral : ' . $e->getMessage());
             throw $e;
         }
     }
 
     private function parseJsonResponse(string $content): array
     {
-        try {
-            $content = trim($content);
-            
-            // Nettoyer les délimiteurs de bloc de code JSON
-            $content = preg_replace('/^```(?:json)?\s*/', '', $content);
-            $content = preg_replace('/\s*```$/', '', $content);
-            
-            // Tenter de décoder le texte comme JSON
-            $decodedContent = json_decode($content, true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decodedContent)) {
-                // Valider et transformer la structure des fichiers
-                $files = [];
-                foreach ($decodedContent as $path => $fileInfo) {
-                    if (is_array($fileInfo) && isset($fileInfo['content'])) {
-                        $files[$path] = $fileInfo['content'];
-                    } elseif (is_string($fileInfo)) {
-                        $files[$path] = $fileInfo;
-                    }
-                }
-                return $files;
+        $content = trim($content);
+        $content = preg_replace('/^```(?:json)?\s*/', '', $content);
+        $content = preg_replace('/\s*```$/', '', $content);
+
+        $decoded = json_decode($content, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \RuntimeException('Erreur de décodage JSON : ' . json_last_error_msg());
+        }
+
+        $files = [];
+        foreach ($decoded as $path => $value) {
+            if (!is_string($path)) continue;
+
+            $fileContent = null;
+            if (is_array($value) && isset($value['content']) && is_string($value['content'])) {
+                $fileContent = $value['content'];
+            } elseif (is_string($value)) {
+                $fileContent = $value;
+            }
+
+            // On skip les fichiers avec "null" (en string) ou null PHP
+            if (strtolower(trim($fileContent)) === 'null') {
+                error_log("[AIService] Contenu 'null' détecté pour $path → remplacé par string vide.");
+                $fileContent = '';
             }
             
-            error_log('Erreur: La réponse n\'est pas un JSON valide contenant des fichiers');
-            return ['a'];
-            
-        } catch (\JsonException $e) {
-            error_log('Erreur lors du décodage JSON: ' . $e->getMessage());
-            return ['b'];
-        }
-    }
-
-    private function validateGeneratedContent(string $content): bool
-    {
-        $content = trim($content);
-        if (empty($content)) {
-            error_log('Le contenu est vide après nettoyage');
-            return false;
-        }
-        return true;
-    }
-
-    private function cleanHtmlContent(string $content): string
-    {
-        $content = preg_replace('/<!--[\s\S]*?-->/', '', $content);
-        $content = preg_replace('/<[^>]*>/', '', $content);
-        $content = preg_replace('/\s+/', ' ', $content);
-        return trim($content);
-    }
-
-    private function validateTemplateStructure(): void
-    {
-        if (!is_dir(self::TEMPLATE_DIR)) {
-            throw new \RuntimeException('Le répertoire template n\'existe pas : ' . self::TEMPLATE_DIR);
-        }
-    }
-
-    private function getTemplateStructure(): array
-    {
-        $templatePath = self::TEMPLATE_DIR;
-        return $this->scanDirectory($templatePath);
-    }
-
-    private function scanDirectory(string $path, string $relativePath = ''): array
-    {
-        $result = [];
-        $items = scandir($path);
-
-        foreach ($items as $item) {
-            if ($item === '.' || $item === '..' || $item === 'vendor' || $item === 'var' || $item === '.git') {
+            if ($fileContent === null) {
+                error_log("[AIService] Fichier ignoré (contenu null PHP): $path");
                 continue;
             }
 
-            $fullPath = $path . '/' . $item;
-            $relativeItemPath = $relativePath ? $relativePath . '/' . $item : $item;
-
-            if (is_dir($fullPath)) {
-                $subDirContent = $this->scanDirectory($fullPath, $relativeItemPath);
-                if (!empty($subDirContent)) {
-                    $result[$relativeItemPath] = ['type' => 'directory', 'children' => $subDirContent];
-                }
-            } else {
-                $content = file_get_contents($fullPath);
-                if ($content !== false) {
-                    $result[$relativeItemPath] = [
-                        'type' => 'file',
-                        'content' => $content
-                    ];
-                }
-            }
+            $files[$path] = $fileContent;
         }
 
-        return $result;
+        if (empty($files)) {
+            throw new \RuntimeException('Aucun fichier valide trouvé dans la réponse JSON.');
+        }
+
+        return $files;
     }
 }

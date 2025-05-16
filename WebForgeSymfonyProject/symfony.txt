@@ -1,0 +1,612 @@
+Le contenu est délimité par ___
+
+1.
+Chemin : config/packages/cache.yaml
+Contenu :
+___
+framework:
+    cache:
+        # Unique name of your app: used to compute stable namespaces for cache keys.
+        #prefix_seed: your_vendor_name/app_name
+
+        # The "app" cache stores to the filesystem by default.
+        # The data in this cache should persist between deploys.
+        # Other options include:
+
+        # Redis
+        #app: cache.adapter.redis
+        #default_redis_provider: redis://localhost
+
+        # APCu (not recommended with heavy random-write workloads as memory fragmentation can cause perf issues)
+        #app: cache.adapter.apcu
+
+        # Namespaced pools use the above "app" backend by default
+        #pools:
+            #my.dedicated.cache: null
+___
+
+2.
+Chemin : config/packages/doctrine.yaml
+Contenu :
+___
+doctrine:
+    dbal:
+        url: '%env(resolve:DATABASE_URL)%'
+
+        profiling_collect_backtrace: '%kernel.debug%'
+        use_savepoints: true
+    orm:
+        auto_generate_proxy_classes: true
+        enable_lazy_ghost_objects: true
+        report_fields_where_declared: true
+        validate_xml_mapping: true
+        naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
+        auto_mapping: true
+        mappings:
+            App:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Entity'
+                prefix: 'App\Entity'
+                alias: App
+
+when@test:
+    doctrine:
+        dbal:
+            dbname_suffix: '_test%env(default::TEST_TOKEN)%'
+
+when@prod:
+    doctrine:
+        orm:
+            auto_generate_proxy_classes: false
+            proxy_dir: '%kernel.build_dir%/doctrine/orm/Proxies'
+            query_cache_driver:
+                type: pool
+                pool: doctrine.system_cache_pool
+            result_cache_driver:
+                type: pool
+                pool: doctrine.result_cache_pool
+
+    framework:
+        cache:
+            pools:
+                doctrine.result_cache_pool:
+                    adapter: cache.app
+                doctrine.system_cache_pool:
+                    adapter: cache.system
+___
+
+3.
+Chemin : config/packages/doctrine_migrations.yaml
+Contenu :
+___
+doctrine_migrations:
+    migrations_paths:
+        'DoctrineMigrations': '%kernel.project_dir%/migrations'
+    enable_profiler: false
+___
+
+4.
+Chemin : config/packages/framework.yaml
+Contenu :
+___
+framework:
+    secret: '%env(APP_SECRET)%'
+    annotations: false
+    http_method_override: false
+    handle_all_throwables: true
+
+    session:
+        handler_id: null
+        cookie_secure: auto
+        cookie_samesite: lax
+
+    #esi: true
+    #fragments: true
+    php_errors:
+        log: true
+
+when@test:
+    framework:
+        test: true
+        session:
+            storage_factory_id: session.storage.factory.mock_file
+___
+
+5.
+Chemin : config/packages/mailer.yaml
+Contenu :
+___
+framework:
+    mailer:
+        dsn: '%env(MAILER_DSN)%'
+___
+
+6.
+Chemin : config/packages/messenger.yaml
+Contenu :
+___
+framework:
+    messenger:
+        failure_transport: failed
+
+        transports:
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    use_notify: true
+                    check_delayed_interval: 60000
+                retry_strategy:
+                    max_retries: 3
+                    multiplier: 2
+            failed: 'doctrine://default?queue_name=failed'
+            # sync: 'sync://'
+
+        default_bus: messenger.bus.default
+
+        buses:
+            messenger.bus.default: []
+
+        routing:
+            Symfony\Component\Mailer\Messenger\SendEmailMessage: async
+            Symfony\Component\Notifier\Message\ChatMessage: async
+            Symfony\Component\Notifier\Message\SmsMessage: async
+
+            # 'App\Message\YourMessage': async
+___
+
+7.
+Chemin : config/packages/monolog.yaml
+Contenu :
+___
+monolog:
+    channels:
+        - deprecation
+
+when@dev:
+    monolog:
+        handlers:
+            main:
+                type: stream
+                path: "%kernel.logs_dir%/%kernel.environment%.log"
+                level: debug
+                channels: ["!event"]
+            #firephp:
+            #    type: firephp
+            #    level: info
+            #chromephp:
+            #    type: chromephp
+            #    level: info
+            console:
+                type: console
+                process_psr_3_messages: false
+                channels: ["!event", "!doctrine", "!console"]
+
+when@test:
+    monolog:
+        handlers:
+            main:
+                type: fingers_crossed
+                action_level: error
+                handler: nested
+                excluded_http_codes: [404, 405]
+                channels: ["!event"]
+            nested:
+                type: stream
+                path: "%kernel.logs_dir%/%kernel.environment%.log"
+                level: debug
+
+when@prod:
+    monolog:
+        handlers:
+            main:
+                type: fingers_crossed
+                action_level: error
+                handler: nested
+                excluded_http_codes: [404, 405]
+                buffer_size: 50
+            nested:
+                type: stream
+                path: php://stderr
+                level: debug
+                formatter: monolog.formatter.json
+            console:
+                type: console
+                process_psr_3_messages: false
+                channels: ["!event", "!doctrine"]
+            deprecation:
+                type: stream
+                channels: [deprecation]
+                path: php://stderr
+                formatter: monolog.formatter.json
+___
+
+8.
+Chemin : config/packages/notifier.yaml
+Contenu :
+___
+framework:
+    notifier:
+        chatter_transports:
+        texter_transports:
+        channel_policy:
+            urgent: ['email']
+            high: ['email']
+            medium: ['email']
+            low: ['email']
+        admin_recipients:
+            - { email: admin@example.com }
+___
+
+9.
+Chemin : config/packages/routing.yaml
+Contenu :
+___
+framework:
+    router:
+        utf8: true
+
+when@prod:
+    framework:
+        router:
+            strict_requirements: null
+___
+
+10.
+Chemin : config/packages/security.yaml
+Contenu :
+___
+security:
+    password_hashers:
+        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
+    providers:
+        users_in_memory: { memory: null }
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+        main:
+            lazy: true
+            provider: users_in_memory
+
+    access_control:
+        # - { path: ^/admin, roles: ROLE_ADMIN }
+        # - { path: ^/profile, roles: ROLE_USER }
+
+when@test:
+    security:
+        password_hashers:
+            Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
+                algorithm: auto
+                cost: 4
+                time_cost: 3
+                memory_cost: 10
+___
+
+11.
+Chemin : config/packages/translation.yaml
+Contenu :
+___
+framework:
+    default_locale: en
+    translator:
+        default_path: '%kernel.project_dir%/translations'
+        fallbacks:
+            - en
+        providers:
+___
+
+12.
+Chemin : config/packages/twig.yaml
+Contenu :
+___
+twig:
+    file_name_pattern: '*.twig'
+
+when@test:
+    twig:
+        strict_variables: true
+___
+
+13.
+Chemin : config/packages/validator.yaml
+Contenu :
+___
+framework:
+    validation:
+        email_validation_mode: html5
+
+        #auto_mapping:
+        #    App\Entity\: []
+
+when@test:
+    framework:
+        validation:
+            not_compromised_password: false
+___
+
+14.
+Chemin : config/routes/framework.yaml
+Contenu :
+___
+when@dev:
+    _errors:
+        resource: '@FrameworkBundle/Resources/config/routing/errors.xml'
+        prefix: /_error
+___
+
+15.
+Chemin : config/routes/security.yaml
+Contenu :
+___
+_security_logout:
+    resource: security.route_loader.logout
+    type: service
+___
+
+16.
+Chemin : config/bundles.php
+Contenu :
+___
+<?php
+
+return [
+    Symfony\Bundle\FrameworkBundle\FrameworkBundle::class => ['all' => true],
+    Doctrine\Bundle\DoctrineBundle\DoctrineBundle::class => ['all' => true],
+    Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle::class => ['all' => true],
+    Symfony\Bundle\DebugBundle\DebugBundle::class => ['dev' => true],
+    Symfony\Bundle\TwigBundle\TwigBundle::class => ['all' => true],
+    Symfony\Bundle\WebProfilerBundle\WebProfilerBundle::class => ['dev' => true, 'test' => true],
+    Symfony\UX\StimulusBundle\StimulusBundle::class => ['all' => true],
+    Symfony\UX\Turbo\TurboBundle::class => ['all' => true],
+    Twig\Extra\TwigExtraBundle\TwigExtraBundle::class => ['all' => true],
+    Symfony\Bundle\SecurityBundle\SecurityBundle::class => ['all' => true],
+    Symfony\Bundle\MonologBundle\MonologBundle::class => ['all' => true],
+    Symfony\Bundle\MakerBundle\MakerBundle::class => ['dev' => true],
+];
+___
+17.
+Chemin : config/preload.php
+Contenu :
+___
+<?php
+
+if (file_exists(dirname(__DIR__).'/var/cache/prod/App_KernelProdContainer.preload.php')) {
+    require dirname(__DIR__).'/var/cache/prod/App_KernelProdContainer.preload.php';
+}
+___
+18.
+Chemin : config/routes.yaml
+Contenu :
+___
+controllers:
+    resource:
+        path: ../src/Controller/
+        namespace: App\Controller
+    type: attribute
+___
+19.
+Chemin : config/services.yaml
+Contenu :
+___
+parameters:
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+___
+
+20.
+Chemin : public/index.php
+Contenu :
+___
+<?php
+
+use App\Kernel;
+
+require_once dirname(__DIR__).'/vendor/autoload_runtime.php';
+
+return function (array $context) {
+    return new Kernel($context['APP_ENV'], (bool) $context['APP_DEBUG']);
+};
+___
+
+21.
+Chemin : templates/base.html.twig
+Contenu :
+___
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>{% block title %}Welcome!{% endblock %}</title>
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
+        {% block stylesheets %}
+        {% endblock %}
+        {% block javascripts %}
+        {% endblock %}
+    </head>
+    <body>
+        {% block body %}{% endblock %}
+    </body>
+</html>
+___
+
+22.
+Chemin : src/Kernel.php
+Contenu :
+___
+<?php
+
+namespace App;
+
+use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
+use Symfony\Component\HttpKernel\Kernel as BaseKernel;
+
+class Kernel extends BaseKernel
+{
+    use MicroKernelTrait;
+}
+___
+
+23.
+Chemin : src/Controller (vide)
+
+24.
+Chemin : src/Entity (vide)
+
+25.
+Chemin : src/Form (vide)
+
+26.
+Chemin : src/Repository (vide)
+
+27.
+Chemin : Racine (/)
+Fichier : .env
+Contenu :
+___
+APP_ENV=prod
+APP_SECRET=f9aa5016b790a916d1c7a37a88fb60f9
+# DATABASE_URL="mysql://app:!ChangeMe!@127.0.0.1:3306/app?serverVersion=8.0.32&charset=utf8mb4"
+MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0
+MAILER_DSN=null://null
+___
+
+28.
+Chemin : Racine (/)
+Fichier : composer.json
+Contenu :
+___
+{
+    "type": "project",
+    "license": "proprietary",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.1",
+        "ext-ctype": "*",
+        "ext-iconv": "*",
+        "doctrine/dbal": "^3",
+        "doctrine/doctrine-bundle": "^2.14",
+        "doctrine/doctrine-migrations-bundle": "^3.4",
+        "doctrine/orm": "^3.3",
+        "phpdocumentor/reflection-docblock": "^5.6",
+        "phpstan/phpdoc-parser": "^2.1",
+        "symfony/asset": "6.4.*",
+        "symfony/asset-mapper": "6.4.*",
+        "symfony/console": "6.4.*",
+        "symfony/doctrine-messenger": "6.4.*",
+        "symfony/dotenv": "6.4.*",
+        "symfony/expression-language": "6.4.*",
+        "symfony/flex": "^2",
+        "symfony/form": "6.4.*",
+        "symfony/framework-bundle": "6.4.*",
+        "symfony/http-client": "6.4.*",
+        "symfony/intl": "6.4.*",
+        "symfony/mailer": "6.4.*",
+        "symfony/mime": "6.4.*",
+        "symfony/monolog-bundle": "^3.0",
+        "symfony/notifier": "6.4.*",
+        "symfony/process": "6.4.*",
+        "symfony/property-access": "6.4.*",
+        "symfony/property-info": "6.4.*",
+        "symfony/runtime": "6.4.*",
+        "symfony/security-bundle": "6.4.*",
+        "symfony/serializer": "6.4.*",
+        "symfony/stimulus-bundle": "^2.24",
+        "symfony/string": "6.4.*",
+        "symfony/translation": "6.4.*",
+        "symfony/twig-bundle": "6.4.*",
+        "symfony/ux-turbo": "^2.24",
+        "symfony/validator": "6.4.*",
+        "symfony/web-link": "6.4.*",
+        "symfony/yaml": "6.4.*",
+        "twig/extra-bundle": "^2.12|^3.0",
+        "twig/twig": "^2.12|^3.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true,
+            "symfony/flex": true,
+            "symfony/runtime": true
+        },
+        "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "App\\Tests\\": "tests/"
+        }
+    },
+    "replace": {
+        "symfony/polyfill-ctype": "*",
+        "symfony/polyfill-iconv": "*",
+        "symfony/polyfill-php72": "*",
+        "symfony/polyfill-php73": "*",
+        "symfony/polyfill-php74": "*",
+        "symfony/polyfill-php80": "*",
+        "symfony/polyfill-php81": "*"
+    },
+    "scripts": {
+        "auto-scripts": {
+            "cache:clear": "symfony-cmd",
+            "assets:install %PUBLIC_DIR%": "symfony-cmd",
+            "importmap:install": "symfony-cmd"
+        },
+        "post-install-cmd": [
+            "@auto-scripts"
+        ],
+        "post-update-cmd": [
+            "@auto-scripts"
+        ]
+    },
+    "conflict": {
+        "symfony/symfony": "*"
+    },
+    "extra": {
+        "symfony": {
+            "allow-contrib": false,
+            "require": "6.4.*"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5",
+        "symfony/browser-kit": "6.4.*",
+        "symfony/css-selector": "6.4.*",
+        "symfony/debug-bundle": "6.4.*",
+        "symfony/maker-bundle": "^1.0",
+        "symfony/phpunit-bridge": "^7.2",
+        "symfony/stopwatch": "6.4.*",
+        "symfony/web-profiler-bundle": "6.4.*"
+    }
+}
+___
+
+29.
+Chemin : Racine (/)
+Fichier : composer.lock
+Contenu :
+___
+Trop long pour le mettre ici, il faut que Gemini le fasse lui-même
+___
+
+30.
+Chemin : Racine (/)
+Fichier : symfony.lock
+Contenu :
+___
+Trop long pour le mettre ici, il faut que Gemini le fasse lui-même
+___

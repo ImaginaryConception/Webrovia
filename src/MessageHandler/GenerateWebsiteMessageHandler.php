@@ -13,7 +13,6 @@ use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
 #[AsMessageHandler]
 class GenerateWebsiteMessageHandler
 {
-    // Les extensions de fichiers ne sont plus à valider car nous utilisons un template existant
     private const MAX_RETRIES = 3;
 
     public function __construct(
@@ -25,9 +24,8 @@ class GenerateWebsiteMessageHandler
     public function __invoke(GenerateWebsiteMessage $message)
     {
         $prompt = $this->promptRepository->find($message->getPromptId());
-
         if (!$prompt) {
-            error_log(sprintf('Prompt non trouvé avec l\'ID: %d', $message->getPromptId()));
+            // error_log("Prompt non trouvé : ID " . $message->getPromptId());
             return;
         }
 
@@ -42,30 +40,26 @@ class GenerateWebsiteMessageHandler
 
     private function processPrompt(Prompt $prompt): void
     {
-        $existingFiles = $this->getExistingFiles($prompt);
-        $promptContent = $this->getPromptContent($prompt);
-
         $retryCount = 0;
         $lastError = null;
+        $promptContent = $prompt->getModificationRequest() ?? $prompt->getContent();
 
         do {
             try {
                 $files = $this->aiService->makeRequest($promptContent);
-                $this->validateGeneratedFiles($files, $existingFiles);
+
+                // if (empty($files)) {
+                //     throw new \RuntimeException("Aucun fichier généré.");
+                // }
 
                 $prompt->setGeneratedFiles($files);
                 $prompt->setStatus('completed');
                 return;
-            } catch (HttpExceptionInterface $e) {
+            } catch (HttpExceptionInterface|\Exception $e) {
                 $lastError = $e;
                 $retryCount++;
                 if ($retryCount < self::MAX_RETRIES) {
-                    error_log(sprintf('Tentative %d/%d échouée pour le prompt %d: %s',
-                        $retryCount,
-                        self::MAX_RETRIES,
-                        $prompt->getId(),
-                        $e->getMessage()
-                    ));
+                    // error_log("Tentative $retryCount/$this::MAX_RETRIES échouée : " . $e->getMessage());
                     sleep(pow(2, $retryCount));
                 }
             }
@@ -74,86 +68,20 @@ class GenerateWebsiteMessageHandler
         throw $lastError ?? new \RuntimeException('Échec de la génération après plusieurs tentatives');
     }
 
-    private function getExistingFiles(Prompt $prompt): ?array
-    {
-        if ($prompt->getModificationRequest() && $prompt->getOriginalPrompt()) {
-            return $prompt->getOriginalPrompt()->getGeneratedFiles();
-        }
-        return null;
-    }
-
-    private function getPromptContent(Prompt $prompt): string
-    {
-        return $prompt->getModificationRequest() ?? $prompt->getContent();
-    }
-
-    private function validateAndParseResponse($rawResponse): array
-    {
-        // Validation détaillée de la réponse vide
-        if ($rawResponse === null || $rawResponse === '') {
-            throw new \RuntimeException('La réponse de Gemini est vide.');
-        }
-
-        if (is_string($rawResponse) && trim($rawResponse) === '') {
-            throw new \RuntimeException('La réponse de Gemini ne contient que des espaces.');
-        }
-
-        // Accepter la réponse directement si c'est déjà un tableau
-        if (is_array($rawResponse)) {
-            if (empty($rawResponse)) {
-                throw new \RuntimeException('La réponse de Gemini est un tableau vide.');
-            }
-            return $rawResponse;
-        }
-
-        // Tenter de parser comme JSON
-        $files = json_decode($rawResponse, true);
-        if (json_last_error() === JSON_ERROR_NONE) {
-            if (!is_array($files)) {
-                throw new \RuntimeException('La réponse JSON de Gemini n\'est pas un tableau valide.');
-            }
-            if (empty($files)) {
-                throw new \RuntimeException('La réponse JSON de Gemini est un tableau vide.');
-            }
-            return $files;
-        }
-
-        // Si ce n'est pas du JSON valide, traiter comme une réponse texte simple
-        if (!is_string($rawResponse)) {
-            throw new \RuntimeException('Format de réponse Gemini non valide : ' . gettype($rawResponse));
-        }
-
-        return ['content' => $rawResponse];
-    }
-
-    private function validateGeneratedFiles(array $files, ?array $existingFiles): void
-    {
-        // if (empty($files)) {
-        //     throw new \RuntimeException('Aucun fichier généré par Gemini');
-        // }
-
-        if (!$existingFiles) {
-            $this->validateRequiredFiles($files);
-        }
-    }
-
-    private function validateRequiredFiles(array $files): void
-    {
-        // La validation n'est plus nécessaire car nous utilisons un template existant
-        return;
-    }
-
     private function handleError(Prompt $prompt, \Exception $e): void
     {
-        $errorMessage = sprintf(
-            'Erreur lors de la génération du site web (Prompt ID: %d): %s',
-            $prompt->getId(),
-            $e->getMessage()
-        );
-        error_log($errorMessage);
-
+        $errorMessage = $this->formatErrorMessage($e);
+        // error_log("Erreur lors de la génération : " . $errorMessage);
         $prompt->setStatus('error');
-        $prompt->setError($e->getMessage());
+        $prompt->setError($errorMessage);
     }
-    
+
+    private function formatErrorMessage(\Exception $e): string
+    {
+        if ($e instanceof HttpExceptionInterface) {
+            return sprintf('Erreur HTTP %d : %s', $e->getCode(), $e->getMessage());
+        }
+
+        return sprintf('Erreur : %s', $e->getMessage());
+    }
 }

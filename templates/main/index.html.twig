@@ -91,7 +91,6 @@
             const resultSection = document.getElementById('result-section');
             const submitText = document.getElementById('submit-text');
             const loadingSpinner = document.getElementById('loading-spinner');
-            let editor;
             let currentFiles = {};
 
             if (form) {
@@ -229,8 +228,6 @@
                     btn.addEventListener('click', () => showFile(btn.dataset.file));
                 });
 
-                document.getElementById('download-btn').addEventListener('click', downloadFiles);
-
                 // Gestion des modifications du site
                 const modifyBtn = document.getElementById('modify-btn');
                 const modificationPrompt = document.getElementById('modification-prompt');
@@ -311,112 +308,9 @@
                 }
             }
 
-            // Gestionnaires d'événements pour les boutons plein écran
-            // document.getElementById('editor-fullscreen-btn')?.addEventListener('click', () => {
-            //     toggleFullScreen(document.getElementById('editor-container'));
-            // });
-
             document.getElementById('preview-fullscreen-btn')?.addEventListener('click', () => {
                 toggleFullScreen(document.getElementById('preview-container'));
             });
-
-            function showFile(type) {
-                const fileMap = {
-                    'html': 'index.html',
-                    'css': 'styles.css',
-                    'js': 'script.js'
-                };
-
-                const fileName = fileMap[type];
-                const content = currentFiles[fileName] || '';
-
-                // Nettoyer le conteneur de l'éditeur
-                // const container = document.getElementById('editor-container');
-                // container.innerHTML = '';
-
-                // Supprimer l'ancien éditeur
-                if (editor) {
-                    editor.off('change');
-                    editor = null;
-                }
-
-                // Créer un nouvel éditeur
-                // editor = CodeMirror(container, {
-                //     mode: type === 'html' ? 'xml' : type,
-                //     theme: 'monokai',
-                //     lineNumbers: true,
-                //     readOnly: false,
-                //     value: content
-                // });
-
-                // Ajouter le nouvel écouteur d'événements
-                editor.on('change', () => {
-                    currentFiles[fileName] = editor.getValue();
-                    updatePreview(); // Mettre à jour l'aperçu en direct lors des modifications
-                });
-
-
-                document.querySelectorAll('.tab-btn').forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.file === type);
-                });
-            }
-
-            function updatePreview() {
-                const preview = document.getElementById('preview-frame');
-                if (!preview) return;
-
-                try {
-                    const doc = preview.contentDocument || preview.contentWindow.document;
-                    doc.open();
-                    doc.write(currentFiles['index.html'] || '');
-                    doc.close();
-
-                    // Attendre que le document soit chargé avant d'injecter les styles et scripts
-                    const injectContent = () => {
-                        try {
-                            if (currentFiles['styles.css']) {
-                                const style = doc.createElement('style');
-                                style.textContent = currentFiles['styles.css'];
-                                doc.head?.appendChild(style);
-                            }
-
-                            if (currentFiles['script.js']) {
-                                const script = doc.createElement('script');
-                                script.textContent = currentFiles['script.js'];
-                                doc.body?.appendChild(script);
-                            }
-                        } catch (error) {
-                            console.error('Erreur lors de l\'injection du contenu:', error);
-                        }
-                    };
-
-                    // S'assurer que le document est complètement chargé
-                    if (doc.readyState === 'complete') {
-                        injectContent();
-                    } else {
-                        doc.addEventListener('DOMContentLoaded', injectContent);
-                    }
-                } catch (error) {
-                    console.error('Erreur lors de la mise à jour de l\'aperçu:', error);
-                }
-            }
-
-            async function downloadFiles() {
-                const zip = new JSZip();
-                Object.entries(currentFiles).forEach(([filename, content]) => {
-                    zip.file(filename, content);
-                });
-
-                const blob = await zip.generateAsync({type: 'blob'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'site-web.zip';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }
         });
     </script>
 
