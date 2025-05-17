@@ -25,36 +25,36 @@ class AIService
             $structure = <<<TEXT
 Structure des fichiers à respecter :
 
-config/packages/cache.yaml  
-config/packages/doctrine.yaml  
-config/packages/doctrine_migrations.yaml  
-config/packages/framework.yaml  
-config/packages/mailer.yaml  
-config/packages/messenger.yaml  
-config/packages/monolog.yaml  
-config/packages/notifier.yaml  
-config/packages/routing.yaml  
-config/packages/security.yaml  
-config/packages/translation.yaml  
-config/packages/twig.yaml  
-config/packages/validator.yaml  
-config/routes/framework.yaml  
-config/routes/security.yaml  
-config/bundles.php  
-config/preload.php  
-config/routes.yaml  
-config/services.yaml  
-public/index.php  
-templates/base.html.twig  
-src/Kernel.php  
-src/Controller  
-src/Entity  
-src/Form  
-src/Repository  
-.env  
-composer.json  
-composer.lock  
-symfony.lock  
+config/packages/cache.yaml
+config/packages/doctrine.yaml
+config/packages/doctrine_migrations.yaml
+config/packages/framework.yaml
+config/packages/mailer.yaml
+config/packages/messenger.yaml
+config/packages/monolog.yaml
+config/packages/notifier.yaml
+config/packages/routing.yaml
+config/packages/security.yaml
+config/packages/translation.yaml
+config/packages/twig.yaml
+config/packages/validator.yaml
+config/routes/framework.yaml
+config/routes/security.yaml
+config/bundles.php
+config/preload.php
+config/routes.yaml
+config/services.yaml
+public/index.php
+templates/base.html.twig
+src/Kernel.php
+src/Controller (dossiers contrôleurs avec les contrôleurs à l'intérieur)
+src/Entity (dossiers entités avec les entités à l'intérieur)
+src/Form (dossiers formulaires avec les formulaires à l'intérieur)
+src/Repository (dossiers repositories avec les repositories à l'intérieur)
+.env
+composer.json
+composer.lock
+symfony.lock
 TEXT;
 
 $promptContent = <<<PROMPT
@@ -62,12 +62,19 @@ Tu es un expert Symfony. Génère un projet Symfony complet et fonctionnel sous 
 
 Règles à suivre STRICTEMENT :
 
-1. Chaque **clé** = chemin absolu d’un fichier ou dossier dans un projet Symfony
-2. Chaque **valeur** = 
-   - vide `""` si c’est un dossier
-   - contenu exact du fichier si c’est un fichier (PHP, YAML, Twig, JSON, etc.)
-3. ⚠️ Tu ne dois jamais écrire `"null"` (ni en texte, ni en valeur JSON), jamais ! Si tu ne sais pas quoi mettre, mets `""` (une chaîne vide) pour un fichier vide, ou alors du vrai code par défaut
-4. Aucune explication, aucun commentaire, juste un JSON valide
+1. Chaque clé = chemin absolu d'un fichier ou dossier dans un projet Symfony
+2. Chaque valeur =
+   - contenu exact du fichier si c'est un fichier (PHP, YAML, Twig, JSON, etc.)
+3. Tu ne dois jamais écrire `"null"` (ni en texte, ni en valeur JSON), jamais ! Si tu ne sais pas quoi mettre, mets `""` (une chaîne vide) pour un fichier vide, ou alors du vrai code par défaut
+4. Aucune explication, aucun commentaire, juste un JSON
+5. Le APP_SECRET doit être généré automatiquement et le APP_ENV doit être "prod"
+6. Le projet doit être fonctionnel, il ne doit pas y avoir d'erreurs PHP
+7. Le "base.html.twig" doit être complet.
+8. Le style du site doit être minimaliste, moderne et fonctionnel.
+9. Le site doit être responsive et entièrement fonctionnel.
+10. Les fichiers doivent être valide avec tout ce qui est nécéssaire pour un projet Symfony fonctionnel: des contrôleurs, des formulaires, des entités, des repositories,des templates, etc.
+11. Il faut penser à mettre un "<?php" en début de chaque fichier PHP
+12. Il faut penser à mettre un "{% extends 'base.html.twig' %}" en début de chaque fichier Twig.
 
 Demande utilisateur : "$prompt"
 

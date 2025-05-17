@@ -51,15 +51,11 @@ class MainController extends AbstractController
     public function modify(Request $request, EntityManagerInterface $em, MessageBusInterface $messageBus, int $id): Response
     {
         try {
-            if (!$request->headers->has('X-Requested-With') || $request->headers->get('X-Requested-With') !== 'XMLHttpRequest') {
-                return new Response(
-                    json_encode([
-                        'success' => false,
-                        'error' => 'Cette action nécessite une requête AJAX'
-                    ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
-                    Response::HTTP_BAD_REQUEST,
-                    ['Content-Type' => 'application/json']
-                );
+            if ($request->headers->get('X-Requested-With') !== 'XMLHttpRequest') {
+                return $this->json([
+                    'success' => false,
+                    'error' => 'Cette action nécessite une requête AJAX'
+                ], Response::HTTP_BAD_REQUEST);
             }
 
             $content = $request->request->get('content');
@@ -67,14 +63,12 @@ class MainController extends AbstractController
                 throw new Exception('Le contenu de la modification est requis');
             }
 
-            // Récupérer le prompt spécifique à modifier
             $prompt = $em->getRepository(Prompt::class)->find($id);
-
             if (!$prompt || $prompt->getUser() !== $this->getUser()) {
                 throw new Exception('Accès non autorisé');
             }
 
-            // Créer un nouveau prompt avec les fichiers générés initialement
+            // Nouvelle version du prompt
             $newPrompt = new Prompt();
             $newPrompt->setUser($this->getUser());
             $newPrompt->setContent($prompt->getContent());
@@ -83,8 +77,8 @@ class MainController extends AbstractController
             $newPrompt->setGeneratedFiles($prompt->getGeneratedFiles());
             $newPrompt->setOriginalPrompt($prompt);
             $newPrompt->setWebsiteIdentification($prompt->getWebsiteIdentification() ?: Uuid::uuid4()->toString());
-            
-            // Calculer la nouvelle version en fonction de la version la plus élevée
+
+            // Calcul version
             $highestVersion = $em->getRepository(Prompt::class)
                 ->createQueryBuilder('p')
                 ->select('MAX(p.version)')
@@ -93,72 +87,37 @@ class MainController extends AbstractController
                 ->setParameter('promptId', $prompt->getId())
                 ->getQuery()
                 ->getSingleScalarResult() ?: 0;
-            
+
             $newPrompt->setVersion($highestVersion + 1);
 
-            // Désactiver l'ancien prompt
-            $prompt->setStatus('archived');
-            $em->flush();
-
-            $content = $request->request->get('content');
-            if (!$content) {
-                throw new Exception('Le contenu de la modification est requis');
-            }
-
-            // Récupérer le prompt spécifique à modifier
-            $prompt = $em->getRepository(Prompt::class)->find($id);
-
-            if (!$prompt || $prompt->getUser() !== $this->getUser()) {
-                throw new Exception('Accès non autorisé');
-            }
-
-            // Créer un nouveau prompt avec les fichiers générés initialement
-            $newPrompt = new Prompt();
-            $newPrompt->setUser($this->getUser());
-            $newPrompt->setContent($prompt->getContent());
-            $newPrompt->setModificationRequest($content);
-            $newPrompt->setStatus('pending');
-            $newPrompt->setGeneratedFiles($prompt->getGeneratedFiles());
-            $newPrompt->setOriginalPrompt($prompt);
-            
-            // Mettre à jour les références des prompts existants
+            // Mettre à jour les anciens prompts si nécessaire
             $existingPrompts = $em->getRepository(Prompt::class)->findBy(['originalPrompt' => $prompt]);
             foreach ($existingPrompts as $existingPrompt) {
                 $existingPrompt->setOriginalPrompt($newPrompt);
             }
-            
+
+            // Archive l'ancien
+            $prompt->setStatus('archived');
+
             $em->persist($newPrompt);
             $em->flush();
-            
-            // Désactiver l'ancien prompt au lieu de le supprimer
-            $prompt->setStatus('archived');
-            $em->flush();
 
-            // Dispatcher le message pour la génération
             $messageBus->dispatch(new GenerateWebsiteMessage($newPrompt->getId()));
 
-            return new Response(
-                json_encode([
-                    'success' => true,
-                    'data' => [
-                        'id' => $newPrompt->getId(),
-                        'status' => $newPrompt->getStatus(),
-                        'message' => 'Modification du site web en cours...'
-                    ]
-                ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
-                Response::HTTP_OK,
-                ['Content-Type' => 'application/json']
-            );
+            return $this->json([
+                'success' => true,
+                'data' => [
+                    'id' => $newPrompt->getId(),
+                    'status' => $newPrompt->getStatus(),
+                    'message' => 'Modification du site web en cours...'
+                ]
+            ], Response::HTTP_OK);
 
         } catch (Exception $e) {
-            return new Response(
-                json_encode([
-                    'success' => false,
-                    'error' => $e->getMessage()
-                ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
-                Response::HTTP_BAD_REQUEST,
-                ['Content-Type' => 'application/json']
-            );
+            return $this->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], Response::HTTP_BAD_REQUEST);
         }
     }
 
@@ -267,9 +226,10 @@ class MainController extends AbstractController
             $generatedFiles = $prompt->getGeneratedFiles();
             if ($generatedFiles) {
                 foreach ($generatedFiles as $filename => $content) {
-                    // Nettoyer et encoder correctement le contenu JSON
+                    // Nettoyer et décoder correctement le contenu JSON
                     $cleanContent = html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                    $response['files'][$filename] = json_encode(json_decode($cleanContent)) ?: $cleanContent;
+                    $decodedContent = json_decode($cleanContent, true);
+                    $response['files'][$filename] = $decodedContent !== null ? $decodedContent : $cleanContent;
                 }
             }
 

@@ -42,27 +42,15 @@
                 <span id="error-message" class="block sm:inline"></span>
             </div>
 
-            <div id="result-section" class="hidden max-w-5xl mx-auto">
-                <div class="gap-6">
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Aperçu en direct</h3>
-                            <button id="preview-fullscreen-btn" class="text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5m-7 11h4m-4 0v4m0-4l5 5m5-9v4m0-4h4m-4 0l5 5-5-5z" />
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="preview-container" class="h-96 w-full bg-white border rounded-lg overflow-hidden relative">
-                            <iframe id="preview-frame" class="w-full h-full"></iframe>
-                        </div>
-                        <div class="mt-4">
-                            <a href="{{ path('app_my_sites') }}" id="modify-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200">
-                                Modifier avec IA
-                            </a>
-                        </div>
-                    </div>
+            <div id="success-section" class="hidden max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 text-center">
+                <div class="mb-8">
+                    <svg class="mx-auto h-16 w-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
                 </div>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Site Généré avec Succès !</h2>
+                <p class="text-lg text-gray-600 dark:text-gray-300 mb-8">Votre site a été généré avec succès. Vous pouvez maintenant le consulter dans votre espace personnel.</p>
+                <a href="{{ path('app_my_sites') }}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200">Voir mes sites générés</a>
             </div>
         {% else %}
             <div class="text-center">
@@ -79,12 +67,7 @@
 
 {% block javascripts %}
     {{ parent() }}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/twig/twig.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('prompt-form');
@@ -209,154 +192,19 @@
                     }
                 }
 
-                currentFiles = files;
-                resultSection.classList.remove('hidden');
+                // Afficher le message de succès
+                const successSection = document.getElementById('success-section');
+                successSection.classList.remove('hidden');
 
-                // Créer un blob URL pour le fichier HTML généré
-                const htmlContent = files['index.html'] || '';
-                const blob = new Blob([htmlContent], { type: 'text/html' });
-                const blobUrl = URL.createObjectURL(blob);
-
-                // Mettre à jour l'iframe avec le contenu généré
-                const previewFrame = document.getElementById('preview-frame');
-                previewFrame.src = blobUrl;
-
-                // Nettoyer l'URL du blob lorsque l'iframe est chargé
-                previewFrame.onload = () => URL.revokeObjectURL(blobUrl);
-
-                document.querySelectorAll('.tab-btn').forEach(btn => {
-                    btn.addEventListener('click', () => showFile(btn.dataset.file));
-                });
-
-                // Gestion des modifications du site
-                const modifyBtn = document.getElementById('modify-btn');
-                const modificationPrompt = document.getElementById('modification-prompt');
-
-                modifyBtn.addEventListener('click', async function() {
-                    const modificationText = modificationPrompt.value.trim();
-                    if (!modificationText) {
-                        alert('Veuillez décrire les modifications souhaitées.');
-                        return;
-                    }
-
-                    modifyBtn.disabled = true;
-                    modifyBtn.innerHTML = `
-                        <span class="inline-flex items-center">
-                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Modification en cours...
-                        </span>
-                    `;
-
-                    try {
-                        const formData = new FormData();
-                        formData.append('content', modificationText);
-
-                        const promptId = modifyBtn.dataset.id;
-                        const response = await fetch(`/modify/${promptId}`, {
-                            method: 'POST',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: formData
-                        });
-
-                        const data = await response.json();
-                        if (response.ok && data.success && data.files) {
-                            // Mettre à jour uniquement les fichiers modifiés avec ceux de la base de données
-                            currentFiles = data.files;
-                            displayResults(currentFiles);
-                        } else if (data.data && data.data.id) {
-                            await checkStatus(data.data.id);
-                        } else {
-                            throw new Error(data.error || 'Une erreur est survenue lors de la modification');
-                        }
-                    } catch (error) {
-                        alert('Erreur: ' + error.message);
-                    } finally {
-                        modifyBtn.disabled = false;
-                        modifyBtn.innerHTML = 'Appliquer les modifications';
-                    }
-                });
-            }
-
-            // Fonction pour basculer en mode plein écran
-            function toggleFullScreen(element) {
-                if (!document.fullscreenElement && !document.mozFullScreenElement &&
-                    !document.webkitFullscreenElement && !document.msFullscreenElement) {
-                    if (element.requestFullscreen) {
-                        element.requestFullscreen();
-                    } else if (element.msRequestFullscreen) {
-                        element.msRequestFullscreen();
-                    } else if (element.mozRequestFullScreen) {
-                        element.mozRequestFullScreen();
-                    } else if (element.webkitRequestFullscreen) {
-                        element.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-                    }
-                } else {
-                    if (document.exitFullscreen) {
-                        document.exitFullscreen();
-                    } else if (document.msExitFullscreen) {
-                        document.msExitFullscreen();
-                    } else if (document.mozCancelFullScreen) {
-                        document.mozCancelFullScreen();
-                    } else if (document.webkitExitFullscreen) {
-                        document.webkitExitFullscreen();
-                    }
+                // Masquer le formulaire
+                const promptForm = document.getElementById('prompt-form');
+                if (promptForm) {
+                    promptForm.closest('.bg-white').classList.add('hidden');
                 }
+
+                // Fin de la fonction displayResults
             }
 
-            document.getElementById('preview-fullscreen-btn')?.addEventListener('click', () => {
-                toggleFullScreen(document.getElementById('preview-container'));
-            });
         });
     </script>
-
-    <style>
-        .tab-btn {
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            font-weight: 500;
-            color: #6b7280;
-            background-color: transparent;
-            transition: all 0.2s;
-        }
-
-        #editor-container:fullscreen,
-        #editor-container:-webkit-full-screen,
-        #editor-container:-moz-full-screen,
-        #editor-container:-ms-fullscreen {
-            padding: 1rem;
-            background-color: #1e1e1e;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        #preview-container:fullscreen,
-        #preview-container:-webkit-full-screen,
-        #preview-container:-moz-full-screen,
-        #preview-container:-ms-fullscreen {
-            padding: 0;
-            background-color: white;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        .tab-btn:hover {
-            color: #3b82f6;
-        }
-
-        .tab-btn.active {
-            color: white;
-            background-color: #3b82f6;
-        }
-
-        .CodeMirror {
-            height: 100%;
-            font-family: 'Fira Code', monospace;
-            border-radius: 0.375rem;
-        }
-    </style>
 {% endblock %}

@@ -38,7 +38,7 @@
         <div class="text-center mb-12">
             <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">Mes Sites Web</h1>
             <p class="text-lg text-gray-600 dark:text-gray-300">Gérez vos sites web générés par Web Forge AI</p>
-            {# <a href="{{ path('app_home') }}" class="inline-block mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Générer un nouveau site</a> #}
+            <a href="{{ path('app_home') }}" class="inline-block mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Générer un nouveau site</a>
         </div>
 
         {% if prompts is empty %}
@@ -530,6 +530,7 @@
 
                         if (filePath.endsWith('.twig')) {
                             mode = 'twig';
+                            updatePreview(promptId, content);
                         } else if (filePath.endsWith('.css')) {
                             mode = 'css';
                         } else if (filePath.endsWith('.js')) {
@@ -810,46 +811,36 @@
 
                 setEditorContent(promptId, currentFiles[promptId][fileName] || '', mode);
 
-                if (fileType === 'html') {
-                    updatePreview(promptId, currentFiles[promptId][fileName] || '');
-                } else {
-                    updatePreview(promptId, currentFiles[promptId]['index.html'] || '');
+                // Mettre à jour l'aperçu uniquement si c'est un fichier .html.twig
+                if (fileName.endsWith('.html.twig')) {
+                    updatePreview(promptId, fileName);
+                } else if (currentFiles[promptId]['index.html.twig']) {
+                    // Sinon, garder l'aperçu du fichier index.html.twig
+                    updatePreview(promptId, 'index.html.twig');
                 }
             });
         });
 
-        // --- Mise à jour de l'aperçu ---
-        function updatePreview(promptId, htmlContent) {
+        // --- Mise à jour de l'aperçu uniquement pour les fichiers .html.twig ---
+        function updatePreview(promptId, filePath) {
+            // Vérifier si le fichier est un template Twig
+            if (!filePath.endsWith('.html.twig')) {
+                return; // Ne pas mettre à jour l'aperçu pour les fichiers non-Twig
+            }
+
             const iframe = document.querySelector(`.preview-frame[data-prompt-id="${promptId}"]`);
             if (!iframe) {
                 console.warn(`Iframe de prévisualisation non trouvé pour le promptId: ${promptId}`);
                 return;
             }
 
-            const cssContent = currentFiles[promptId]['styles.css'] || '';
-            const jsContent = currentFiles[promptId]['script.js'] || '';
+            // Récupérer le contenu HTML du fichier Twig sélectionné
+            const htmlContent = currentFiles[promptId][filePath] || '';
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
 
-            const fullContent = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>${cssContent}</style>
-                </head>
-                <body>
-                    ${htmlContent}
-                </body>
-                </html>
-            `;
-
-            try {
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                iframeDoc.open();
-                iframeDoc.write(fullContent);
-                iframeDoc.close();
-            } catch (error) {
-                console.error("Erreur lors de la mise à jour de l'iframe:", error);
-                showError("Erreur lors de la mise à jour de l'aperçu.");
-            }
+            iframe.src = blobUrl;
+            iframe.onload = () => URL.revokeObjectURL(blobUrl);
         }
 
         // --- Téléchargement ---

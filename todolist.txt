@@ -1,0 +1,7 @@
+TODO :
+
+1. Création automatique Vendor
+2. Clonage de site par URL
+3. Restauration des versions (et automatique quand erreur)
+4. Stripe
+5. FTP avec Domaine
