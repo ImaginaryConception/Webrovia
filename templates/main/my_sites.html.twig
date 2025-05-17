@@ -67,8 +67,12 @@
                                             'html.twig': 'Template',
                                             'css': 'Style',
                                             'js': 'Script',
-                                            'json': 'Configuration',
-                                            'md': 'Documentation'
+                                            'json': 'JSON',
+                                            'lock': 'LOCK',
+                                            'env': 'Environnement',
+                                            'md': 'Documentation',
+                                            'yaml': 'YAML',
+                                            'php': 'PHP'
                                         } %}
 
                                         {% for type, label in fileTypes %}
@@ -253,8 +257,12 @@
                                             'html.twig': 'Template',
                                             'css': 'Style',
                                             'js': 'Script',
-                                            'json': 'Configuration',
-                                            'md': 'Documentation'
+                                            'json': 'JSON',
+                                            'lock': 'LOCK',
+                                            'env': 'Environnement',
+                                            'md': 'Documentation',
+                                            'yaml': 'YAML',
+                                            'php': 'PHP'
                                         } %}
                                         
                                         {% for type, label in fileTypes %}
@@ -504,7 +512,11 @@
                 const filePath = this.dataset.filePath;
 
                 try {
-                    const response = await fetch(`/api/file-content/${promptId}?path=${encodeURIComponent(filePath)}`);
+                    const response = await fetch(`/api/file-content/${promptId}?path=${encodeURIComponent(filePath)}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
 
                     if (!response.ok) {
                         throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`); // Amélioration du message d'erreur

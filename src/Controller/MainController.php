@@ -396,26 +396,66 @@ class MainController extends AbstractController
             ['createdAt' => 'DESC']
         );
 
-        // Récupérer le dernier prompt pour le passer au template
-        $prompt = $prompts[0] ?? null;
-
-        // Récupérer la liste des templates disponibles
         $templates = [];
-        if ($prompt && $prompt->getGeneratedFiles()) {
-            foreach ($prompt->getGeneratedFiles() as $path => $content) {
-                $templates[] = [
-                    'name' => basename($path),
-                    'path' => $path
-                ];
+        foreach ($prompts as $prompt) {
+            if ($prompt->getGeneratedFiles()) {
+                foreach ($prompt->getGeneratedFiles() as $path => $content) {
+                    $templates[] = [
+                        'name' => basename($path),
+                        'path' => $path
+                    ];
+                }
             }
         }
 
         return $this->render('main/my_sites.html.twig', [
             'prompts' => $prompts,
-            'prompt' => $prompt,
-            'templates' => $templates,
-            'em' => $em
+            'templates' => $templates
         ]);
+    }
+
+    #[Route('/api/file-content/{id}', name: 'app_get_file_content', methods: ['GET'])]
+    public function getFileContent(Request $request, EntityManagerInterface $em, int $id): Response
+    {
+        try {
+            if (!$request->headers->has('X-Requested-With') || $request->headers->get('X-Requested-With') !== 'XMLHttpRequest') {
+                throw new Exception('Cette action nécessite une requête AJAX');
+            }
+
+            $path = $request->query->get('path');
+            if (!$path) {
+                throw new Exception('Le chemin du fichier est requis');
+            }
+
+            $prompt = $em->getRepository(Prompt::class)->find($id);
+            if (!$prompt || $prompt->getUser() !== $this->getUser()) {
+                throw new Exception('Accès non autorisé');
+            }
+
+            $files = $prompt->getGeneratedFiles();
+            if (!isset($files[$path])) {
+                throw new Exception('Fichier non trouvé');
+            }
+
+            return new Response(
+                json_encode([
+                    'success' => true,
+                    'content' => $files[$path]
+                ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+                Response::HTTP_OK,
+                ['Content-Type' => 'application/json']
+            );
+
+        } catch (Exception $e) {
+            return new Response(
+                json_encode([
+                    'success' => false,
+                    'message' => $e->getMessage()
+                ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+                Response::HTTP_BAD_REQUEST,
+                ['Content-Type' => 'application/json']
+            );
+        }
     }
 
     #[Route('/restore-version/{id}', name: 'app_restore_version', methods: ['POST'])]
