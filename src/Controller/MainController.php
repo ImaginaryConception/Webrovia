@@ -6,6 +6,7 @@ use Exception;
 use Stripe\Stripe;
 use App\Entity\Prompt;
 use App\Form\PromptType;
+use App\Form\DomainType;
 use Stripe\StripeClient;
 use Stripe\Checkout\Session;
 use App\Message\GenerateWebsiteMessage;
@@ -349,7 +350,7 @@ class MainController extends AbstractController
 
     #[Route('/my-sites', name: 'app_my_sites')]
     #[IsGranted('ROLE_USER')]
-    public function mySites(EntityManagerInterface $em): Response
+    public function mySites(Request $request, EntityManagerInterface $em): Response
     {
         $prompts = $em->getRepository(Prompt::class)->findBy(
             ['user' => $this->getUser()],
@@ -368,10 +369,85 @@ class MainController extends AbstractController
             }
         }
 
+        $domainForm = $this->createForm(DomainType::class);
+        $domainForm->handleRequest($request);
+
+        if ($domainForm->isSubmitted() && $domainForm->isValid()) {
+            $data = $domainForm->getData();
+            $domainName = $data['domainName'] . $data['extension'];
+            
+            $this->addFlash('success', 'Le nom de domaine ' . $domainName . ' a été enregistré avec succès.');
+            return $this->redirectToRoute('app_my_sites');
+        }
+
         return $this->render('main/my_sites.html.twig', [
             'prompts' => $prompts,
-            'templates' => $templates
+            'templates' => $templates,
+            'domain_form' => $domainForm->createView()
         ]);
+    }
+
+    #[Route('/preview/{id}', name: 'app_preview_template', methods: ['GET'])]
+    #[IsGranted('ROLE_USER')]
+    public function previewTemplate(Request $request, EntityManagerInterface $em, int $id): Response
+    {
+        try {
+            $path = $request->query->get('path');
+            if (!$path) {
+                $errorMessage = new Response(
+                    '<div style="display: flex; align-items: center; justify-content: center; min-height: 100%; width: 100%; margin: 0; padding: 20px; background-color: #fff3cd; color: #856404; font-family: Arial, sans-serif; text-align: center;">
+                        <div>
+                            <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 15px; display: block;"></i>
+                            <p style="margin: 0; font-size: 16px;">Veuillez sélectionner un fichier template dans l\'explorateur de fichiers pour continuer.</p>
+                        </div>
+                    </div>',
+                    Response::HTTP_BAD_REQUEST,
+                    ['Content-Type' => 'text/html']
+                );
+                return $errorMessage;
+            }
+
+            $prompt = $em->getRepository(Prompt::class)->find($id);
+            if (!$prompt || $prompt->getUser() !== $this->getUser()) {
+                throw new Exception('Accès non autorisé');
+            }
+
+            $files = $prompt->getGeneratedFiles();
+            if (!isset($files[$path])) {
+                throw new Exception('Fichier non trouvé');
+            }
+
+            // Déterminer le type de contenu en fonction de l'extension du fichier
+            $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $contentType = match($extension) {
+                'css' => 'text/css',
+                'js' => 'application/javascript',
+                'json' => 'application/json',
+                'svg' => 'image/svg+xml',
+                default => 'text/html',
+            };
+
+            // Traiter le contenu Twig pour n'afficher que le HTML/CSS rendu
+                $content = $files[$path];
+                if ($extension === 'twig' || $extension === 'html') {
+                    // Supprimer les balises Twig
+                    $content = preg_replace('/\{%.*?%\}/s', '', $content);
+                    $content = preg_replace('/\{\{.*?\}\}/s', '', $content);
+            }
+
+            return new Response(
+                $content,
+                Response::HTTP_OK,
+                ['Content-Type' => $contentType]
+            );
+        } catch (Exception $e) {
+            // En cas d'erreur, toujours renvoyer une réponse HTML pour l'affichage dans l'iframe
+            return new Response(
+                sprintf('<div class="error">%s</div>', htmlspecialchars($e->getMessage())),
+                Response::HTTP_BAD_REQUEST,
+                ['Content-Type' => 'text/html']
+            );
+        }
     }
 
     #[Route('/api/file-content/{id}', name: 'app_get_file_content', methods: ['GET'])]

@@ -143,26 +143,46 @@
                                         {% if prompt.deployed %}
                                             <div class="flex space-x-4">
                                                 <div class="text-green-600 dark:text-green-400 font-semibold py-2 px-4">
-                                                    Site publié.
+                                                    Site publié sur {{ prompt.domainName }}
                                                 </div>
-                                                <button class="redeploy-btn bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}" data-deploy-url="{{ path('app_deploy_site', {'promptId': prompt.id, 'domain': prompt.domainName}) }}">
-                                                    Redéployer le site
-                                                </button>
+                                                <form action="{{ path('app_deploy_site', {'promptId': prompt.id}) }}" method="post" class="inline">
+                                                    <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                                                        Redéployer le site
+                                                    </button>
+                                                </form>
                                             </div>
                                         {% else %}
-                                            <div class="flex space-x-2">
-                                                <input type="text" class="custom-domain-input flex-grow px-4 py-2 border rounded-l-lg dark:bg-gray-700 dark:text-white dark:border-gray-600" data-prompt-id="{{ prompt.id }}" placeholder="Votre nom de domaine">
-                                                <select class="domain-extension px-4 py-2 border rounded-r-lg bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600">
-                                                    <option value=".com">.com</option>
-                                                    <option value=".fr">.fr</option>
-                                                    <option value=".org">.org</option>
-                                                    <option value=".net">.net</option>
-                                                    <option value=".eu">.eu</option>
-                                                </select>
-                                            </div>
-                                            <button class="deploy-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}" data-deploy-url="{{ path('app_deploy_site', {'promptId': prompt.id, 'domain': 'temp'}) }}" disabled>
-                                                Publier le site sur <span class="domain-preview"></span>
-                                            </button>
+                                            {{ form_start(domain_form, {'action': path('app_deploy_site', {'promptId': prompt.id}), 'attr': {'class': 'space-y-2'}}) }}
+                                                <div class="flex space-x-2">
+                                                    {{ form_widget(domain_form.domainName) }}
+                                                    {{ form_widget(domain_form.extension) }}
+                                                </div>
+                                                <div>
+                                                    <button type="submit" id="publish-button-{{ prompt.id }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                                                    Publier le site
+                                                    </button>
+                                                    <script>
+                                                        document.addEventListener('DOMContentLoaded', function() {
+                                                            const domainInput = document.querySelector('#{{ domain_form.domainName.vars.id }}');
+                                                            const extensionSelect = document.querySelector('#{{ domain_form.extension.vars.id }}');
+                                                            const publishButton = document.querySelector('#publish-button-{{ prompt.id }}');
+                                                            
+                                                            function updateButtonText() {
+                                                                const domain = domainInput.value;
+                                                                const extension = extensionSelect.value;
+                                                                if (domain) {
+                                                                    publishButton.textContent = `Publier sur ${domain}${extension}`;
+                                                                } else {
+                                                                    publishButton.textContent = 'Publier le site';
+                                                                }
+                                                            }
+                                                            
+                                                            domainInput.addEventListener('input', updateButtonText);
+                                                            extensionSelect.addEventListener('change', updateButtonText);
+                                                        });
+                                                    </script>
+                                                </div>
+                                            {{ form_end(domain_form) }}
                                         {% endif %}
                                     </div>
                                 </div>
@@ -178,7 +198,7 @@
                                     </button>
                                 </div>
                                 <div class="preview-container h-[500px] w-full bg-white border rounded-lg overflow-hidden relative" data-prompt-id="{{ prompt.id }}">
-                                    <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}"></iframe>
+                                    <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}" src="{{ path('app_preview_template', {'id': prompt.id}) }}"></iframe>
                                 </div>
                                 <div class="mt-4">
                                     <div class="modification-section mb-6">
@@ -264,7 +284,7 @@
                                             'yaml': 'YAML',
                                             'php': 'PHP'
                                         } %}
-                                        
+
                                         {% for type, label in fileTypes %}
                                             {% set typeFiles = [] %}
                                             {% for template in templates %}
@@ -272,7 +292,7 @@
                                                     {% set typeFiles = typeFiles|merge([template]) %}
                                                 {% endif %}
                                             {% endfor %}
-                                            
+
                                             {% if typeFiles is not empty %}
                                                 <div class="file-category mb-4">
                                                     <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
@@ -359,7 +379,7 @@
                                     </button>
                                 </div>
                                 <div class="preview-container h-[500px] w-full bg-white border rounded-lg overflow-hidden relative" data-prompt-id="{{ prompt.id }}">
-                                    <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}"></iframe>
+                                    <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}" src="{{ path('app_preview_template', {'id': prompt.id}) }}"></iframe>
                                 </div>
                                 <div class="mt-4">
                                     <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Historique des versions</h4>
@@ -466,6 +486,58 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/markdown/markdown.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldcode.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Gestionnaire pour les boutons de fichiers
+            document.querySelectorAll('.file-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const promptId = this.dataset.promptId;
+                    const filePath = this.dataset.filePath;
+                    const previewFrame = document.querySelector(`.preview-frame[data-prompt-id="${promptId}"]`);
+
+                    // Retirer la classe active de tous les boutons
+                    document.querySelectorAll('.file-btn').forEach(btn => btn.classList.remove('active'));
+                    // Ajouter la classe active au bouton cliqué
+                    this.classList.add('active');
+
+                    // Faire la requête AJAX pour obtenir le contenu du template
+                    fetch(`/preview-template/${promptId}?file=${encodeURIComponent(filePath)}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.success) {
+                            throw new Error(data.error || 'Erreur lors du chargement du template');
+                        }
+                        // Mettre à jour l'iframe avec le nouveau contenu
+                        const iframe = previewFrame;
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        iframeDoc.open();
+                        iframeDoc.write(data.content);
+                        iframeDoc.close();
+                    })
+                    .catch(error => {
+                        const errorAlert = document.getElementById('error-alert');
+                        const errorMessage = document.getElementById('error-message');
+                        errorMessage.textContent = error.message;
+                        errorAlert.classList.remove('hidden');
+                        setTimeout(() => {
+                            errorAlert.classList.add('hidden');
+                        }, 5000); // Cache l'erreur après 5 secondes
+                    });
+                });
+            });
+
+            // Gestionnaire pour fermer l'alerte d'erreur
+            document.getElementById('close-error')?.addEventListener('click', function() {
+                document.getElementById('error-alert').classList.add('hidden');
+            });
+        });
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/brace-fold.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/xml-fold.min.js"></script>
@@ -755,8 +827,8 @@
             }
         }
 
-        // --- Chargement initial du contenu des fichiers ---
-        Object.keys(editors).forEach(promptId => { // Utilisation des clés de l'objet editors pour itérer
+        // --- Chargement initial du contenu des fichiers et de l'aperçu ---
+        Object.keys(editors).forEach(promptId => {
             fetch(`/prompt/${promptId}`)
                 .then(response => {
                     if (!response.ok) {
@@ -765,12 +837,17 @@
                     return response.json();
                 })
                 .then(data => {
-                    if (data.files) {
-                        currentFiles[promptId] = data.files;
-                        const htmlContent = data.files['index.html'] || '';
-                        setEditorContent(promptId, htmlContent, 'xml'); // Assure que l'éditeur est initialisé avec le HTML
-                        updatePreview(promptId, htmlContent);
+                    if (!data.files) {
+                        throw new Error('Aucun fichier disponible');
                     }
+                    currentFiles[promptId] = data.files;
+                    
+                    // Vérifier si index.html.twig existe, sinon utiliser index.html
+                    const defaultFile = data.files['index.html.twig'] ? 'index.html.twig' : 'index.html';
+                    const htmlContent = data.files[defaultFile] || '';
+                    
+                    setEditorContent(promptId, htmlContent, 'xml');
+                    updatePreview(promptId, defaultFile);
                 })
                 .catch(error => {
                     console.error(`Erreur lors du chargement initial du prompt ${promptId}:`, error);
@@ -821,26 +898,29 @@
             });
         });
 
-        // --- Mise à jour de l'aperçu uniquement pour les fichiers .html.twig ---
+        // --- Mise à jour de l'aperçu avec gestion du fichier par défaut ---
         function updatePreview(promptId, filePath) {
-            // Vérifier si le fichier est un template Twig
-            if (!filePath.endsWith('.html.twig')) {
-                return; // Ne pas mettre à jour l'aperçu pour les fichiers non-Twig
-            }
-
             const iframe = document.querySelector(`.preview-frame[data-prompt-id="${promptId}"]`);
             if (!iframe) {
                 console.warn(`Iframe de prévisualisation non trouvé pour le promptId: ${promptId}`);
                 return;
             }
 
-            // Récupérer le contenu HTML du fichier Twig sélectionné
-            const htmlContent = currentFiles[promptId][filePath] || '';
+            // Déterminer le contenu à afficher
+            let htmlContent;
+            if (filePath) {
+                // Si un fichier est spécifié, utiliser son contenu
+                htmlContent = currentFiles[promptId][filePath] || '';
+            } else {
+                // Par défaut, utiliser index.html.twig
+                htmlContent = currentFiles[promptId]['index.html.twig'] || '';
+            }
+
+            // Créer et afficher le blob
             const blob = new Blob([htmlContent], { type: 'text/html' });
             const blobUrl = URL.createObjectURL(blob);
-
-            iframe.src = blobUrl;
-            iframe.onload = () => URL.revokeObjectURL(blobUrl);
+            // iframe.src = blobUrl;
+            // iframe.onload = () => URL.revokeObjectURL(blobUrl);
         }
 
         // --- Téléchargement ---

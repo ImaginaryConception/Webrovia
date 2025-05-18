@@ -23,7 +23,7 @@ class AIService
     {
         try {
             $structure = <<<TEXT
-Structure des fichiers à respecter :
+Structure des fichiers à respecter (tous ces dossiers et fichiers doivent être à la racine, tu ne fais aucun dossier qui mènent à la structure suivante :
 
 config/packages/cache.yaml
 config/packages/doctrine.yaml
@@ -52,9 +52,6 @@ src/Entity (dossiers entités avec les entités à l'intérieur)
 src/Form (dossiers formulaires avec les formulaires à l'intérieur)
 src/Repository (dossiers repositories avec les repositories à l'intérieur)
 .env
-composer.json
-composer.lock
-symfony.lock
 TEXT;
 
 $promptContent = <<<PROMPT
@@ -65,16 +62,16 @@ Règles à suivre STRICTEMENT :
 1. Chaque clé = chemin absolu d'un fichier ou dossier dans un projet Symfony
 2. Chaque valeur =
    - contenu exact du fichier si c'est un fichier (PHP, YAML, Twig, JSON, etc.)
-3. Tu ne dois jamais écrire `"null"` (ni en texte, ni en valeur JSON), jamais ! Si tu ne sais pas quoi mettre, mets `""` (une chaîne vide) pour un fichier vide, ou alors du vrai code par défaut
-4. Aucune explication, aucun commentaire, juste un JSON
-5. Le APP_SECRET doit être généré automatiquement et le APP_ENV doit être "prod"
-6. Le projet doit être fonctionnel, il ne doit pas y avoir d'erreurs PHP
-7. Le "base.html.twig" doit être complet.
-8. Le style du site doit être minimaliste, moderne et fonctionnel.
-9. Le site doit être responsive et entièrement fonctionnel.
-10. Les fichiers doivent être valide avec tout ce qui est nécéssaire pour un projet Symfony fonctionnel: des contrôleurs, des formulaires, des entités, des repositories,des templates, etc.
-11. Il faut penser à mettre un "<?php" en début de chaque fichier PHP
-12. Il faut penser à mettre un "{% extends 'base.html.twig' %}" en début de chaque fichier Twig.
+3. Aucune explication, aucun commentaire, juste un JSON
+4. Le APP_SECRET doit être généré automatiquement et le APP_ENV doit être "prod"
+5. Le projet doit être fonctionnel, il ne doit pas y avoir d'erreurs PHP
+6. Le "base.html.twig" doit être complet.
+7. Fais un CSS minimaliste et moderne dans styles.css dans le dossier public.
+8. Le site doit être responsive et entièrement fonctionnel.
+9. Les fichiers doivent être valide avec tout ce qui est nécéssaire pour un projet Symfony fonctionnel: des contrôleurs, des formulaires, des entités, des repositories,des templates, etc.
+10. Il faut penser à mettre un "<?php" en début de chaque fichier PHP
+11. Il faut penser à mettre un "{% extends 'base.html.twig' %}" en début de chaque fichier Twig.
+12. Les fichiers Twig doivent être ultra complets avec pleins de contenu et bien structurés.
 
 Demande utilisateur : "$prompt"
 

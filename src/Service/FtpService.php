@@ -9,7 +9,7 @@ class FtpService
 {
     private $curlHandle = null;
     private string $projectRoot;
-    private string $ftpBasePath = '/WebForgeAllProjects';
+    private string $ftpBasePath = '/WebForgeProjects';
     private string $ftpHost;
     private string $ftpUser;
     private string $ftpPassword;
@@ -71,9 +71,9 @@ class FtpService
             if (empty($generatedFiles)) {
                 throw new \RuntimeException('Aucun fichier généré n\'a été fourni.');
             }
-            if (empty($domain)) {
-                throw new \RuntimeException('Le nom de domaine ne peut pas être vide.');
-            }
+            // if (empty($domain)) {
+            //     throw new \RuntimeException('Le nom de domaine ne peut pas être vide.');
+            // }
 
             // Établir la connexion FTP
             $this->connect();
@@ -142,7 +142,7 @@ class FtpService
 
             return [
                 'success' => true,
-                'url' => 'https://' . rtrim($domain, '/') . '/WebForgeAllProjects/' . $promptId . '/'
+                'url' => 'https://' . rtrim($domain, '/') . '/WebForgeProjects/' . $promptId . '/'
             ];
 
         } catch (\Exception $e) {

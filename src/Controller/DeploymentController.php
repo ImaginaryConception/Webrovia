@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Prompt;
+use App\Form\DomainType;
 use App\Service\FtpService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -13,49 +14,46 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class DeploymentController extends AbstractController
 {
-    #[Route('/deploy/{promptId}', name: 'app_deploy_site')]
-    public function deploy(string $promptId, FtpService $ftpService, EntityManagerInterface $entityManager, ManagerRegistry $doctrine, Request $request): Response
-    {
-        // Récupération du nom de domaine et de l'extension depuis la requête
-        $domainName = $request->query->get('domain_name');
-        $domainExtension = $request->query->get('domain_extension');
+    #[Route('/deploy/{promptId}', name: 'app_deploy_site', methods: ['POST'])]
+    public function deploy(
+        string $promptId,
+        FtpService $ftpService,
+        EntityManagerInterface $em,
+        Request $request
+    ): Response {
+        $prompt = $em->getRepository(Prompt::class)->find($promptId);
 
-        $domain = $domainName . $domainExtension;
-
-        // Récupération de l'entité Prompt
-        $prompt = $entityManager->getRepository(Prompt::class)->find($promptId);
-
-        if (!$prompt) {
-            $this->addFlash('error', 'Le prompt demandé n\'existe pas');
+        if (!$prompt || $prompt->getUser() !== $this->getUser()) {
+            $this->addFlash('error', 'Accès refusé ou prompt introuvable.');
             return $this->redirectToRoute('app_my_sites');
         }
 
-        // Vérification des fichiers générés
-        $generatedFiles = $prompt->getGeneratedFiles();
-        if (!$generatedFiles) {
-            $this->addFlash('error', 'Aucun fichier généré n\'a été trouvé pour ce site');
-            return $this->redirectToRoute('app_my_sites');
+        $form = $this->createForm(DomainType::class);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $formData = $form->getData();
+            $domainName = trim($formData['domainName']);
+            $domainExtension = $formData['extension'];
         }
 
-        // Utilisation directe des fichiers générés stockés dans l'entité
-        $files = $generatedFiles;
+        $fullDomain = $domainName . $domainExtension;
+
+        $prompt->setDomainName($fullDomain);
+        $prompt->setDeployed(true);
+
+        $em->flush();
 
         $result = $ftpService->deploySite($prompt);
 
         if (!$result['success']) {
-            $this->addFlash('error', $result['error'] ?? 'Une erreur est survenue lors du déploiement');
+            $this->addFlash('error', $result['error'] ?? 'Erreur lors du déploiement');
             return $this->redirectToRoute('app_my_sites');
         }
 
-        // Marquer le site comme déployé
-        $prompt->setDeployed(true);
-        $prompt->setDomainName($domain);
-        $em = $doctrine->getManager();
-        $em->persist($prompt);
-        $em->flush();
-
         return $this->render('deployment/success.html.twig', [
-            'domain' => $domain
+            'domain' => $fullDomain
         ]);
     }
+
 }
