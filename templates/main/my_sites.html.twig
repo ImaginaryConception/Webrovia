@@ -152,7 +152,7 @@
                                                 </form>
                                             </div>
                                         {% else %}
-                                            {{ form_start(domain_form, {'action': path('app_deploy_site', {'promptId': prompt.id}), 'attr': {'class': 'space-y-2'}}) }}
+                                            {{ form_start(domain_form, {'action': path('payDomain', {'type': 'site', 'id': prompt.id}), 'attr': {'class': 'space-y-2'}}) }}
                                                 <div class="flex space-x-2">
                                                     {{ form_widget(domain_form.domainName) }}
                                                     {{ form_widget(domain_form.extension) }}
@@ -166,7 +166,7 @@
                                                             const domainInput = document.querySelector('#{{ domain_form.domainName.vars.id }}');
                                                             const extensionSelect = document.querySelector('#{{ domain_form.extension.vars.id }}');
                                                             const publishButton = document.querySelector('#publish-button-{{ prompt.id }}');
-                                                            
+
                                                             function updateButtonText() {
                                                                 const domain = domainInput.value;
                                                                 const extension = extensionSelect.value;

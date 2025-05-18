@@ -1,0 +1,23 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Paiement réussi - Web Forge{% endblock %}
+
+{% block body %}
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8 text-center">
+            <div>
+                <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">Paiement réussi</h2>
+                <p class="mt-2 text-center text-sm text-gray-600 dark:text-gray-300">Votre site est en cours de déploiement...</p>
+            </div>
+            <form id="deployForm" method="POST" action="{{ path(deployRoute, {(routeParam): id}) }}">
+                <input type="hidden" name="domain[domainName]" value="{{ domainName }}">
+                <input type="hidden" name="domain[extension]" value="{{ extension }}">
+            </form>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.getElementById('deployForm').submit();
+                });
+            </script>
+        </div>
+    </div>
+{% endblock %}

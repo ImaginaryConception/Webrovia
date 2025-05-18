@@ -1,33 +1,31 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Web Forge - Générateur de Sites Web par IA{% endblock %}
+{% block title %}Web Forge - Clonage de Sites Web{% endblock %}
 
 {% block stylesheets %}
     {{ parent() }}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
 {% endblock %}
 
 {% block body %}
 <div class="min-h-screen transition-colors duration-200">
     <div class="container mx-auto px-4 py-8">
         <div class="text-center mb-12">
-            <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">Web Forge</h1>
-            <p class="text-lg text-gray-600 dark:text-gray-300">Générez votre site web en quelques secondes grâce à l'IA</p>
+            <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">Clonage de Site Web</h1>
+            <p class="text-lg text-gray-600 dark:text-gray-300">Clonez n'importe quel site web en quelques secondes grâce à l'IA</p>
             {% if app.user %}
                 <a href="{{ path('app_my_sites') }}" class="inline-block mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200 me-2">Mes sites générés</a>
                 <a href="{{ path('app_my_clones') }}" class="inline-block mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200 me-2">Mes clones générés</a><br>
-                <a href="{{ path('app_clone') }}" class="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Cloner un site</a>
+                <a href="{{ path('app_home') }}" class="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Générer un site</a>
             {% endif %}
         </div>
         {% if app.user %}
             <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
-                {{ form_start(form, {'attr': {'id': 'prompt-form', 'class': 'space-y-4'}}) }}
+                {{ form_start(form, {'attr': {'id': 'clone-form', 'class': 'space-y-4'}}) }}
                     <div class="mb-4">
-                        {{ form_widget(form.content) }}
+                        {{ form_widget(form.sourceUrl) }}
                     </div>
                     <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center">
-                        <span id="submit-text">Générer le site</span>
+                        <span id="submit-text">Cloner le site</span>
                         <span id="loading-spinner" class="hidden ml-3">
                             <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -49,13 +47,13 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
                 </div>
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Site Généré avec Succès !</h2>
-                <p class="text-lg text-gray-600 dark:text-gray-300 mb-8">Votre site a été généré avec succès. Vous pouvez maintenant le consulter dans votre espace personnel.</p>
-                <a href="{{ path('app_my_sites') }}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200">Voir mes sites générés</a>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Site Cloné avec Succès !</h2>
+                <p class="text-lg text-gray-600 dark:text-gray-300 mb-8">Votre site a été cloné avec succès. Vous pouvez maintenant le consulter dans votre espace personnel.</p>
+                <a href="{{ path('app_my_clones') }}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200">Voir mes sites clonés</a>
             </div>
         {% else %}
             <div class="text-center">
-                <p class="text-gray-600 dark:text-gray-300 mb-6">Connectez-vous pour commencer à générer des sites web</p>
+                <p class="text-gray-600 dark:text-gray-300 mb-6">Connectez-vous pour commencer à cloner des sites web</p>
                 <div class="space-x-4">
                     <a href="{{ path('app_login') }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Se connecter</a>
                     <a href="{{ path('app_register') }}" class="inline-block bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">S'inscrire</a>
@@ -71,11 +69,9 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('prompt-form');
-            const resultSection = document.getElementById('result-section');
+            const form = document.getElementById('clone-form');
             const submitText = document.getElementById('submit-text');
             const loadingSpinner = document.getElementById('loading-spinner');
-            let currentFiles = {};
 
             if (form) {
                 form.addEventListener('submit', async function(e) {
@@ -85,7 +81,7 @@
 
                     try {
                         const formData = new FormData(form);
-                        const response = await fetch('{{ path("app_generate") }}', {
+                        const response = await fetch('{{ path("app_clone_generate") }}', {
                             method: 'POST',
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest'
@@ -95,17 +91,13 @@
 
                         const data = await response.json();
                         if (response.ok && data.success && data.data && data.data.id) {
-                            // Affichage de la clé API masquée dans la console
-                            if (data.maskedApiKey) {
-                                console.log('Clé API utilisée (masquée):', data.maskedApiKey);
-                            }
                             await checkStatus(data.data.id);
                         } else {
                             const errorAlert = document.getElementById('error-alert');
-                        const errorMessage = document.getElementById('error-message');
-                        errorMessage.textContent = data.error || 'Une erreur est survenue lors de la génération';
-                        errorAlert.classList.remove('hidden');
-                        throw new Error(data.error || 'Une erreur est survenue lors de la génération');
+                            const errorMessage = document.getElementById('error-message');
+                            errorMessage.textContent = data.error || 'Une erreur est survenue lors du clonage';
+                            errorAlert.classList.remove('hidden');
+                            throw new Error(data.error || 'Une erreur est survenue lors du clonage');
                         }
                     } catch (error) {
                         alert('Erreur: ' + error.message);
@@ -116,14 +108,14 @@
                 });
             }
 
-            async function checkStatus(promptId, retryCount = 0, backoffDelay = 1000) {
+            async function checkStatus(cloneId, retryCount = 0, backoffDelay = 1000) {
                 const maxRetries = 5;
-                const maxBackoffDelay = 16000; // 16 secondes maximum
+                const maxBackoffDelay = 16000;
                 const errorAlert = document.getElementById('error-alert');
                 const errorMessage = document.getElementById('error-message');
 
                 try {
-                    const response = await fetch(`/prompt/${promptId}`, {
+                    const response = await fetch(`/clone/${cloneId}`, {
                         headers: {
                             'Accept': 'application/json'
                         }
@@ -134,7 +126,7 @@
                             const nextBackoffDelay = Math.min(backoffDelay * 2, maxBackoffDelay);
                             console.log(`Rate limit atteint, nouvelle tentative dans ${backoffDelay/1000} secondes...`);
                             await new Promise(resolve => setTimeout(resolve, backoffDelay));
-                            return checkStatus(promptId, retryCount + 1, nextBackoffDelay);
+                            return checkStatus(cloneId, retryCount + 1, nextBackoffDelay);
                         }
                         throw new Error(`Veuillez réessayer.`);
                     }
@@ -146,33 +138,28 @@
 
                     const data = await response.json();
                     
-                    // Vérifier d'abord le statut d'erreur
                     if (data.status === 'error' || data.error) {
-                        // Afficher l'erreur immédiatement
-                        errorMessage.textContent = data.error || data.message || 'Une erreur est survenue lors de la génération';
+                        errorMessage.textContent = data.error || data.message || 'Une erreur est survenue lors du clonage';
                         errorAlert.classList.remove('hidden');
                         submitText.classList.remove('hidden');
                         loadingSpinner.classList.add('hidden');
-                        // Arrêter la génération
                         return;
                     }
                     
-                    // Traiter les autres statuts
                     if (data.status === 'completed' && data.files) {
                         errorAlert.classList.add('hidden');
-                        displayResults(data.files);
+                        displayResults();
                         return;
                     } else if (data.status === 'pending' || data.status === 'processing') {
-                        // Vérification automatique toutes les secondes
                         await new Promise(resolve => setTimeout(resolve, 1000));
-                        return checkStatus(promptId, retryCount, backoffDelay);
+                        return checkStatus(cloneId, retryCount, backoffDelay);
                     }
                 } catch (error) {
                     if (retryCount < maxRetries && (error.message.includes('500') || error.message.includes('429'))) {
                         const nextBackoffDelay = Math.min(backoffDelay * 2, maxBackoffDelay);
                         console.log(`Erreur ${error.message}, nouvelle tentative dans ${backoffDelay/1000} secondes...`);
                         await new Promise(resolve => setTimeout(resolve, backoffDelay));
-                        return checkStatus(promptId, retryCount + 1, nextBackoffDelay);
+                        return checkStatus(cloneId, retryCount + 1, nextBackoffDelay);
                     }
                     console.error('Erreur lors de la vérification du statut:', error);
                     errorMessage.textContent = error.message;
@@ -182,30 +169,15 @@
                 }
             }
 
-            function displayResults(files) {
-                // S'assurer que files est un objet JSON valide
-                if (typeof files === 'string') {
-                    try {
-                        files = JSON.parse(files);
-                    } catch (e) {
-                        console.error('Erreur lors du parsing JSON:', e);
-                        return;
-                    }
-                }
-
-                // Afficher le message de succès
+            function displayResults() {
                 const successSection = document.getElementById('success-section');
                 successSection.classList.remove('hidden');
 
-                // Masquer le formulaire
-                const promptForm = document.getElementById('prompt-form');
-                if (promptForm) {
-                    promptForm.closest('.bg-white').classList.add('hidden');
+                const cloneForm = document.getElementById('clone-form');
+                if (cloneForm) {
+                    cloneForm.closest('.bg-white').classList.add('hidden');
                 }
-
-                // Fin de la fonction displayResults
             }
-
         });
     </script>
 {% endblock %}

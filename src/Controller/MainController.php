@@ -4,11 +4,14 @@ namespace App\Controller;
 
 use Exception;
 use Stripe\Stripe;
+use Ramsey\Uuid\Uuid;
 use App\Entity\Prompt;
-use App\Form\PromptType;
 use App\Form\DomainType;
+use App\Form\PromptType;
 use Stripe\StripeClient;
+use App\Entity\WebsiteClone;
 use Stripe\Checkout\Session;
+use App\Service\FtpService;
 use App\Message\GenerateWebsiteMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
@@ -20,9 +23,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Ramsey\Uuid\Uuid;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 
 class MainController extends AbstractController
 {
@@ -300,28 +302,110 @@ class MainController extends AbstractController
     public function adminPrompts(EntityManagerInterface $em): Response
     {
         $prompts = $em->getRepository(Prompt::class)->findAllOrderedByDate();
+        $clones = $em->getRepository(WebsiteClone::class)->findAll();
 
         return $this->render('main/admin_prompts.html.twig', [
-            'prompts' => $prompts
+            'prompts' => $prompts,
+            'clones' => $clones
         ]);
     }
 
-    #[Route('/create-stripe-session/', name: 'pay')]
-    public function stripeCheckout()
+    #[Route('/create-stripe-session', name: 'pay')]
+    public function stripeCheckout(UrlGeneratorInterface $urlGenerator): RedirectResponse
     {
-        $stripePrivateKey = new StripeClient($_ENV['STRIPE_SECRET_KEY']);
+        $stripe = new StripeClient($_ENV['STRIPE_SECRET_KEY']);
 
-        $checkout_session = $stripePrivateKey->checkout->sessions->create([
+        $checkoutSession = $stripe->checkout->sessions->create([
             'line_items' => [[
-                'price' => 'price_1RLmFaPWgJeaubFaxBHYVrcz',
+                'price' => 'price_1RQEoUBtUGEFOuHvDJWQVYku',
                 'quantity' => 1,
             ]],
             'mode' => 'subscription',
-            'success_url' => $this->generateUrl('success', [], UrlGeneratorInterface::ABSOLUTE_URL),
-            'cancel_url' => $this->generateUrl('error', [], UrlGeneratorInterface::ABSOLUTE_URL),
+            'payment_method_types' => ['card'],
+            'success_url' => $urlGenerator->generate('success', [], UrlGeneratorInterface::ABSOLUTE_URL),
+            'cancel_url' => $urlGenerator->generate('error', [], UrlGeneratorInterface::ABSOLUTE_URL),
         ]);
 
-        return new RedirectResponse($checkout_session->url);
+        return new RedirectResponse($checkoutSession->url);
+    }
+
+    #[Route('/payment/success', name: 'app_payment_success')]
+    public function paymentSuccess(Request $request, EntityManagerInterface $em, FtpService $ftpService): Response
+    {
+        $type = $request->query->get('type');
+        $id = $request->query->get('id');
+        $domainName = $request->query->get('domainName');
+        $extension = $request->query->get('extension');
+
+        if ($type === 'site') {
+            $prompt = $em->getRepository(Prompt::class)->find($id);
+            if (!$prompt || $prompt->getUser() !== $this->getUser()) {
+                $this->addFlash('error', 'Accès refusé ou prompt introuvable.');
+                return $this->redirectToRoute('app_my_sites');
+            }
+
+            $fullDomain = $domainName . $extension;
+            $prompt->setDomainName($fullDomain);
+            $prompt->setDeployed(true);
+            $em->flush();
+
+            $result = $ftpService->deploySite($prompt);
+
+            if (!$result['success']) {
+                $this->addFlash('error', $result['error'] ?? 'Erreur lors du déploiement');
+                return $this->redirectToRoute('app_my_sites');
+            }
+
+            return $this->render('deployment/success.html.twig', [
+                'domain' => $fullDomain
+            ]);
+        }
+
+        // Pour les clones, rediriger vers la route de déploiement existante
+        return $this->redirectToRoute('app_deploy_clone', [
+            'cloneId' => $id,
+            'domainName' => $domainName,
+            'extension' => $extension
+        ]);
+    }
+
+    #[Route('/create-stripe-session-domain/{type}/{id}', name: 'payDomain')]
+    public function domainCheckout(string $type, int $id, Request $request, UrlGeneratorInterface $urlGenerator): RedirectResponse
+    {
+        $stripe = new StripeClient($_ENV['STRIPE_SECRET_KEY']);
+
+        $returnRoute = $type === 'site' ? 'app_my_sites' : 'app_my_clones';
+        $deployRoute = $type === 'site' ? 'app_deploy_site' : 'app_deploy_clone';
+        $routeParam = $type === 'site' ? 'promptId' : 'cloneId';
+
+        // Récupérer les données du formulaire
+        $formData = $request->request->all()['domain'];
+        $domainName = $formData['domainName'];
+        $extension = $formData['extension'];
+
+        $checkoutSession = $stripe->checkout->sessions->create([
+            'line_items' => [[
+                'price' => 'price_1RQFAkBtUGEFOuHvakQdWcqY',
+                'quantity' => 1,
+            ]],
+            'mode' => 'subscription',
+            'payment_method_types' => ['card'],
+            'success_url' => $urlGenerator->generate('app_payment_success', [
+                'type' => $type,
+                'id' => $id,
+                'domainName' => $domainName,
+                'extension' => $extension
+            ], UrlGeneratorInterface::ABSOLUTE_URL),
+            'cancel_url' => $urlGenerator->generate($returnRoute, [], UrlGeneratorInterface::ABSOLUTE_URL),
+            'metadata' => [
+                'type' => $type,
+                'id' => $id,
+                'domainName' => $domainName,
+                'extension' => $extension
+            ]
+        ]);
+
+        return new RedirectResponse($checkoutSession->url);
     }
 
     #[Route('/success', name: 'success')]
