@@ -418,6 +418,17 @@ class MainController extends AbstractController
             ['createdAt' => 'DESC']
         );
 
+        // Injecte allVersions dans chaque prompt
+        foreach ($prompts as $prompt) {
+            $versions = [];
+            $current = $prompt;
+            while ($current !== null) {
+                $versions[] = $current;
+                $current = $current->getOriginalPrompt();
+            }
+            $prompt->allVersions = $versions; // du plus récent au plus ancien
+        }
+
         $templates = [];
         foreach ($prompts as $prompt) {
             if ($prompt->getGeneratedFiles()) {

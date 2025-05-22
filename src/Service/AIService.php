@@ -17,7 +17,10 @@ class AIService
 
     public function generateWebsiteFromPrompt(string $prompt, ?array $existingFiles = null): array
     {
-        $promptText = "Tu es un générateur de code HTML.TWIG/CSS/JS. Retourne UNIQUEMENT un objet JSON avec les clés index.html.twig, styles.css et script.js. ";
+        $promptText = "Tu es un générateur de code HTML.TWIG/CSS/JS. Retourne UNIQUEMENT un objet JSON avec les clés suivantes :\n";
+        $promptText .= "- index.html.twig : Doit commencer par {% extends 'base.html.twig' %} et définir son contenu dans {% block body %}\n";
+        $promptText .= "- styles.css : Le CSS doit être écrit de manière brute sans utiliser Asset, il doit être ultra moderne et complet\n";
+        $promptText .= "- script.js : Le code JavaScript doit être ultra complet pour la page web\n\n";
         
         if ($existingFiles) {
             $promptText .= "Voici le code existant que tu dois conserver et modifier uniquement selon la demande :\n";

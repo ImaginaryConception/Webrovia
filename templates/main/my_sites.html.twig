@@ -41,7 +41,7 @@
                 </div>
             </div>
         {% endif %}
-        <div id="error-alert" class="hidden max-w-3xl mx-auto mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        {# <div id="error-alert" class="hidden max-w-3xl mx-auto mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
             <strong class="font-bold">Erreur!</strong>
             <span id="error-message" class="block sm:inline"></span>
             <span class="absolute top-0 bottom-0 right-0 px-4 py-3">
@@ -50,7 +50,7 @@
                     <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
                 </svg>
             </span>
-        </div>
+        </div> #}
         <div class="text-center mb-12">
             <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">Mes Sites Web</h1>
             <p class="text-lg text-gray-600 dark:text-gray-300">Gérez vos sites web générés par Web Forge AI</p>
@@ -262,17 +262,8 @@
                                     </div>
                                     <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Historique des versions</h4>
                                     <div class="versions-list space-y-2 mb-4 max-h-64 overflow-y-auto">
-                                        {% set allVersions = [prompt] %}
-                                        {% set currentPrompt = prompt %}
-                                        {% if currentPrompt.originalPrompt is not null %}
-                                            {% set originalPrompt = currentPrompt.originalPrompt %}
-                                            {% set allVersions = allVersions|merge([originalPrompt]) %}
-                                            {% if originalPrompt.originalPrompt is not null %}
-                                                {% set allVersions = allVersions|merge([originalPrompt.originalPrompt]) %}
-                                            {% endif %}
-                                        {% endif %}
-
-                                        {% for version in allVersions|reverse %}
+                                    {% if prompt.allVersions is defined and prompt.allVersions is not empty %}
+                                        {% for version in prompt.allVersions %}
                                             <div class="version-item p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2 {% if version.status == 'archived' %}opacity-75{% endif %}">
                                                 <div class="flex justify-between items-start mb-2">
                                                     <div class="version-header">
@@ -290,7 +281,7 @@
                                                         </button>
                                                     {% endif %}
                                                 </div>
-                                                
+
                                                 {% if version.modificationRequest %}
                                                     <div class="version-content mt-2 p-2 bg-white dark:bg-gray-600 rounded">
                                                         <p class="text-sm text-gray-600 dark:text-gray-300">
@@ -300,10 +291,11 @@
                                                     </div>
                                                 {% endif %}
                                             </div>
-                                        {% else %}
-                                            <p class="text-gray-500 dark:text-gray-400 text-sm">Aucune version disponible</p>
                                         {% endfor %}
-                                    </div>
+                                    {% else %}
+                                        <p class="text-gray-500 dark:text-gray-400 text-sm">Aucune version disponible</p>
+                                    {% endif %}
+                                </div>
                                 </div>
                             </div>
                         </div>
@@ -505,10 +497,10 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="error-alert" class="max-w-3xl mx-auto mt-5 mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                        {# <div id="error-alert" class="max-w-3xl mx-auto mt-5 mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
                             <strong class="font-bold">Erreur!</strong>
                             <span id="error-message" class="block sm:inline">Veuillez réessayer</span>
-                        </div>
+                        </div> #}
                     </div>
                 {% endif %}
             {% endfor %}
@@ -814,7 +806,7 @@
         });
 
 
-        // --- Gestion des changements dans l'éditeur ---
+        // --- Gestion des changements dans l'éditeur avec mise à jour en temps réel ---
         function handleEditorChange(promptId) {
             const editor = editors[promptId];
             if (!editor) {
@@ -828,7 +820,7 @@
             let fileName;
             switch (fileType) {
                 case 'xml':
-                    fileName = 'index.html';
+                    fileName = 'index.html.twig';
                     break;
                 case 'css':
                     fileName = 'styles.css';
@@ -837,7 +829,7 @@
                     fileName = 'script.js';
                     break;
                 default:
-                    fileName = 'index.html';
+                    fileName = 'index.html.twig';
                     break;
             }
 
@@ -850,7 +842,7 @@
             if (fileType === 'xml') {
                 updatePreview(promptId, content);
             } else {
-                updatePreview(promptId, currentFiles[promptId]['index.html'] || '');
+                updatePreview(promptId, currentFiles[promptId]['index.html.twig'] || '');
             }
         }
 
@@ -897,7 +889,7 @@
                 let mode;
                 switch (fileType) {
                     case 'html':
-                        fileName = 'index.html';
+                        fileName = 'index.html.twig';
                         mode = 'xml';
                         break;
                     case 'css':
@@ -909,7 +901,7 @@
                         mode = 'javascript';
                         break;
                     default:
-                        fileName = 'index.html';
+                        fileName = 'index.html.twig';
                         mode = 'xml';
                         break;
                 }
@@ -926,7 +918,7 @@
             });
         });
 
-        // --- Mise à jour de l'aperçu avec gestion du fichier par défaut ---
+        // --- Mise à jour de l'aperçu en temps réel avec gestion des dépendances ---
         function updatePreview(promptId, filePath) {
             const iframe = document.querySelector(`.preview-frame[data-prompt-id="${promptId}"]`);
             if (!iframe) {
@@ -939,6 +931,10 @@
             if (filePath) {
                 // Si un fichier est spécifié, utiliser son contenu
                 htmlContent = currentFiles[promptId][filePath] || '';
+                // Si le fichier modifié est un CSS ou JS, mettre à jour le HTML principal
+                if (filePath.endsWith('.css') || filePath.endsWith('.js')) {
+                    htmlContent = currentFiles[promptId]['index.html.twig'] || '';
+                }
             } else {
                 // Par défaut, utiliser index.html.twig
                 htmlContent = currentFiles[promptId]['index.html.twig'] || '';

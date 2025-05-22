@@ -1,3 +1,0 @@
-TODO :
-
-- Afficher toutes les versions dans l'historique
