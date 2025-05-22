@@ -3,9 +3,11 @@
 namespace App\MessageHandler;
 
 use App\Entity\Prompt;
+use App\Entity\User;
 use App\Service\AIService;
 use App\Repository\PromptRepository;
 use App\Message\GenerateWebsiteMessage;
+use Symfony\Bundle\SecurityBundle\Security;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
@@ -18,7 +20,8 @@ class GenerateWebsiteMessageHandler
     public function __construct(
         private PromptRepository $promptRepository,
         private EntityManagerInterface $entityManager,
-        private AIService $aiService
+        private AIService $aiService,
+        private Security $security
     ) {}
 
     public function __invoke(GenerateWebsiteMessage $message)
@@ -43,17 +46,24 @@ class GenerateWebsiteMessageHandler
         $retryCount = 0;
         $lastError = null;
         $promptContent = $prompt->getModificationRequest() ?? $prompt->getContent();
+        $existingFiles = $prompt->getModificationRequest() ? $prompt->getGeneratedFiles() : null;
+        $user = $this->security->getUser();
+
+        if (!$user instanceof User) {
+            throw new \LogicException('L’utilisateur connecté n’est pas une instance de App\Entity\User');
+        }
 
         do {
             try {
-                $files = $this->aiService->makeRequest($promptContent);
+                $files = $this->aiService->generateWebsiteFromPrompt($promptContent, $existingFiles);
 
-                // if (empty($files)) {
-                //     throw new \RuntimeException("Aucun fichier généré.");
-                // }
+                if (empty($files)) {
+                    throw new \RuntimeException("Aucun fichier généré.");
+                }
 
                 $prompt->setGeneratedFiles($files);
                 $prompt->setStatus('completed');
+                $user->setCount($user->getCount() + 1);
                 return;
             } catch (HttpExceptionInterface|\Exception $e) {
                 $lastError = $e;

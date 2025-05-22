@@ -3,159 +3,74 @@
 namespace App\Service;
 
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
 class AIService
 {
     private HttpClientInterface $client;
-    private FilesystemAdapter $cache;
-    private const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
-    private const API_KEY = 'ESoQIWE9LvoI7tEcPYoZxACk7j1kF6Mt';
-    private const MODEL = 'mistral-small-latest';
+    private string $apiKey;
 
     public function __construct(HttpClientInterface $client)
     {
         $this->client = $client;
-        $this->cache = new FilesystemAdapter('mistral', 3600, __DIR__ . '/../../var/cache/mistral');
+        $this->apiKey = $_ENV['GEMINI_API_KEY'] ?? throw new \RuntimeException('GEMINI_API_KEY non définie');
     }
 
-    public function makeRequest(string $prompt): array
+    public function generateWebsiteFromPrompt(string $prompt, ?array $existingFiles = null): array
     {
-        try {
-            $structure = <<<TEXT
-Structure des fichiers à respecter, tous ces dossiers et fichiers doivent être à la racine, tu ne fais aucun dossier qui mènent à la structure suivante :
+        $promptText = "Tu es un générateur de code HTML.TWIG/CSS/JS. Retourne UNIQUEMENT un objet JSON avec les clés index.html.twig, styles.css et script.js. ";
+        
+        if ($existingFiles) {
+            $promptText .= "Voici le code existant que tu dois conserver et modifier uniquement selon la demande :\n";
+            $promptText .= json_encode($existingFiles, JSON_PRETTY_PRINT) . "\n\nModifie uniquement ce qui est demandé dans le prompt suivant, en gardant le reste du code intact : ";
+        } else {
+            $promptText .= "Chaque valeur doit être une string contenant le code. Ne rajoute pas de texte autour. Pas de commentaires, pas d'explications, pas de blabla, QUE DU JSON. Voici la demande : ";
+        }
+        
+        $promptText .= $prompt;
 
-config/packages/cache.yaml
-config/packages/doctrine.yaml
-config/packages/doctrine_migrations.yaml
-config/packages/framework.yaml
-config/packages/mailer.yaml
-config/packages/messenger.yaml
-config/packages/monolog.yaml
-config/packages/notifier.yaml
-config/packages/routing.yaml
-config/packages/security.yaml
-config/packages/translation.yaml
-config/packages/twig.yaml
-config/packages/validator.yaml
-config/routes/framework.yaml
-config/routes/security.yaml
-config/bundles.php
-config/preload.php
-config/routes.yaml
-config/services.yaml
-public/index.php
-templates/base.html.twig
-src/Kernel.php
-src/Controller (dossiers contrôleurs avec les contrôleurs à l'intérieur)
-src/Entity (dossiers entités avec les entités à l'intérieur)
-src/Form (dossiers formulaires avec les formulaires à l'intérieur)
-src/Repository (dossiers repositories avec les repositories à l'intérieur)
-.env
-
-ULTRA IMPORTANT :
-- Le contenu de chaque fichier doit être valide et fonctionnel.
-- Le projet doit être fonctionnel, il ne doit pas y avoir d'erreurs PHP.
-- Chacun des fichiers doivent être cohérents entre eux et les autres.
-
-Demande utilisateur : "$prompt"
-TEXT;
-
-$promptContent = <<<PROMPT
-Tu es un expert Symfony. Génère un projet Symfony complet et fonctionnel sous forme de JSON.
-
-Règles à suivre STRICTEMENT :
-
-- Chaque clé = chemin absolu d'un fichier ou dossier dans un projet Symfony
-- Chaque valeur = contenu exact du fichier si c'est un fichier (PHP, YAML, Twig, JSON, etc.)
-- Aucune explication, aucun commentaire, juste un JSON
-- Le APP_SECRET doit être généré automatiquement.
-- Le APP_ENV doit être "prod"
-- Le projet doit être fonctionnel, il ne doit pas y avoir d'erreurs PHP
-- Le "base.html.twig" doit être complet.
-- Fais un CSS minimaliste et moderne dans styles.css dans le dossier public.
-- Le site doit être responsive et entièrement fonctionnel.
-- Les fichiers doivent être valide avec tout ce qui est nécéssaire pour un projet Symfony fonctionnel: des contrôleurs, des formulaires, des entités, des repositories,des templates, etc.
-- Il faut penser à mettre un "<?php" en début de chaque fichier PHP
-- Il faut penser à mettre un "{% extends 'base.html.twig' %}" en début de chaque fichier Twig.
-- Les fichiers Twig doivent être ultra complets avec pleins de contenu et bien structurés.
-
-$structure
-PROMPT;
-
-            $response = $this->client->request('POST', self::MISTRAL_API_URL, [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . self::API_KEY,
-                    'Content-Type' => 'application/json',
+        $response = $this->client->request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
+            'headers' => [
+                'Content-Type' => 'application/json',
+            ],
+            'query' => [
+                'key' => $this->apiKey,
+            ],
+            'json' => [
+                'contents' => [[
+                    'parts' => [[
+                        'text' => $promptText
+                    ]]
+                ]],
+                'generationConfig' => [
+                    'temperature' => 1.5,
                 ],
-                'json' => [
-                    'model' => self::MODEL,
-                    'messages' => [
-                        ['role' => 'user', 'content' => $promptContent]
-                    ],
-                    'temperature' => 0.7,
-                ],
-                'timeout' => 2000,
-            ]);
+            ],
+        ]);
 
-            $raw = $response->getContent(false);
-            if (!$raw) {
-                throw new \RuntimeException('Réponse vide de Mistral.');
-            }
+        $data = $response->toArray(false);
+        $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
-            $data = json_decode($raw, true);
-            if (!isset($data['choices'][0]['message']['content'])) {
-                throw new \RuntimeException('Structure de réponse invalide de Mistral.');
-            }
-
-            return $this->parseJsonResponse($data['choices'][0]['message']['content']);
-
-        } catch (\Exception $e) {
-            error_log('Erreur Mistral : ' . $e->getMessage());
-            throw $e;
-        }
-    }
-
-    private function parseJsonResponse(string $content): array
-    {
-        $content = trim($content);
-        $content = preg_replace('/^```(?:json)?\s*/', '', $content);
-        $content = preg_replace('/\s*```$/', '', $content);
-
-        $decoded = json_decode($content, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \RuntimeException('Erreur de décodage JSON : ' . json_last_error_msg());
+        if (!$text) {
+            throw new \RuntimeException('Réponse vide de Gemini');
         }
 
-        $files = [];
-        foreach ($decoded as $path => $value) {
-            if (!is_string($path)) continue;
+        // Nettoyage du contenu
+        $text = trim($text);
+        $text = preg_replace('/```(json)?\s*/', '', $text);
+        $text = preg_replace('/```$/', '', $text);
+        $text = str_replace('\n', '', $text);
+        $text = str_replace('\r', '', $text);
 
-            $fileContent = null;
-            if (is_array($value) && isset($value['content']) && is_string($value['content'])) {
-                $fileContent = $value['content'];
-            } elseif (is_string($value)) {
-                $fileContent = $value;
-            }
-
-            // On skip les fichiers avec "null" (en string) ou null PHP
-            if (strtolower(trim($fileContent)) === 'null') {
-                error_log("[AIService] Contenu 'null' détecté pour $path → remplacé par string vide.");
-                $fileContent = '';
-            }
-            
-            if ($fileContent === null) {
-                error_log("[AIService] Fichier ignoré (contenu null PHP): $path");
-                continue;
-            }
-
-            $files[$path] = $fileContent;
+        $json = json_decode($text, true);
+        if (!is_array($json)) {
+            throw new \RuntimeException('Réponse JSON invalide: ' . json_last_error_msg());
         }
 
-        if (empty($files)) {
-            throw new \RuntimeException('Aucun fichier valide trouvé dans la réponse JSON.');
-        }
-
-        return $files;
+        // S'assurer que les clés existent
+        return [
+            'index.html.twig' => $json['index.html.twig'] ?? '',
+            'styles.css' => $json['styles.css'] ?? '',
+            'script.js' => $json['script.js'] ?? '',
+        ];
     }
 }

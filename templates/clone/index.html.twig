@@ -9,23 +9,37 @@
 {% block body %}
 <div class="min-h-screen transition-colors duration-200">
     <div class="container mx-auto px-4 py-8">
+        {% if not app.user.isSubscribed is defined or not app.user.isSubscribed %}
+            <div class="max-w-3xl mx-auto mb-8 bg-yellow-50 dark:bg-yellow-900 border-l-4 border-yellow-400 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-yellow-400" viewBox="0² 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700 dark:text-yellow-200">
+                            Version gratuite limitée à 3 clonages. <a href="{{ path('app_subscription') }}" class="font-medium underline hover:text-yellow-600 dark:hover:text-yellow-300">Passez à la version premium</a> pour des clonages illimités.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
         <div class="text-center mb-12">
             <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">Clonage de Site Web</h1>
-            <p class="text-lg text-gray-600 dark:text-gray-300">Clonez n'importe quel site web en quelques secondes grâce à l'IA</p>
-            {% if app.user %}
-                <a href="{{ path('app_my_sites') }}" class="inline-block mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200 me-2">Mes sites générés</a>
-                <a href="{{ path('app_my_clones') }}" class="inline-block mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200 me-2">Mes clones générés</a><br>
-                <a href="{{ path('app_home') }}" class="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Générer un site</a>
-            {% endif %}
-        </div>
-        {% if app.user %}
+            <p class="text-lg mb-5 text-gray-600 dark:text-gray-300">Clonez n'importe quel site web en quelques secondes grâce à l'IA</p>
             <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
+            {% if app.user %}
+                <a href="{{ path('app_my_sites') }}" class="inline-block mb-6 mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200 me-2">Mes sites générés</a>
+                <a href="{{ path('app_my_clones') }}" class="inline-block mb-6 mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200 me-2">Mes clones générés</a><br>
+            {% endif %}
+        {% if app.user %}
                 {{ form_start(form, {'attr': {'id': 'clone-form', 'class': 'space-y-4'}}) }}
                     <div class="mb-4">
                         {{ form_widget(form.sourceUrl) }}
                     </div>
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center">
-                        <span id="submit-text">Cloner le site</span>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center" {% if not app.user.isSubscribed is defined or not app.user.isSubscribed %}{% if app.user.cloneCount >= 3 %}disabled{% endif %}{% endif %}>
+                        <span id="submit-text">{% if not app.user.isSubscribed is defined or not app.user.isSubscribed %}{% if app.user.cloneCount >= 3 %}Limite de clonage atteinte{% else %}Cloner le site ({{ 3 - app.user.cloneCount }} restants){% endif %}{% else %}Cloner le site{% endif %}</span>
                         <span id="loading-spinner" class="hidden ml-3">
                             <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -34,6 +48,7 @@
                         </span>
                     </button>
                 {{ form_end(form) }}
+                <a href="{{ path('app_home') }}" class="inline-block mt-6 bg-gray-700 hover:bg-gray-900 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Générer un site</a>
             </div>
 
             <div id="error-alert" class="hidden max-w-3xl mx-auto mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
@@ -100,7 +115,7 @@
                             throw new Error(data.error || 'Une erreur est survenue lors du clonage');
                         }
                     } catch (error) {
-                        alert('Erreur: ' + error.message);
+                        // alert('Erreur: ' + error.message);
                     } finally {
                         submitText.classList.remove('hidden');
                         loadingSpinner.classList.add('hidden');

@@ -4,16 +4,19 @@ namespace App\Controller;
 
 use Exception;
 use Stripe\Stripe;
+use App\Entity\User;
 use Ramsey\Uuid\Uuid;
 use App\Entity\Prompt;
 use App\Form\DomainType;
 use App\Form\PromptType;
 use Stripe\StripeClient;
+use App\Service\FtpService;
 use App\Entity\WebsiteClone;
 use Stripe\Checkout\Session;
-use App\Service\FtpService;
 use App\Message\GenerateWebsiteMessage;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Service\PromptRestorationService;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -126,7 +129,7 @@ class MainController extends AbstractController
 
     #[Route('/generate', name: 'app_generate', methods: ['POST'])]
     #[IsGranted('ROLE_USER')]
-    public function generate(Request $request, EntityManagerInterface $em, MessageBusInterface $messageBus): Response
+    public function generate(Request $request, Security $security, EntityManagerInterface $em, MessageBusInterface $messageBus): Response
     {
         try {
             if (!$request->headers->has('X-Requested-With') || $request->headers->get('X-Requested-With') !== 'XMLHttpRequest') {
@@ -138,6 +141,15 @@ class MainController extends AbstractController
                     Response::HTTP_BAD_REQUEST,
                     ['Content-Type' => 'application/json']
                 );
+            }
+
+            $user = $security->getUser();
+            if (!$user instanceof \App\Entity\User) {
+                throw new Exception("Utilisateur non valide.");
+            }
+
+            if ($user->getCount() >= 3 && $user->isSubscribed() === false) {
+                throw new Exception('Vous avez atteint le nombre maximum de sites web gratuits');
             }
 
             $prompt = new Prompt();
@@ -213,8 +225,11 @@ class MainController extends AbstractController
 
     #[Route('/prompt/{id}', name: 'app_prompt_status', methods: ['GET'])]
     #[IsGranted('ROLE_USER')]
-    public function promptStatus(Prompt $prompt, EntityManagerInterface $em, MessageBusInterface $messageBus): Response
-    {
+    public function promptStatus(
+        Prompt $prompt, 
+        EntityManagerInterface $em, 
+        PromptRestorationService $promptRestorationService
+    ): Response {
         if ($prompt->getUser() !== $this->getUser()) {
             throw $this->createAccessDeniedException();
         }
@@ -222,53 +237,15 @@ class MainController extends AbstractController
         try {
             $response = [
                 'status' => $prompt->getStatus(),
-                'files' => []
+                'files' => $promptRestorationService->getPromptFiles($prompt)
             ];
-
-            // Traiter les fichiers générés
-            $generatedFiles = $prompt->getGeneratedFiles();
-            if ($generatedFiles) {
-                foreach ($generatedFiles as $filename => $content) {
-                    // Nettoyer et décoder correctement le contenu JSON
-                    $cleanContent = html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                    $decodedContent = json_decode($cleanContent, true);
-                    $response['files'][$filename] = $decodedContent !== null ? $decodedContent : $cleanContent;
-                }
-            }
 
             if ($prompt->getStatus() === 'error') {
                 $error = $prompt->getError();
-                $response['error'] = $error;
-
-                // Restaurer automatiquement la version précédente en cas d'erreur
-                $previousPrompt = $em->getRepository(Prompt::class)->findOneBy(
-                    ['websiteIdentification' => $prompt->getWebsiteIdentification()],
-                    ['version' => 'DESC']
+                $response = array_merge(
+                    $response,
+                    $promptRestorationService->handleErrorAndRestore($prompt)
                 );
-
-                if ($previousPrompt && $previousPrompt->getId() !== $prompt->getId()) {
-                    $newPrompt = new Prompt();
-                    $newPrompt->setUser($this->getUser());
-                    $newPrompt->setContent($previousPrompt->getContent());
-                    if ($previousPrompt->getWebsiteType()) {
-                        $newPrompt->setWebsiteType($previousPrompt->getWebsiteType());
-                    }
-                    if ($previousPrompt->getFeatures()) {
-                        $newPrompt->setFeatures($previousPrompt->getFeatures());
-                    }
-                    $newPrompt->setGeneratedFiles($previousPrompt->getGeneratedFiles());
-                    $newPrompt->setStatus('pending');
-                    $newPrompt->setWebsiteIdentification($previousPrompt->getWebsiteIdentification());
-                    $newPrompt->setVersion($previousPrompt->getVersion() + 1);
-                    $newPrompt->setOriginalPrompt($previousPrompt->getOriginalPrompt() ?: $previousPrompt);
-
-                    $em->persist($newPrompt);
-                    $prompt->setStatus('archived');
-                    $em->flush();
-
-                    $messageBus->dispatch(new GenerateWebsiteMessage($newPrompt->getId()));
-                    $response['restoration_initiated'] = true;
-                }
 
                 // Si l'erreur contient "429", on renvoie une vraie 429
                 $httpCode = str_contains($error, '429') ? 429 : Response::HTTP_INTERNAL_SERVER_ERROR;
@@ -385,7 +362,7 @@ class MainController extends AbstractController
 
         $checkoutSession = $stripe->checkout->sessions->create([
             'line_items' => [[
-                'price' => 'price_1RQFAkBtUGEFOuHvakQdWcqY',
+                'price' => 'price_1RLmFaPWgJeaubFaxBHYVrcz',
                 'quantity' => 1,
             ]],
             'mode' => 'subscription',
@@ -447,7 +424,8 @@ class MainController extends AbstractController
                 foreach ($prompt->getGeneratedFiles() as $path => $content) {
                     $templates[] = [
                         'name' => basename($path),
-                        'path' => $path
+                        'path' => $path,
+                        'promptId' => $prompt->getId()
                     ];
                 }
             }
@@ -482,7 +460,7 @@ class MainController extends AbstractController
                     '<div style="display: flex; align-items: center; justify-content: center; min-height: 100%; width: 100%; margin: 0; padding: 20px; background-color: #fff3cd; color: #856404; font-family: Arial, sans-serif; text-align: center;">
                         <div>
                             <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 15px; display: block;"></i>
-                            <p style="margin: 0; font-size: 16px;">Veuillez sélectionner un fichier template dans l\'explorateur de fichiers pour continuer.</p>
+                            <p style="margin: 0; font-size: 16px;">Veuillez sélectionner un template dans l\'explorateur de fichiers pour continuer.</p>
                         </div>
                     </div>',
                     Response::HTTP_BAD_REQUEST,
@@ -511,12 +489,74 @@ class MainController extends AbstractController
                 default => 'text/html',
             };
 
-            // Traiter le contenu Twig pour n'afficher que le HTML/CSS rendu
-                $content = $files[$path];
-                if ($extension === 'twig' || $extension === 'html') {
-                    // Supprimer les balises Twig
-                    $content = preg_replace('/\{%.*?%\}/s', '', $content);
-                    $content = preg_replace('/\{\{.*?\}\}/s', '', $content);
+            // Traiter le contenu pour créer une prévisualisation intégrée
+            $content = $files[$path];
+            if ($extension === 'twig' || $extension === 'html') {
+                // Supprimer les balises Twig
+                $content = preg_replace('/\{%.*?%\}/s', '', $content);
+                $content = preg_replace('/\{\{.*?\}\}/s', '', $content);
+            }
+
+            // Préparer les ressources
+            $cssContent = [];
+            $jsContent = [];
+            $svgContent = [];
+            
+            // Collecter toutes les ressources
+            foreach ($files as $filePath => $fileContent) {
+                $fileExt = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+                switch ($fileExt) {
+                    case 'css':
+                        $cssContent[] = $fileContent;
+                        break;
+                    case 'js':
+                        $jsContent[] = $fileContent;
+                        break;
+                    case 'svg':
+                        $fileName = pathinfo($filePath, PATHINFO_FILENAME);
+                        $svgContent[$fileName] = $fileContent;
+                        break;
+                }
+            }
+
+            // Assurer une structure HTML complète
+            if ($extension === 'twig' || $extension === 'html') {
+                if (!preg_match('/<html[^>]*>/i', $content)) {
+                    $content = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Preview</title></head><body>" . $content . "</body></html>";
+                }
+
+                
+                // Injecter les styles CSS
+                if (!empty($cssContent)) {
+                    $styles = "<style>" . implode("", $cssContent) . "</style>";
+                    if (strpos($content, '</head>') !== false) {
+                        $content = preg_replace('/<\/head>/', $styles . '</head>', $content);
+                    } elseif (strpos($content, '<html') !== false) {
+                        $content = preg_replace('/<html[^>]*>/', '$0<head>' . $styles . '</head>', $content);
+                    } else {
+                        $content = "<head>" . $styles . "</head>" . $content;
+                    }
+                }
+                
+                // Injecter les SVGs
+                if (!empty($svgContent)) {
+                    $svgSprites = "<div style=\"display: none;\">";
+                    foreach ($svgContent as $name => $svg) {
+                        $svgSprites .= "<!-- SVG: $name -->$svg";
+                    }
+                    $svgSprites .= "</div>";
+                    $content = preg_replace('/<body[^>]*>/', '$0' . $svgSprites, $content);
+                }
+                
+                // Injecter les scripts JavaScript
+                if (!empty($jsContent)) {
+                    $scripts = "<script>" . implode("", $jsContent) . "</script>";
+                    $content = preg_replace('/<\/body>/', $scripts . '</body>', $content);
+                }
+                
+                // Ajouter des styles pour l'iframe
+                $frameStyles = "<style>body { margin: 0; padding: 0; }</style>";
+                $content = preg_replace('/<\/head>/', $frameStyles . '</head>', $content);
             }
 
             return new Response(
@@ -578,7 +618,20 @@ class MainController extends AbstractController
         }
     }
 
-    #[Route('/restore-version/{id}', name: 'app_restore_version', methods: ['POST'])]
+    private function getPromptChain(Prompt $prompt): array
+    {
+        $chain = [];
+        $current = $prompt;
+
+        while ($current !== null) {
+            $chain[] = $current;
+            $current = $current->getOriginalPrompt();
+        }
+
+        return array_reverse($chain); // pour avoir la plus ancienne en premier
+    }
+
+    #[Route('/restore/{id}', name: 'app_restore_version', methods: ['POST'])]
     #[IsGranted('ROLE_USER')]
     public function restoreVersion(Request $request, EntityManagerInterface $em, int $id): Response
     {
@@ -613,7 +666,7 @@ class MainController extends AbstractController
             $em->flush();
 
             $this->addFlash('success', 'La version a été restaurée avec succès et toutes les autres versions ont été archivées.');
-            
+            return $this->redirectToRoute('app_my_sites');
         } catch (Exception $e) {
             $this->addFlash('error', $e->getMessage());
         }

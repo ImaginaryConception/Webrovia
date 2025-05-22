@@ -27,6 +27,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?string $password = null;
 
+    #[ORM\Column(type: 'boolean')]
+    private bool $isSubscribed = false;
+
+    #[ORM\Column(type: 'integer')]
+    private int $count = 0;
+
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Prompt::class, orphanRemoval: true)]
     private Collection $prompts;
 
@@ -80,8 +86,31 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    public function isSubscribed(): bool
+    {
+        return $this->isSubscribed;
+    }
+
+    public function setIsSubscribed(bool $isSubscribed): self
+    {
+        $this->isSubscribed = $isSubscribed;
+
+        return $this;
+    }
+
     public function eraseCredentials(): void
     {
+    }
+
+    public function getCount(): int
+    {
+        return $this->count;
+    }
+
+    public function setCount(int $count): self
+    {
+        $this->count = $count;
+        return $this;
     }
 
     /**

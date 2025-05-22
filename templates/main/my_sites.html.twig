@@ -25,6 +25,22 @@
 {% block body %}
 <div class="min-h-screen transition-colors duration-200">
     <div class="container mx-auto px-4 py-8">
+        {% if not app.user.isSubscribed is defined or not app.user.isSubscribed %}
+            <div class="max-w-3xl mx-auto mb-8 bg-yellow-50 dark:bg-yellow-900 border-l-4 border-yellow-400 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700 dark:text-yellow-200">
+                            Version gratuite limitée à 3 générations. <a href="{{ path('app_subscription') }}" class="font-medium underline hover:text-yellow-600 dark:hover:text-yellow-300">Passez à la version premium</a> pour des générations illimitées.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
         <div id="error-alert" class="hidden max-w-3xl mx-auto mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
             <strong class="font-bold">Erreur!</strong>
             <span id="error-message" class="block sm:inline"></span>
@@ -41,6 +57,9 @@
             <a href="{{ path('app_home') }}" class="inline-block mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Générer un nouveau site</a>
         </div>
 
+        {% set domain_name_widget = form_widget(domain_form.domainName) %}
+        {% set extension_widget = form_widget(domain_form.extension) %}
+
         {% if prompts is empty %}
             <div class="text-center py-12">
                 <p class="text-gray-600 dark:text-gray-300">Vous n'avez pas encore généré de sites web.</p>
@@ -48,13 +67,32 @@
             </div>
         {% else %}
             {% for prompt in prompts %}
-                {% if prompt.status == 'completed' %}
-                    <div class="max-w-5xl mx-auto mb-12 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                {% if prompt.status == 'completed' or prompt.status == 'error' %}
+                    <div class="max-w-5xl mx-auto mb-12 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 {% if prompt.status == 'error' %}border-2 border-red-500{% endif %}">
                         <div class="mb-6">
                             <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Site #{{ prompt.id }}</h2>
                             <div class="bg-gray-100 dark:bg-gray-700 rounded p-4 mb-4">
                                 <h3 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">Prompt :</h3>
                                 <p class="text-gray-600 dark:text-gray-400">{{ prompt.content }}</p>
+                                {% if prompt.status == 'error' %}
+                                    <div class="mt-4 bg-red-100 dark:bg-red-900 border-l-4 border-red-500 p-4">
+                                        <div class="flex">
+                                            <div class="flex-shrink-0">
+                                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                                </svg>
+                                            </div>
+                                            <div class="ml-3">
+                                                <p class="text-sm text-red-700 dark:text-red-200">
+                                                    Une erreur est survenue : {{ prompt.error }}
+                                                </p>
+                                                <p class="mt-2 text-sm text-red-600 dark:text-red-300">
+                                                    La restauration automatique de la dernière version stable est en cours...
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -78,7 +116,7 @@
                                         {% for type, label in fileTypes %}
                                             {% set typeFiles = [] %}
                                             {% for template in templates %}
-                                                {% if template.path ends with type %}
+                                                {% if template.path ends with type and template.promptId == prompt.id %}
                                                     {% set typeFiles = typeFiles|merge([template]) %}
                                                 {% endif %}
                                             {% endfor %}
@@ -136,6 +174,12 @@
                                 </div>
                                 <div class="editor-container h-[600px] relative" data-prompt-id="{{ prompt.id }}"></div>
                                 <div class="flex space-x-4 mt-4">
+                                {% if not app.user.isSubscribed %}
+                                    <div class="w-full bg-yellow-300 dark:bg-yellow-900 rounded-lg p-4 text-center">
+                                        <p class="text-yellow-700 dark:text-yellow-300 mb-3">Pour télécharger, déployer et modifier vos sites, abonnez-vous à Web Forge !</p>
+                                        <a href="{{ path('app_subscription') }}" class="inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Découvrir l'abonnement</a>
+                                    </div>
+                                {% else %}
                                     <button class="download-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
                                         Télécharger le site
                                     </button>
@@ -154,13 +198,14 @@
                                         {% else %}
                                             {{ form_start(domain_form, {'action': path('payDomain', {'type': 'site', 'id': prompt.id}), 'attr': {'class': 'space-y-2'}}) }}
                                                 <div class="flex space-x-2">
-                                                    {{ form_widget(domain_form.domainName) }}
-                                                    {{ form_widget(domain_form.extension) }}
+                                                    {{ domain_name_widget|raw }}
+                                                    {{ extension_widget|raw }}
                                                 </div>
                                                 <div>
                                                     <button type="submit" id="publish-button-{{ prompt.id }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">
                                                     Publier le site
                                                     </button>
+                                        {% endif %}
                                                     <script>
                                                         document.addEventListener('DOMContentLoaded', function() {
                                                             const domainInput = document.querySelector('#{{ domain_form.domainName.vars.id }}');
@@ -176,7 +221,7 @@
                                                                     publishButton.textContent = 'Publier le site';
                                                                 }
                                                             }
-                                                            
+
                                                             domainInput.addEventListener('input', updateButtonText);
                                                             extensionSelect.addEventListener('change', updateButtonText);
                                                         });
@@ -203,10 +248,17 @@
                                 <div class="mt-4">
                                     <div class="modification-section mb-6">
                                         <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Modifier le site</h4>
-                                        <textarea class="modification-prompt w-full h-24 p-2 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600" data-prompt-id="{{ prompt.id }}" placeholder="Décrivez les modifications que vous souhaitez apporter au site..."></textarea>
-                                        <button class="modify-btn mt-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
-                                            Appliquer les modifications
-                                        </button>
+                                        {% if not app.user.isSubscribed %}
+                                            <div class="bg-yellow-300 dark:bg-yellow-900 rounded-lg p-4 text-center">
+                                                <p class="text-yellow-700 dark:text-yellow-300 mb-3">La modification de sites est réservée aux abonnés Web Forge.</p>
+                                                <a href="{{ path('app_subscription') }}" class="inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded-lg transition duration-200">S'abonner maintenant</a>
+                                            </div>
+                                        {% else %}
+                                            <textarea class="modification-prompt w-full h-24 p-2 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600" data-prompt-id="{{ prompt.id }}" placeholder="Décrivez les modifications que vous souhaitez apporter au site..."></textarea>
+                                            <button class="modify-btn mt-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
+                                                Appliquer les modifications
+                                            </button>
+                                        {% endif %}
                                     </div>
                                     <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Historique des versions</h4>
                                     <div class="versions-list space-y-2 mb-4 max-h-64 overflow-y-auto">
@@ -224,7 +276,7 @@
                                             <div class="version-item p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2 {% if version.status == 'archived' %}opacity-75{% endif %}">
                                                 <div class="flex justify-between items-start mb-2">
                                                     <div class="version-header">
-                                                        {# <span class="font-medium text-lg">Version {{ version.version }}</span> #}
+                                                        <span class="font-medium text-white text-lg">Version {{ version.version }}</span>
                                                         <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">{{ version.createdAt|date('d/m/Y H:i') }}</span>
                                                         {% if version.status == 'archived' %}
                                                             <span class="ml-2 px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs rounded">Archivée</span>
@@ -233,11 +285,9 @@
                                                         {% endif %}
                                                     </div>
                                                     {% if version.status == 'archived' and version.id != prompt.id %}
-                                                        <form action="{{ path('app_restore_version', {'id': version.id}) }}" method="post" class="inline">
-                                                            <button type="submit" class="restore-version-btn bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-200 px-3 py-1 rounded-full text-sm transition-colors duration-200">
-                                                                Restaurer cette version
-                                                            </button>
-                                                        </form>
+                                                        <button type="button" class="restore-version-btn bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-200 px-3 py-1 rounded-full text-sm transition-colors duration-200" data-version-id="{{ version.id }}">
+                                                            Restaurer cette version
+                                                        </button>
                                                     {% endif %}
                                                 </div>
                                                 
@@ -265,6 +315,25 @@
                             <div class="bg-gray-100 dark:bg-gray-700 rounded p-4 mb-4">
                                 <h3 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">Prompt :</h3>
                                 <p class="text-gray-600 dark:text-gray-400">{{ prompt.content }}</p>
+                                {% if prompt.status == 'error' %}
+                                    <div class="mt-4 bg-red-100 dark:bg-red-900 border-l-4 border-red-500 p-4">
+                                        <div class="flex">
+                                            <div class="flex-shrink-0">
+                                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                                </svg>
+                                            </div>
+                                            <div class="ml-3">
+                                                <p class="text-sm text-red-700 dark:text-red-200">
+                                                    Une erreur est survenue : {{ prompt.error }}
+                                                </p>
+                                                <p class="mt-2 text-sm text-red-600 dark:text-red-300">
+                                                    La restauration automatique de la dernière version stable est en cours...
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -288,7 +357,7 @@
                                         {% for type, label in fileTypes %}
                                             {% set typeFiles = [] %}
                                             {% for template in templates %}
-                                                {% if template.path ends with type %}
+                                                {% if template.path ends with type and template.promptId == prompt.id %}
                                                     {% set typeFiles = typeFiles|merge([template]) %}
                                                 {% endif %}
                                             {% endfor %}
@@ -407,11 +476,9 @@
                                                         {% endif %}
                                                     </div>
                                                     {% if version.status == 'archived' and version.id != prompt.id %}
-                                                        <form action="{{ path('app_restore_version', {'id': version.id}) }}" method="post" class="inline">
-                                                            <button type="submit" class="restore-version-btn bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-200 px-3 py-1 rounded-full text-sm transition-colors duration-200">
-                                                                Restaurer cette version
-                                                            </button>
-                                                        </form>
+                                                        <button type="button" class="restore-version-btn bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-200 px-3 py-1 rounded-full text-sm transition-colors duration-200" data-version-id="{{ version.id }}">
+                                                            Restaurer cette version
+                                                        </button>
                                                     {% endif %}
                                                 </div>
                                                 
@@ -663,46 +730,6 @@
             }
         }
 
-
-        // --- Gestionnaire de restauration de version ---
-        document.querySelectorAll('.restore-version-btn').forEach(button => {
-            button.addEventListener('click', async function() {
-                const promptId = this.dataset.promptId;
-                const restoreUrl = this.dataset.restoreUrl;
-                const buttonText = this.textContent;
-                this.textContent = 'Restauration en cours...';
-                this.disabled = true;
-
-                try {
-                    const response = await fetch(restoreUrl, {
-                        method: 'POST',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Content-Type': 'application/json'
-                        },
-                        credentials: 'same-origin'
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`Erreur HTTP: ${response.status}`);
-                    }
-
-                    const data = await response.json();
-
-                    if (data.success) {
-                        window.location.reload();
-                    } else {
-                        throw new Error(data.message || 'Une erreur est survenue lors de la restauration');
-                    }
-                } catch (error) {
-                    showError(error.message || 'Une erreur est survenue lors de la restauration de la version');
-                } finally {
-                    this.textContent = buttonText;
-                    this.disabled = false;
-                }
-            });
-        });
-
         // --- Polling du statut ---
         async function pollPromptStatus(promptId) {
             try {
@@ -852,6 +879,7 @@
                 .catch(error => {
                     console.error(`Erreur lors du chargement initial du prompt ${promptId}:`, error);
                     showError(`Erreur lors du chargement initial: ${error.message}`);
+                    location.reload();
                 });
         });
 
@@ -993,6 +1021,49 @@
                     showError(error.message || 'Une erreur est survenue lors du déploiement');
                     this.innerHTML = originalText;
                     this.disabled = false;
+                }
+            });
+        });
+
+        // --- Restauration de version ---
+        document.querySelectorAll('.restore-version-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const versionId = this.dataset.versionId;
+                const originalText = this.innerHTML;
+
+                try {
+                    this.disabled = true;
+                    this.innerHTML = `
+                        <span class="inline-flex items-center">
+                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-700 dark:text-blue-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Restauration en cours...
+                        </span>
+                    `;
+
+                    const response = await fetch(`/restore/${versionId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    const data = await response.json();
+                    if (response.ok && data.success) {
+                        location.reload();
+                    } else {
+                        throw new Error(data.error || 'Une erreur est survenue lors de la restauration');
+                    }
+                } catch (error) {
+                    console.error('Erreur de restauration:', error);
+                    showError(error.message || 'Une erreur est survenue lors de la restauration');
+                    this.innerHTML = originalText;
+                } finally {
+                    this.disabled = false;
+                    location.reload();
                 }
             });
         });

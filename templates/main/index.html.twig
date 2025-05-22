@@ -13,21 +13,56 @@
     <div class="container mx-auto px-4 py-8">
         <div class="text-center mb-12">
             <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">Web Forge</h1>
-            <p class="text-lg text-gray-600 dark:text-gray-300">Générez votre site web en quelques secondes grâce à l'IA</p>
+            <p class="text-lg text-gray-600 mb-5 dark:text-gray-300">Générez votre site web en quelques secondes grâce à l'IA</p>
             {% if app.user %}
-                <a href="{{ path('app_my_sites') }}" class="inline-block mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200 me-2">Mes sites générés</a>
-                <a href="{{ path('app_my_clones') }}" class="inline-block mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200 me-2">Mes clones générés</a><br>
-                <a href="{{ path('app_clone') }}" class="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Cloner un site</a>
+                {% if not app.user.isSubscribed %}
+                    <div class="max-w-2xl mx-auto bg-yellow-300 dark:bg-yellow-900 rounded-lg p-6 mb-6">
+                        <h2 class="text-xl font-semibold text-yellow-800 dark:text-yellow-200 mb-3">Débloquez tout le potentiel de Web Forge !</h2>
+                        <p class="text-yellow-700 dark:text-yellow-300 mb-4">Abonnez-vous pour accéder à toutes les fonctionnalités premium :</p>
+                        <ul class="text-left text-yellow-700 dark:text-yellow-300 mb-4 max-w-md mx-auto">
+                            <li class="flex items-center mb-2">
+                                <svg class="w-5 h-5 mr-2 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Génération illimitée de sites
+                            </li>
+                            <li class="flex items-center mb-2">
+                                <svg class="w-5 h-5 mr-2 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Modification et personnalisation avancées
+                            </li>
+                            <li class="flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Déploiement et hébergement inclus
+                            </li>
+                        </ul>
+                        <a href="{{ path('app_subscription') }}" class="inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg transition duration-200 transform hover:scale-105">S'abonner maintenant</a>
+                    </div>
+                {% endif %}
+                <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
+                    <a href="{{ path('app_my_sites') }}" class="inline-block mb-6 mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200 me-2">Mes sites générés</a>
+                    <a href="{{ path('app_my_clones') }}" class="inline-block mb-6 mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200 me-2">Mes clones générés</a><br>
             {% endif %}
-        </div>
         {% if app.user %}
-            <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
                 {{ form_start(form, {'attr': {'id': 'prompt-form', 'class': 'space-y-4'}}) }}
                     <div class="mb-4">
                         {{ form_widget(form.content) }}
                     </div>
                     <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center">
+                        {% if app.user.count == 0 and not app.user.isSubscribed %}
+                        <span id="submit-text">Générer le site (3 générations gratuites restantes)</span>
+                        {% elseif app.user.count == 1 and not app.user.isSubscribed %}
+                        <span id="submit-text">Générer le site (2 générations gratuites restantes)</span>
+                        {% elseif app.user.count == 2 and not app.user.isSubscribed %}
+                        <span id="submit-text">Générer le site (1 génération gratuite restante)</span>
+                        {% elseif app.user.count == 3 and not app.user.isSubscribed %}
+                        <span id="submit-text">Génération bloquée, veuillez vous abonner.</span>
+                        {% elseif app.user.isSubscribed %}
                         <span id="submit-text">Générer le site</span>
+                        {% endif %}
                         <span id="loading-spinner" class="hidden ml-3">
                             <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -36,6 +71,7 @@
                         </span>
                     </button>
                 {{ form_end(form) }}
+                    <a href="{{ path('app_clone') }}" class="inline-block mt-6 bg-gray-700 hover:bg-gray-900 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Cloner un site</a>
             </div>
 
             <div id="error-alert" class="hidden max-w-3xl mx-auto mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
@@ -108,7 +144,7 @@
                         throw new Error(data.error || 'Une erreur est survenue lors de la génération');
                         }
                     } catch (error) {
-                        alert('Erreur: ' + error.message);
+                        // alert('Erreur: ' + error.message);
                     } finally {
                         submitText.classList.remove('hidden');
                         loadingSpinner.classList.add('hidden');
