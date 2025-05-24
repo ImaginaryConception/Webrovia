@@ -10,12 +10,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Ajouter la classe active au bouton cliqué
             this.classList.add('active');
 
-            // Mettre à jour l'URL de l'iframe avec le chemin du fichier
-            const previewFrame = document.querySelector(`.preview-frame[data-prompt-id="${promptId}"]`);
-            if (previewFrame) {
-                const currentSrc = new URL(previewFrame.src);
-                currentSrc.searchParams.set('path', filePath);
-                previewFrame.src = currentSrc.toString();
+            // Mettre à jour l'URL de l'iframe uniquement pour les fichiers template
+            if (filePath.endsWith('.html.twig')) {
+                const previewFrame = document.querySelector(`.preview-frame[data-prompt-id="${promptId}"]`);
+                if (previewFrame) {
+                    const currentSrc = new URL(previewFrame.src);
+                    currentSrc.searchParams.set('path', filePath);
+                    previewFrame.src = currentSrc.toString();
+                }
             }
 
             // Charger le contenu du fichier dans l'éditeur

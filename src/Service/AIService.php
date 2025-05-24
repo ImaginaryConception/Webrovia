@@ -17,10 +17,27 @@ class AIService
 
     public function generateWebsiteFromPrompt(string $prompt, ?array $existingFiles = null): array
     {
-        $promptText = "Tu es un générateur de code HTML.TWIG/CSS/JS. Retourne UNIQUEMENT un objet JSON avec les clés suivantes :\n";
+        // Gestion de la création et suppression des fichiers Twig
+        if (preg_match('/^Créer un nouveau fichier ([\w.-]+\.html\.twig)/', $prompt, $matches)) {
+            $fileName = $matches[1];
+            $prompt = "Create a new Twig template file named '{$fileName}' that extends base.html.twig. The template should define its content within the {% block body %} block. Make sure the content is meaningful and follows best practices for web development. The template should inherit styles from app.css and functionality from app.js.";
+        } elseif (preg_match('/^Supprimer le fichier ([\w.-]+\.html\.twig)/', $prompt, $matches)) {
+            $fileName = $matches[1];
+            if (isset($existingFiles[$fileName])) {
+                unset($existingFiles[$fileName]);
+                return $existingFiles;
+            }
+            throw new \RuntimeException("Le fichier {$fileName} n'existe pas");
+        }
+
+        $promptText = "Tu es un générateur de code HTML.TWIG/CSS/JS. Retourne UNIQUEMENT un objet JSON. Le JSON peut contenir les clés suivantes :\n";
         $promptText .= "- index.html.twig : Doit commencer par {% extends 'base.html.twig' %} et définir son contenu dans {% block body %}\n";
-        $promptText .= "- styles.css : Le CSS doit être écrit de manière brute sans utiliser Asset, il doit être ultra moderne et complet\n";
-        $promptText .= "- script.js : Le code JavaScript doit être ultra complet pour la page web\n\n";
+        $promptText .= "- app.css : Le CSS doit être écrit de manière brute sans utiliser Asset, il doit être ultra moderne et complet\n";
+        $promptText .= "- app.js : Le code JavaScript doit être ultra complet pour la page web\n";
+        $promptText .= "- Autres fichiers .html.twig : Tu peux créer d'autres fichiers .html.twig si demandé. Ils doivent tous:\n";
+        $promptText .= "  * Commencer par {% extends 'base.html.twig' %}\n";
+        $promptText .= "  * Définir leur contenu dans {% block body %}\n";
+        $promptText .= "  * Hériter automatiquement de app.js et app.css\n\n";
         
         if ($existingFiles) {
             $promptText .= "Voici le code existant que tu dois conserver et modifier uniquement selon la demande :\n";
@@ -69,11 +86,19 @@ class AIService
             throw new \RuntimeException('Réponse JSON invalide: ' . json_last_error_msg());
         }
 
-        // S'assurer que les clés existent
-        return [
-            'index.html.twig' => $json['index.html.twig'] ?? '',
-            'styles.css' => $json['styles.css'] ?? '',
-            'script.js' => $json['script.js'] ?? '',
-        ];
+        // Filtrer les clés pour ne garder que les fichiers .twig, app.css et app.js
+        $result = [];
+        foreach ($json as $filename => $content) {
+            if ($filename === 'app.css' || $filename === 'app.js' || str_ends_with($filename, '.html.twig')) {
+                $result[$filename] = $content;
+            }
+        }
+
+        // S'assurer que les fichiers requis existent
+        if (!isset($result['index.html.twig'])) $result['index.html.twig'] = '';
+        if (!isset($result['app.css'])) $result['app.css'] = '';
+        if (!isset($result['app.js'])) $result['app.js'] = '';
+
+        return $result;
     }
 }

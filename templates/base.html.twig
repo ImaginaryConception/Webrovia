@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }" :class="{ 'dark': darkMode }">
+<html lang="fr" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: false }" :class="{ 'dark': darkMode }">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{% block title %}Welcome!{% endblock %} - Web Forge</title>
+        <title>{% block title %}Welcome!{% endblock %} - Web Forge AI</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
         <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
         {% block stylesheets %}
@@ -15,6 +15,8 @@
                         extend: {
                             colors: {
                                 primary: '#3B82F6',
+                                secondary: '#10B981',
+                                accent: '#8B5CF6'
                             }
                         }
                     }
@@ -24,6 +26,20 @@
                 @layer utilities {
                     .content-auto {
                         content-visibility: auto;
+                    }
+                    .sidebar-icon {
+                        @apply relative flex items-center justify-center h-12 w-12 mt-2 mb-2 mx-auto shadow-lg bg-gray-800 dark:bg-gray-800 text-primary hover:bg-primary hover:text-white rounded-3xl hover:rounded-xl transition-all duration-300 ease-linear cursor-pointer;
+                    }
+                    .fade-in {
+                        opacity: 0;
+                        transform: translateY(20px);
+                        animation: fadeIn 0.6s ease-out forwards;
+                    }
+                    @keyframes fadeIn {
+                        to {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
                     }
                 }
             </style>
@@ -35,90 +51,165 @@
         {% endblock %}
     </head>
     <body class="h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-        <div class="min-h-full">
-            <nav class="bg-white dark:bg-gray-800 shadow-sm">
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div class="flex h-16 justify-between">
-                        <div class="flex">
-                            <div class="flex flex-shrink-0 items-center">
-                                <a href="{{ path('app_home') }}"><span class="font-bold text-gray-900 dark:text-white mb-4 me-1">Web Forge</span><a href="https://www.imaginaryconception.com/" target="_blank" class="text-gray-600 dark:text-gray-300">by Imaginary Conception</a></a></br>
-                            </div>
-                            <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                                <a href="{{ path('app_home') }}" class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">Générer</a>
-                                <a href="{{ path('app_clone') }}" class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">Cloner</a>
-                                <a href="{{ path('app_my_sites') }}" class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">Mes Sites Web</a>
-                                <a href="{{ path('app_my_clones') }}" class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">Mes Clones</a>
-                                <a href="{{ path('app_subscription') }}" class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">Accès</a>
-                                <a href="{{ path('app_admin_prompts') }}" class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">Admin</a>
-                            </div>
+        <div class="min-h-full flex">
+            <!-- Mobile Menu Button -->
+            <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden fixed top-4 left-4 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                <span class="sr-only">Open sidebar</span>
+                <i class="fas" :class="{ 'fa-times': sidebarOpen, 'fa-bars': !sidebarOpen }"></i>
+            </button>
+
+            <!-- Sidebar -->
+            <div :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}" class="fixed top-0 left-0 h-screen w-64 py-6 m-0 flex flex-col bg-white dark:bg-gray-800 text-white shadow-lg z-40 transform lg:translate-x-0 lg:w-48 transition-all duration-300 ease-in-out">
+                <!-- Close button for mobile -->
+                <button @click="sidebarOpen = false" class="lg:hidden absolute top-4 right-4 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                    <span class="sr-only">Fermer le menu</span>
+                    <i class="fas fa-times"></i>
+                </button>
+                <!-- User Controls in Sidebar (Mobile Only) -->
+                <div class="block lg:hidden px-4 py-2 mb-4 border-b border-gray-200 dark:border-gray-700">
+                    <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mb-2">
+                        <i class="fas" :class="{ 'fa-sun': darkMode, 'fa-moon': !darkMode }"></i>
+                        {# <span class="ml-4">{{ darkMode ? 'Mode Clair' : 'Mode Sombre' }}</span> #}
+                    </button>
+
+                    {% if app.user %}
+                        <a href="{{ path('app_logout') }}" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span class="ml-4">Déconnexion</span>
+                        </a>
+                    {% else %}
+                        <a href="{{ path('app_login') }}" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mb-2">
+                            <i class="fas fa-sign-in-alt"></i>
+                            <span class="ml-4">Connexion</span>
+                        </a>
+                        <a href="{{ path('app_register') }}" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                            <i class="fas fa-user-plus"></i>
+                            <span class="ml-4">Inscription</span>
+                        </a>
+                    {% endif %}
+
+                    <a href="https://www.imaginaryconception.com/" target="_blank" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mt-2">
+                        <i class="fas fa-code text-xl"></i>
+                        <span class="ml-4">Imaginary Conception</span>
+                    </a>
+                </div>
+
+                <div class="flex flex-col flex-grow mt-20">
+                    <a href="{{ path('app_home') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 100ms;" title="Générer">
+                        <i class="fas fa-magic text-xl"></i>
+                        <span class="ml-4 lg:ml-4 lg:block">Générer</span>
+                    </a>
+                    <a href="{{ path('app_clone') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 200ms;" title="Cloner">
+                        <i class="fas fa-clone text-xl"></i>
+                        <span class="ml-4 lg:ml-4 lg:block">Cloner</span>
+                    </a>
+                    <a href="{{ path('app_my_sites') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 300ms;" title="Mes Sites Web">
+                        <i class="fas fa-globe text-xl"></i>
+                        <span class="ml-4 lg:ml-4 lg:block">Mes Sites Web</span>
+                    </a>
+                    <a href="{{ path('app_my_clones') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 400ms;" title="Mes Clones">
+                        <i class="fas fa-copy text-xl"></i>
+                        <span class="ml-4 lg:ml-4 lg:block">Mes Clones</span>
+                    </a>
+                    <a href="{{ path('app_subscription') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 500ms;" title="Accès Premium">
+                        <i class="fas fa-crown text-xl text-yellow-500"></i>
+                        <span class="ml-4 lg:ml-4 lg:block">Accès Premium</span>
+                    </a>
+                    <a href="{{ path('app_admin_prompts') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 600ms;" title="Admin">
+                        <i class="fas fa-cog text-xl"></i>
+                        <span class="ml-4 lg:ml-4 lg:block">Admin</span>
+                    </a>
+
+                    {% if app.user %}
+                        <a href="{{ path('app_logout') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 700ms;">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span class="ml-4 lg:ml-4 lg:block">Déconnexion</span>
+                        </a>
+                    {% else %}
+                        <a href="{{ path('app_login') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 700ms;">
+                            <i class="fas fa-sign-in-alt"></i>
+                            <span class="ml-4 lg:ml-4 lg:block">Connexion</span>
+                        </a>
+                        <a href="{{ path('app_register') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 800ms;">
+                            <i class="fas fa-user-plus"></i>
+                            <span class="ml-4 lg:ml-4 lg:block">Inscription</span>
+                        </a>
+                    {% endif %}
+                </div>
+
+                <!-- User Controls in Sidebar (Desktop Only) -->
+                <div class="hidden lg:flex lg:flex-col mt-auto px-4 py-4 lg:px-0 fade-in" style="animation-delay: 900ms;">
+                    <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 mb-4 group">
+                        <i class="fas" :class="{ 'fa-sun': darkMode, 'fa-moon': !darkMode }"></i>
+                        <span class="ml-4 lg:block" x-text="darkMode ? 'Mode Clair' : 'Mode Sombre'"></span>
+                    </button>
+
+                    <a href="https://www.imaginaryconception.com/" target="_blank" class="flex items-center justify-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 group" title="by Imaginary Conception">
+                        <div class="flex items-center justify-center">
+                            <i class="fas fa-code text-xl"></i>
+                            <span class="ml-4 lg:block lg:text-center">Imaginary Conception</span>
                         </div>
-                        <div class="hidden sm:ml-6 sm:flex sm:items-center">
-                            <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" type="button" class="rounded-lg p-2.5 text-sm me-3 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-700"><i class="fa-solid fa-moon"></i></button>
-                            {% if app.user %}
-                                <div class="relative ml-3" x-data="{ open: false }" @click.away="open = false">
-                                    <button @click="open = !open" type="button" class="flex rounded-full bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2" id="user-menu-button">
-                                        <span class="sr-only">Ouvrir le menu utilisateur</span>
-                                        <img class="h-8 w-8 rounded-full" src="https://www.gravatar.com/avatar/{{ app.user.email }}?s=200" alt=""><p class="ms-2 mt-1 font-bold text-gray-900 dark:text-white">{{ app.user.email }}</p>
-                                    </button>
-                                    <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95" class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white dark:bg-gray-800 py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none" role="menu">
-                                        {# <a href="{{ path('app_profile') }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" role="menuitem">Profil</a> #}
-                                        <a href="{{ path('app_logout') }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" role="menuitem">Déconnexion</a>
-                                    </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="flex-1 ml-0 lg:ml-48 transition-all duration-300">
+                <nav class="bg-white dark:bg-gray-800 shadow-sm">
+                    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                        <div class="flex h-16 justify-between items-center">
+                            <div class="flex items-center ml-16 lg:ml-0">
+                                <div class="flex flex-shrink-0 items-center">
+                                    <a href="{{ path('app_home') }}"><span class="font-bold text-2xl bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">Web Forge AI</span></a>
+                                    <a href="https://www.imaginaryconception.com/" target="_blank"><span class="text-1xl bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent ms-3">by Imaginary Conception</span></a>
                                 </div>
-                            {% else %}
-                                <div class="flex items-center space-x-4">
-                                    <a href="{{ path('app_login') }}" class="text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100">Connexion</a>
-                                    <a href="{{ path('app_register') }}" class="text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100">Inscription</a>
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="-mr-2 flex items-center sm:hidden">
-                            <button type="button" @click="mobileMenu = !mobileMenu" class="inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500" aria-controls="mobile-menu" aria-expanded="false">
-                                <span class="sr-only">Ouvrir le menu principal</span>
-                                <svg class="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                                </svg>
-                            </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </nav>
+                </nav>
 
-            <main>
-                <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
-                    {% for message in app.flashes('success') %}
-                        <div class="rounded-md bg-green-50 dark:bg-green-900 p-4 mb-4">
-                            <div class="flex">
-                                <div class="flex-shrink-0">
-                                    <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                    </svg>
-                                </div>
-                                <div class="ml-3">
-                                    <p class="text-sm font-medium text-green-800 dark:text-green-200">{{ message }}</p>
+                <main>
+                    <div class="mx-auto max-w-7xl py-6 px-4 sm:px-6 lg:px-8">
+                        <!-- Page Header -->
+                        <div class="mb-8 fade-in">
+                            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">{% block page_title %}{% endblock %}</h1>
+                            <p class="text-gray-600 dark:text-gray-400">{% block page_subtitle %}{% endblock %}</p>
+                        </div>
+
+                        <!-- Flash Messages -->
+                        {% for message in app.flashes('success') %}
+                            <div class="rounded-lg bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-800 p-4 mb-6 fade-in" style="animation-delay: 200ms;">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-check-circle text-xl text-green-400"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-sm font-medium text-green-800 dark:text-green-200">{{ message }}</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    {% endfor %}
+                        {% endfor %}
 
-                    {% for message in app.flashes('error') %}
-                        <div class="rounded-md bg-red-50 dark:bg-red-900 p-4 mb-4">
-                            <div class="flex">
-                                <div class="flex-shrink-0">
-                                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                                    </svg>
-                                </div>
-                                <div class="ml-3">
-                                    <p class="text-sm font-medium text-red-800 dark:text-red-200">{{ message }}</p>
+                        {% for message in app.flashes('error') %}
+                            <div class="rounded-lg bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 p-4 mb-6 fade-in" style="animation-delay: 200ms;">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-exclamation-circle text-xl text-red-400"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-sm font-medium text-red-800 dark:text-red-200">{{ message }}</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    {% endfor %}
+                        {% endfor %}
 
-                    {% block body %}{% endblock %}
-                </div>
-            </main>
+                        <!-- Main Content -->
+                        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 fade-in" style="animation-delay: 300ms;">
+                            {% block body %}{% endblock %}
+                        </div>
+                    </div>
+                </main>
+            </div>
         </div>
     </body>
 </html>

@@ -96,72 +96,6 @@
                             </div>
                         </div>
 
-                        <div class="mb-6">
-                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Explorateur de fichiers</h3>
-                                <div class="file-explorer overflow-y-auto h-64" data-prompt-id="{{ prompt.id }}">
-                                    <div class="file-tree">
-                                        {% set fileTypes = {
-                                            'html.twig': 'Template',
-                                            'css': 'Style',
-                                            'js': 'Script',
-                                            'json': 'JSON',
-                                            'lock': 'LOCK',
-                                            'env': 'Environnement',
-                                            'md': 'Documentation',
-                                            'yaml': 'YAML',
-                                            'php': 'PHP'
-                                        } %}
-
-                                        {% for type, label in fileTypes %}
-                                            {% set typeFiles = [] %}
-                                            {% for template in templates %}
-                                                {% if template.path ends with type and template.promptId == prompt.id %}
-                                                    {% set typeFiles = typeFiles|merge([template]) %}
-                                                {% endif %}
-                                            {% endfor %}
-
-                                            {% if typeFiles is not empty %}
-                                                <div class="file-category mb-4">
-                                                    <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
-                                                        <span class="mr-2">
-                                                            {% if type == 'html.twig' %}
-                                                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path></svg>
-                                                            {% elseif type == 'css' %}
-                                                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path></svg>
-                                                            {% elseif type == 'js' %}
-                                                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>
-                                                            {% else %}
-                                                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
-                                                            {% endif %}
-                                                        </span>
-                                                        {{ label }}s
-                                                    </h4>
-                                                    <ul class="pl-4 space-y-1">
-                                                        {% for file in typeFiles %}
-                                                            <li>
-                                                                <button class="file-btn text-left w-full px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center group" 
-                                                                        data-prompt-id="{{ prompt.id }}" 
-                                                                        data-file-path="{{ file.path }}">
-                                                                    <span class="flex-grow text-white truncate">{{ file.name }}</span>
-                                                                    <span class="hidden group-hover:inline-flex ml-2 text-gray-500 dark:text-gray-400">
-                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                                                        </svg>
-                                                                    </span>
-                                                                </button>
-                                                            </li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                </div>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         <div class="flex flex-col gap-6">
                             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Code généré</h3>
@@ -244,6 +178,124 @@
                                 </div>
                                 <div class="preview-container h-[500px] w-full bg-white border rounded-lg overflow-hidden relative" data-prompt-id="{{ prompt.id }}">
                                     <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}" src="{{ path('app_preview_template', {'id': prompt.id}) }}"></iframe>
+                                </div>
+
+                                <!-- Modal de création de fichier -->
+                                <div id="newFileModal-{{ prompt.id }}" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center" data-modal-type="creation">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Nouveau fichier Twig</h3>
+                                        <div class="mb-4">
+                                            <label for="fileName-{{ prompt.id }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nom du fichier</label>
+                                            <input type="text" id="fileName-{{ prompt.id }}" class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="mon-template">
+                                        </div>
+                                        <div class="mb-4">
+                                            <label for="fileContent-{{ prompt.id }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Contenu de la page</label>
+                                            <textarea id="fileContent-{{ prompt.id }}" class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white h-32" placeholder="Décrivez le contenu souhaité pour votre page (structure, style, fonctionnalités...)"></textarea>
+                                        </div>
+                                        <div class="flex justify-end space-x-3">
+                                            <button type="button" class="cancel-file-btn px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600" data-prompt-id="{{ prompt.id }}">Annuler</button>
+                                            <button type="button" class="create-file-btn px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center space-x-2" data-prompt-id="{{ prompt.id }}">
+                                                <span class="create-btn-text">Créer</span>
+                                                <svg class="animate-spin h-4 w-4 text-white hidden create-btn-spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Modal de confirmation de suppression -->
+                                <div id="deleteFileModal-{{ prompt.id }}" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center" data-modal-type="deletion">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Confirmer la suppression</h3>
+                                        <p class="text-gray-600 dark:text-gray-400 mb-6">Êtes-vous sûr de vouloir supprimer ce fichier ? Cette action est irréversible.</p>
+                                        <div class="flex justify-end space-x-3">
+                                            <button type="button" class="cancel-delete-btn px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Non, annuler</button>
+                                            <button type="button" class="confirm-delete-btn px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">Oui, supprimer</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                    </div>
+                                </div>
+                                <div class="mb-6">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Explorateur de fichiers</h3>
+                                        <div class="file-explorer overflow-y-auto h-64" data-prompt-id="{{ prompt.id }}">
+                                            <div class="flex justify-between items-center mb-4">
+                                                <button class="add-file-btn bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm" data-prompt-id="{{ prompt.id }}">
+                                                    <i class="fas fa-plus mr-1"></i> Nouveau template
+                                                </button>
+                                            </div>
+                                            <div class="file-tree">
+                                                {% set fileTypes = {
+                                                    'html.twig': 'Template',
+                                                    'css': 'Style',
+                                                    'js': 'Script',
+                                                    'json': 'JSON',
+                                                    'lock': 'LOCK',
+                                                    'env': 'Environnement',
+                                                    'md': 'Documentation',
+                                                    'yaml': 'YAML',
+                                                    'php': 'PHP'
+                                                } %}
+
+                                                {% for type, label in fileTypes %}
+                                                    {% set typeFiles = [] %}
+                                                    {% for template in templates %}
+                                                        {% if template.path ends with type and template.promptId == prompt.id %}
+                                                            {% set typeFiles = typeFiles|merge([template]) %}
+                                                        {% endif %}
+                                                    {% endfor %}
+
+                                                    {% if typeFiles is not empty %}
+                                                        <div class="file-category mb-4">
+                                                            <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                                                                <span class="mr-2">
+                                                                    {% if type == 'html.twig' %}
+                                                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path></svg>
+                                                                    {% elseif type == 'css' %}
+                                                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path></svg>
+                                                                    {% elseif type == 'js' %}
+                                                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>
+                                                                    {% else %}
+                                                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
+                                                                    {% endif %}
+                                                                </span>
+                                                                {{ label }}s
+                                                            </h4>
+                                                            <ul class="pl-4 space-y-1">
+                                                                {% for file in typeFiles %}
+                                                                    <li>
+                                                                        <div class="flex items-center justify-between w-full px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 group">
+                                                                            <button class="file-btn text-left flex-grow flex items-center" 
+                                                                                    data-prompt-id="{{ prompt.id }}" 
+                                                                                    data-file-path="{{ file.path }}">
+                                                                                <span class="flex-grow text-gray-700 dark:text-gray-300 truncate">{{ file.name }}</span>
+                                                                                <span class="hidden group-hover:inline-flex ml-2 text-gray-500 dark:text-gray-400">
+                                                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                                                    </svg>
+                                                                                </span>
+                                                                            </button>
+                                                                            {% if type == 'html.twig' and file.name != 'index.html.twig' %}
+                                                                                <button class="delete-file-btn hidden group-hover:inline-flex text-red-500 hover:text-red-700 ml-2" 
+                                                                                        data-prompt-id="{{ prompt.id }}" 
+                                                                                        data-file-path="{{ file.path }}">
+                                                                                    <i class="fas fa-trash-alt"></i>
+                                                                                </button>
+                                                                            {% endif %}
+                                                                        </div>
+                                                                    </li>
+                                                                {% endfor %}
+                                                            </ul>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="mt-4">
                                     <div class="modification-section mb-6">
@@ -329,74 +381,6 @@
                             </div>
                         </div>
 
-                        <div class="mb-6">
-                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Explorateur de fichiers</h3>
-                                <div class="file-explorer overflow-y-auto h-64" data-prompt-id="{{ prompt.id }}">
-                                    <div class="file-tree">
-                                        {% set fileTypes = {
-                                            'html.twig': 'Template',
-                                            'css': 'Style',
-                                            'js': 'Script',
-                                            'json': 'JSON',
-                                            'lock': 'LOCK',
-                                            'env': 'Environnement',
-                                            'md': 'Documentation',
-                                            'yaml': 'YAML',
-                                            'php': 'PHP'
-                                        } %}
-
-                                        {% for type, label in fileTypes %}
-                                            {% set typeFiles = [] %}
-                                            {% for template in templates %}
-                                                {% if template.path ends with type and template.promptId == prompt.id %}
-                                                    {% set typeFiles = typeFiles|merge([template]) %}
-                                                {% endif %}
-                                            {% endfor %}
-
-                                            {% if typeFiles is not empty %}
-                                                <div class="file-category mb-4">
-                                                    <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
-                                                        <span class="mr-2">
-                                                            {% if type == 'html.twig' %}
-                                                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path></svg>
-                                                            {% elseif type == 'css' %}
-                                                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path></svg>
-                                                            {% elseif type == 'js' %}
-                                                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>
-                                                            {% else %}
-                                                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
-                                                            {% endif %}
-                                                        </span>
-                                                        {{ label }}s
-                                                    </h4>
-                                                    <ul class="pl-4 space-y-1">
-                                                        {% for file in typeFiles %}
-                                                            <li>
-                                                                <button class="file-btn text-left w-full px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center group" 
-                                                                        data-prompt-id="{{ prompt.id }}" 
-                                                                        data-file-path="{{ file.path }}"
-                                                                        
-                                                                        >
-                                                                    <span class="flex-grow text-white truncate">{{ file.name }}</span>
-                                                                    <span class="hidden group-hover:inline-flex ml-2 text-gray-500 dark:text-gray-400">
-                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                                                        </svg>
-                                                                    </span>
-                                                                </button>
-                                                            </li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                </div>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         <div class="flex flex-col gap-6">
                             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Code généré</h3>
@@ -442,6 +426,46 @@
                                 <div class="preview-container h-[500px] w-full bg-white border rounded-lg overflow-hidden relative" data-prompt-id="{{ prompt.id }}">
                                     <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}" src="{{ path('app_preview_template', {'id': prompt.id}) }}"></iframe>
                                 </div>
+
+                                <!-- Modal pour la création de fichier -->
+                                <!-- Modal de création de fichier -->
+                                <div id="newFileModal-{{ prompt.id }}" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center" data-modal-type="creation">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Nouveau fichier Twig</h3>
+                                        <div class="mb-4">
+                                            <label for="fileName-{{ prompt.id }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nom du fichier</label>
+                                            <input type="text" id="fileName-{{ prompt.id }}" class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="mon-template">
+                                        </div>
+                                        <div class="mb-4">
+                                            <label for="fileContent-{{ prompt.id }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Contenu de la page</label>
+                                            <textarea id="fileContent-{{ prompt.id }}" class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white h-32" placeholder="Décrivez le contenu souhaité pour votre page (structure, style, fonctionnalités...)"></textarea>
+                                        </div>
+                                        <div class="flex justify-end space-x-3">
+                                            <button type="button" class="cancel-file-btn px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600" data-prompt-id="{{ prompt.id }}">Annuler</button>
+                                            <button type="button" class="create-file-btn px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center space-x-2" data-prompt-id="{{ prompt.id }}">
+                                                <span class="create-btn-text">Créer</span>
+                                                <svg class="animate-spin h-4 w-4 text-white hidden create-btn-spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Modal de confirmation de suppression -->
+                                <div id="deleteFileModal-{{ prompt.id }}" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center" data-modal-type="deletion">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Confirmer la suppression</h3>
+                                        <p class="text-gray-600 dark:text-gray-400 mb-6">Êtes-vous sûr de vouloir supprimer ce fichier ? Cette action est irréversible.</p>
+                                        <div class="flex justify-end space-x-3">
+                                            <button type="button" class="cancel-delete-btn px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Non, annuler</button>
+                                            <button type="button" class="confirm-delete-btn px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">Oui, supprimer</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                    </div>
+                                </div>
                                 <div class="mt-4">
                                     <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Historique des versions</h4>
                                     <div class="versions-list space-y-2 mb-4 max-h-64 overflow-y-auto">
@@ -486,6 +510,73 @@
                                         {% else %}
                                             <p class="text-gray-500 dark:text-gray-400 text-sm">Aucune version disponible</p>
                                         {% endfor %}
+                                    </div>
+                                    <div class="mb-6">
+                                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Explorateur de fichiers</h3>
+                                            <div class="file-explorer overflow-y-auto h-64" data-prompt-id="{{ prompt.id }}">
+                                                <div class="file-tree">
+                                                    {% set fileTypes = {
+                                                        'html.twig': 'Template',
+                                                        'css': 'Style',
+                                                        'js': 'Script',
+                                                        'json': 'JSON',
+                                                        'lock': 'LOCK',
+                                                        'env': 'Environnement',
+                                                        'md': 'Documentation',
+                                                        'yaml': 'YAML',
+                                                        'php': 'PHP'
+                                                    } %}
+
+                                                    {% for type, label in fileTypes %}
+                                                        {% set typeFiles = [] %}
+                                                        {% for template in templates %}
+                                                            {% if template.path ends with type and template.promptId == prompt.id %}
+                                                                {% set typeFiles = typeFiles|merge([template]) %}
+                                                            {% endif %}
+                                                        {% endfor %}
+
+                                                        {% if typeFiles is not empty %}
+                                                            <div class="file-category mb-4">
+                                                                <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                                                                    <span class="mr-2">
+                                                                        {% if type == 'html.twig' %}
+                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path></svg>
+                                                                        {% elseif type == 'css' %}
+                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path></svg>
+                                                                        {% elseif type == 'js' %}
+                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>
+                                                                        {% else %}
+                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
+                                                                        {% endif %}
+                                                                    </span>
+                                                                    {{ label }}s
+                                                                </h4>
+                                                                <ul class="pl-4 space-y-1">
+                                                                    {% for file in typeFiles %}
+                                                                        <li>
+                                                                            <button class="file-btn text-left w-full px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center group" 
+                                                                                    data-prompt-id="{{ prompt.id }}" 
+                                                                                    data-file-path="{{ file.path }}"
+                                                                                    
+                                                                                    >
+                                                                                <span class="flex-grow text-white truncate">{{ file.name }}</span>
+                                                                                <span class="hidden group-hover:inline-flex ml-2 text-gray-500 dark:text-gray-400">
+                                                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                                                    </svg>
+                                                                                </span>
+                                                                            </button>
+                                                                        </li>
+                                                                    {% endfor %}
+                                                                </ul>
+                                                            </div>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="modification-section">
                                         <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Modifier le site</h4>
@@ -784,6 +875,176 @@
             updateButtonState(); // Initialiser l'état du bouton
         });
 
+
+        // --- Gestion des modals ---
+        let isCreatingFile = false;
+        let currentDeletingFile = null;
+
+        function showModal(modalId) {
+            const modal = document.querySelector(modalId);
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function hideModal(modalId) {
+            const modal = document.querySelector(modalId);
+            if (modal) modal.classList.add('hidden');
+        }
+
+        // --- Gestion de la suppression des fichiers Twig ---
+        document.querySelectorAll('.delete-file-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const promptId = this.dataset.promptId;
+                const filePath = this.dataset.filePath;
+                const deleteModal = document.querySelector(`#deleteFileModal-${promptId}`);
+                
+                // Stocker les informations du fichier à supprimer
+                currentDeletingFile = { promptId, filePath };
+                
+                // Afficher le modal de confirmation
+                showModal(`#deleteFileModal-${promptId}`);
+            });
+        });
+
+        // Gestion des boutons du modal de suppression
+        document.querySelectorAll('.cancel-delete-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const modal = this.closest('[id^="deleteFileModal-"]');
+                hideModal(`#${modal.id}`);
+                currentDeletingFile = null;
+            });
+        });
+
+        document.querySelectorAll('.confirm-delete-btn').forEach(button => {
+            button.addEventListener('click', async function() {
+                if (!currentDeletingFile) return;
+                
+                try {
+                    const response = await fetch(`/modify/${currentDeletingFile.promptId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: new URLSearchParams({
+                            'content': `Supprimer le fichier ${currentDeletingFile.filePath}`
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Erreur lors de la suppression du fichier : ' + (data.error || 'Erreur inconnue'));
+                        hideModal(`#deleteFileModal-${currentDeletingFile.promptId}`);
+                    }
+                } catch (error) {
+                    console.error('Erreur lors de la suppression du fichier :', error);
+                    alert('Erreur lors de la suppression du fichier');
+                    hideModal(`#deleteFileModal-${currentDeletingFile.promptId}`);
+                }
+            });
+        });
+
+        // --- Gestion de la création de nouveaux fichiers Twig ---
+        document.querySelectorAll('.add-file-btn, .add-twig-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const promptId = this.dataset.promptId;
+                showModal(`#newFileModal-${promptId}`);
+            });
+        });
+
+        document.querySelectorAll('.cancel-file-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                if (isCreatingFile) return; // Empêcher la fermeture pendant la création
+                const promptId = this.dataset.promptId;
+                hideModal(`#newFileModal-${promptId}`);
+            });
+        });
+
+        document.querySelectorAll('.create-file-btn').forEach(button => {
+            button.addEventListener('click', async function() {
+                const promptId = this.dataset.promptId;
+                const modal = document.querySelector(`#newFileModal-${promptId}`);
+                const input = document.querySelector(`#fileName-${promptId}`);
+                const contentInput = document.querySelector(`#fileContent-${promptId}`);
+                const fileName = input.value.trim();
+                const fileContent = contentInput.value.trim();
+                const btnText = this.querySelector('.create-btn-text');
+                const btnSpinner = this.querySelector('.create-btn-spinner');
+                const cancelBtn = modal.querySelector('.cancel-file-btn');
+
+                if (!fileName) {
+                    alert('Veuillez entrer un nom de fichier');
+                    return;
+                }
+
+                if (!fileContent) {
+                    alert('Veuillez décrire le contenu souhaité pour votre page');
+                    return;
+                }
+
+                const fullFileName = `${fileName}.html.twig`;
+
+                // Désactiver les boutons et afficher le spinner
+                isCreatingFile = true;
+                this.disabled = true;
+                cancelBtn.disabled = true;
+                cancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                btnText.textContent = 'Création en cours...';
+                btnSpinner.classList.remove('hidden');
+
+                try {
+                    const response = await fetch(`/modify/${promptId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: new URLSearchParams({
+                            'content': `Créer un nouveau fichier ${fullFileName} qui hérite de base.html.twig avec le contenu suivant : ${fileContent}`
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        // Réactiver les boutons en cas d'erreur
+                        isCreatingFile = false;
+                        this.disabled = false;
+                        cancelBtn.disabled = false;
+                        cancelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        btnText.textContent = 'Créer';
+                        btnSpinner.classList.add('hidden');
+                        alert('Erreur lors de la création du fichier : ' + (data.error || 'Erreur inconnue'));
+                    }
+                } catch (error) {
+                    // Réactiver les boutons en cas d'erreur
+                    isCreatingFile = false;
+                    this.disabled = false;
+                    cancelBtn.disabled = false;
+                    cancelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btnText.textContent = 'Créer';
+                    btnSpinner.classList.add('hidden');
+                    console.error('Erreur lors de la création du fichier :', error);
+                    alert('Erreur lors de la création du fichier');
+                }
+            });
+        });
+
+        // Gestion de la fermeture des modals en cliquant en dehors
+        document.querySelectorAll('[data-modal-type]').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    const modalType = this.dataset.modalType;
+                    if (modalType === 'creation' && isCreatingFile) return; // Empêcher la fermeture pendant la création
+                    if (modalType === 'deletion') {
+                        currentDeletingFile = null;
+                    }
+                    this.classList.add('hidden');
+                }
+            });
+        });
 
         // --- Initialisation des éditeurs CodeMirror ---
         document.querySelectorAll('.editor-container').forEach(container => {
