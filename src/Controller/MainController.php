@@ -244,7 +244,7 @@ class MainController extends AbstractController
                 $error = $prompt->getError();
                 $response = array_merge(
                     $response,
-                    $promptRestorationService->handleErrorAndRestore($prompt)
+                    $promptRestorationService->handleError($prompt)
                 );
 
                 // Si l'erreur contient "429", on renvoie une vraie 429
@@ -318,7 +318,7 @@ class MainController extends AbstractController
             $prompt = $em->getRepository(Prompt::class)->find($id);
             if (!$prompt || $prompt->getUser() !== $this->getUser()) {
                 $this->addFlash('error', 'Accès refusé ou prompt introuvable.');
-                return $this->redirectToRoute('app_my_sites');
+                return $this->redirectToRoute('app_my_sites', ['id' => $id]);
             }
 
             $fullDomain = $domainName . $extension;
@@ -330,7 +330,7 @@ class MainController extends AbstractController
 
             if (!$result['success']) {
                 $this->addFlash('error', $result['error'] ?? 'Erreur lors du déploiement');
-                return $this->redirectToRoute('app_my_sites');
+                return $this->redirectToRoute('app_my_sites', ['id' => $id]);
             }
 
             return $this->render('deployment/success.html.twig', [
@@ -409,24 +409,95 @@ class MainController extends AbstractController
         return $this->render('main/error.html.twig');
     }
 
-    #[Route('/my-sites', name: 'app_my_sites')]
+    #[Route('/delete-site/{id}', name: 'app_delete_site', methods: ['POST'])]
     #[IsGranted('ROLE_USER')]
-    public function mySites(Request $request, EntityManagerInterface $em): Response
+    public function deleteSite(Request $request, EntityManagerInterface $em, int $id): Response
+    {
+        try {
+            if ($request->headers->get('X-Requested-With') !== 'XMLHttpRequest') {
+                return $this->json([
+                    'success' => false,
+                    'error' => 'Cette action nécessite une requête AJAX'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $prompt = $em->getRepository(Prompt::class)->find($id);
+            if (!$prompt || $prompt->getUser() !== $this->getUser()) {
+                throw new Exception('Accès non autorisé');
+            }
+
+            $prompt->setStatus('archived');
+            $em->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Site supprimé avec succès'
+            ]);
+
+        } catch (Exception $e) {
+            return $this->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], Response::HTTP_BAD_REQUEST);
+        }
+    }
+
+    #[Route('/sites', name: 'app_list_sites')]
+    #[IsGranted('ROLE_USER')]
+    public function listSites(EntityManagerInterface $em): Response
     {
         $prompts = $em->getRepository(Prompt::class)->findBy(
             ['user' => $this->getUser()],
             ['createdAt' => 'DESC']
         );
 
+        return $this->render('main/list_sites.html.twig', [
+            'prompts' => $prompts
+        ]);
+    }
+
+    #[Route('/my-sites/{id}', name: 'app_my_sites')]
+    #[IsGranted('ROLE_USER')]
+    public function mySites(Request $request, EntityManagerInterface $em, ?int $id = null): Response
+    {
+        if ($id !== null) {
+            $prompt = $em->getRepository(Prompt::class)->find($id);
+            if (!$prompt || $prompt->getUser() !== $this->getUser()) {
+                throw $this->createNotFoundException('Site non trouvé');
+            }
+            
+            // Si le prompt actuel n'est pas complété, chercher la dernière version complétée
+            if ($prompt->getStatus() == 'archived') {
+                $latestPrompt = $em->getRepository(Prompt::class)->findOneBy(
+                    [
+                        'user' => $this->getUser(),
+                        'websiteIdentification' => $prompt->getWebsiteIdentification(),
+                        'status' => 'completed'
+                    ],
+                    ['version' => 'DESC']
+                );
+                
+                if ($latestPrompt && $latestPrompt->getId() !== $prompt->getId()) {
+                    return $this->redirectToRoute('app_my_sites', ['id' => $latestPrompt->getId()]);
+                }
+            }
+            
+            $prompts = [$prompt];
+        } else {
+            $prompts = $em->getRepository(Prompt::class)->findBy(
+                ['user' => $this->getUser()],
+                ['createdAt' => 'DESC']
+            );
+        }
+
         // Injecte allVersions dans chaque prompt
         foreach ($prompts as $prompt) {
-            $versions = [];
-            $current = $prompt;
-            while ($current !== null) {
-                $versions[] = $current;
-                $current = $current->getOriginalPrompt();
-            }
-            $prompt->allVersions = $versions; // du plus récent au plus ancien
+            // Récupérer toutes les versions liées au même websiteIdentification
+            $versions = $em->getRepository(Prompt::class)->findBy(
+                ['websiteIdentification' => $prompt->getWebsiteIdentification()],
+                ['version' => 'DESC']
+            );
+            $prompt->allVersions = $versions;
         }
 
         $templates = [];
@@ -450,7 +521,7 @@ class MainController extends AbstractController
             $domainName = $data['domainName'] . $data['extension'];
             
             $this->addFlash('success', 'Le nom de domaine ' . $domainName . ' a été enregistré avec succès.');
-            return $this->redirectToRoute('app_my_sites');
+            return $this->redirectToRoute('app_my_sites', ['id' => $id]);
         }
 
         return $this->render('main/my_sites.html.twig', [
@@ -467,17 +538,7 @@ class MainController extends AbstractController
         try {
             $path = $request->query->get('path');
             if (!$path) {
-                $errorMessage = new Response(
-                    '<div style="display: flex; align-items: center; justify-content: center; min-height: 100%; width: 100%; margin: 0; padding: 20px; background-color: #fff3cd; color: #856404; font-family: Arial, sans-serif; text-align: center;">
-                        <div>
-                            <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 15px; display: block;"></i>
-                            <p style="margin: 0; font-size: 16px;">Veuillez sélectionner un template dans l\'explorateur de fichiers pour continuer.</p>
-                        </div>
-                    </div>',
-                    Response::HTTP_BAD_REQUEST,
-                    ['Content-Type' => 'text/html']
-                );
-                return $errorMessage;
+                $path = 'index.html.twig';
             }
 
             $prompt = $em->getRepository(Prompt::class)->find($id);
@@ -666,7 +727,9 @@ class MainController extends AbstractController
             // Archiver toutes les versions du site, sauf la version cible
             foreach ($allPrompts as $prompt) {
                 if ($prompt->getId() !== $targetPrompt->getId()) {
-                    $prompt->setStatus('archived');
+                    if($prompt->getStatus() != 'error') {
+                        $prompt->setStatus('archived');
+                    }
                 }
             }
             
@@ -677,7 +740,7 @@ class MainController extends AbstractController
             $em->flush();
 
             $this->addFlash('success', 'La version a été restaurée avec succès et toutes les autres versions ont été archivées.');
-            return $this->redirectToRoute('app_my_sites');
+            return $this->redirectToRoute('app_my_sites', ['id' => $id]);
         } catch (Exception $e) {
             $this->addFlash('error', $e->getMessage());
         }

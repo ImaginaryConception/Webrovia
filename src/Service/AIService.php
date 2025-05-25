@@ -37,8 +37,9 @@ class AIService
         $promptText .= "- Autres fichiers .html.twig : Tu peux créer d'autres fichiers .html.twig si demandé. Ils doivent tous:\n";
         $promptText .= "  * Commencer par {% extends 'base.html.twig' %}\n";
         $promptText .= "  * Définir leur contenu dans {% block body %}\n";
-        $promptText .= "  * Hériter automatiquement de app.js et app.css\n\n";
-        
+        $promptText .= "  * Hériter automatiquement de app.js et app.css\n";
+        $promptText .= "IMPORTANT : NE JAMAIS générer le fichier base.html.twig\n\n";
+
         if ($existingFiles) {
             $promptText .= "Voici le code existant que tu dois conserver et modifier uniquement selon la demande :\n";
             $promptText .= json_encode($existingFiles, JSON_PRETTY_PRINT) . "\n\nModifie uniquement ce qui est demandé dans le prompt suivant, en gardant le reste du code intact : ";
@@ -46,7 +47,7 @@ class AIService
             $promptText .= "Chaque valeur doit être une string contenant le code. Ne rajoute pas de texte autour. Pas de commentaires, pas d'explications, pas de blabla, QUE DU JSON. Voici la demande : ";
         }
         
-        $promptText .= $prompt;
+        $promptText .= $prompt . " IMPORTANT : Il faut que ce soit ULTRA MODERNE VISUELLEMENT avec du contenu ULTRA COMPLET et une mise en page ULTRA PROFESSIONNELLE !";
 
         $response = $this->client->request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
             'headers' => [

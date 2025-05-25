@@ -3,46 +3,61 @@
 {% block title %}Inscription - Web Forge{% endblock %}
 
 {% block body %}
-<div class="min-h-screen bg-black-100 py-6 flex flex-col justify-center sm:py-12">
+<div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-6 flex flex-col justify-center sm:py-12">
     <div class="relative py-3 sm:max-w-xl sm:mx-auto">
-        <div class="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-600 shadow-lg transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl"></div>
-        <div class="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
+        <div class="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl opacity-75 transition-all duration-300 hover:opacity-90"></div>
+        <div class="relative px-4 py-10 bg-white dark:bg-gray-800 shadow-xl sm:rounded-3xl sm:p-20 transition-transform duration-300 hover:scale-[1.01]">
             <div class="max-w-md mx-auto">
-                <div class="divide-y divide-gray-200">
-                    <div class="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
-                        <h1 class="text-3xl font-bold text-center mb-8">Inscription</h1>
+                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <div class="py-8 text-base leading-6 space-y-4 text-gray-700 dark:text-gray-300 sm:text-lg sm:leading-7">
+                        <h1 class="text-4xl font-extrabold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">Inscription</h1>
 
                         {{ form_start(registrationForm, {'attr': {'class': 'space-y-6'}}) }}
-                            <div>
-                                {{ form_label(registrationForm.email, 'Email', {'label_attr': {'class': 'block text-sm font-medium text-gray-700'}}) }}
-                                <div class="mt-1">
-                                    {{ form_widget(registrationForm.email, {'attr': {'class': 'shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm bordershadowoutlinenone'}}) }}
-                                    {{ form_errors(registrationForm.email) }}
+                            <div class="space-y-2">
+                                {{ form_label(registrationForm.email, 'Email', {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+                                <div class="mt-1 relative rounded-md shadow-sm">
+                                    {{ form_widget(registrationForm.email, {'attr': {
+                                        'class': 'appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white sm:text-sm transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-400',
+                                        'placeholder': 'Votre email'
+                                    }}) }}
+                                    {{ form_errors(registrationForm.email, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
                                 </div>
                             </div>
 
-                            <div>
-                                {{ form_label(registrationForm.plainPassword, 'Mot de passe', {'label_attr': {'class': 'block text-sm font-medium text-gray-700'}}) }}
-                                <div class="mt-1">
-                                    {{ form_widget(registrationForm.plainPassword, {'attr': {'class': 'shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm bordershadowoutlinenone'}}) }}
-                                    {{ form_errors(registrationForm.plainPassword) }}
+                            <div class="space-y-2">
+                                {{ form_label(registrationForm.plainPassword, 'Mot de passe', {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+                                <div class="mt-1 relative rounded-md shadow-sm">
+                                    {{ form_widget(registrationForm.plainPassword, {'attr': {
+                                        'class': 'appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white sm:text-sm transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-400',
+                                        'placeholder': 'Votre mot de passe'
+                                    }}) }}
+                                    {{ form_errors(registrationForm.plainPassword, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
                                 </div>
                             </div>
 
-                            <div class="flex items-center">
-                                {{ form_widget(registrationForm.agreeTerms, {'attr': {'class': 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'}}) }}
-                                {{ form_label(registrationForm.agreeTerms, 'J\'accepte les conditions d\'utilisation', {'label_attr': {'class': 'ml-2 block text-sm text-gray-900'}}) }}
-                                {{ form_errors(registrationForm.agreeTerms) }}
+                            <div class="flex items-center space-x-3 pt-2">
+                                {{ form_widget(registrationForm.agreeTerms, {'attr': {'class': 'h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 dark:border-gray-600 rounded transition-colors duration-200 cursor-pointer'}}) }}
+                                {{ form_label(registrationForm.agreeTerms, "J'accepte les conditions d'utilisation", {'label_attr': {'class': 'text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors duration-200'}}) }}
                             </div>
+                            {{ form_errors(registrationForm.agreeTerms, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
 
-                            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                S'inscrire
-                            </button>
+                            <div class="pt-4">
+                                <button type="submit" 
+                                        class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white 
+                                               bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 
+                                               focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 
+                                               dark:focus:ring-offset-gray-900 transform transition-all duration-300 hover:scale-[1.02] 
+                                               hover:shadow-lg">
+                                    S'inscrire
+                                </button>
+                            </div>
                         {{ form_end(registrationForm) }}
 
-                        <p class="mt-6 text-center text-sm text-gray-600">
+                        <p class="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
                             Déjà inscrit?
-                            <a href="{{ path('app_login') }}" class="font-medium text-blue-600 hover:text-blue-500">Se connecter</a>
+                            <a href="{{ path('app_login') }}" 
+                               class="font-medium text-purple-600 hover:text-purple-500 dark:text-purple-400 dark:hover:text-purple-300 
+                                      transition-colors duration-300 hover:underline">Se connecter</a>
                         </p>
                     </div>
                 </div>

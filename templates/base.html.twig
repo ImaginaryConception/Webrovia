@@ -65,36 +65,9 @@
                     <span class="sr-only">Fermer le menu</span>
                     <i class="fas fa-times"></i>
                 </button>
-                <!-- User Controls in Sidebar (Mobile Only) -->
-                <div class="block lg:hidden px-4 py-2 mb-4 border-b border-gray-200 dark:border-gray-700">
-                    <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mb-2">
-                        <i class="fas" :class="{ 'fa-sun': darkMode, 'fa-moon': !darkMode }"></i>
-                        {# <span class="ml-4">{{ darkMode ? 'Mode Clair' : 'Mode Sombre' }}</span> #}
-                    </button>
 
-                    {% if app.user %}
-                        <a href="{{ path('app_logout') }}" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                            <i class="fas fa-sign-out-alt"></i>
-                            <span class="ml-4">Déconnexion</span>
-                        </a>
-                    {% else %}
-                        <a href="{{ path('app_login') }}" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mb-2">
-                            <i class="fas fa-sign-in-alt"></i>
-                            <span class="ml-4">Connexion</span>
-                        </a>
-                        <a href="{{ path('app_register') }}" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                            <i class="fas fa-user-plus"></i>
-                            <span class="ml-4">Inscription</span>
-                        </a>
-                    {% endif %}
-
-                    <a href="https://www.imaginaryconception.com/" target="_blank" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mt-2">
-                        <i class="fas fa-code text-xl"></i>
-                        <span class="ml-4">Imaginary Conception</span>
-                    </a>
-                </div>
-
-                <div class="flex flex-col flex-grow mt-20">
+                <div class="flex flex-col flex-grow">
+                    <div class="px-4 py-2 mb-4 text-2xl font-bold text-gray-600 dark:text-gray-300 lg:text-center"><a href="{{ path('app_home') }}">Web Forge</a></div>
                     <a href="{{ path('app_home') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 100ms;" title="Générer">
                         <i class="fas fa-magic text-xl"></i>
                         <span class="ml-4 lg:ml-4 lg:block">Générer</span>
@@ -103,7 +76,7 @@
                         <i class="fas fa-clone text-xl"></i>
                         <span class="ml-4 lg:ml-4 lg:block">Cloner</span>
                     </a>
-                    <a href="{{ path('app_my_sites') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 300ms;" title="Mes Sites Web">
+                    <a href="{{ path('app_list_sites') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 300ms;" title="Mes Sites Web">
                         <i class="fas fa-globe text-xl"></i>
                         <span class="ml-4 lg:ml-4 lg:block">Mes Sites Web</span>
                     </a>
@@ -137,6 +110,35 @@
                     {% endif %}
                 </div>
 
+                <!-- User Controls in Sidebar (Mobile Only) -->
+                <div class="block lg:hidden px-4 py-2 mb-4 border-t border-gray-200 dark:border-gray-700">
+                    <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mb-2">
+                        <i class="fas" :class="{ 'fa-sun': darkMode, 'fa-moon': !darkMode }"></i>
+                        <span class="ml-4 lg:block" x-text="darkMode ? 'Mode Clair' : 'Mode Sombre'"></span>
+                    </button>
+
+                    {% if app.user %}
+                        <a href="{{ path('app_logout') }}" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span class="ml-4">Déconnexion</span>
+                        </a>
+                    {% else %}
+                        <a href="{{ path('app_login') }}" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mb-2">
+                            <i class="fas fa-sign-in-alt"></i>
+                            <span class="ml-4">Connexion</span>
+                        </a>
+                        <a href="{{ path('app_register') }}" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                            <i class="fas fa-user-plus"></i>
+                            <span class="ml-4">Inscription</span>
+                        </a>
+                    {% endif %}
+
+                    <a href="https://www.imaginaryconception.com/" target="_blank" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mt-2">
+                        <i class="fas fa-code text-xl"></i>
+                        <span class="ml-4">Imaginary Conception</span>
+                    </a>
+                </div>
+
                 <!-- User Controls in Sidebar (Desktop Only) -->
                 <div class="hidden lg:flex lg:flex-col mt-auto px-4 py-4 lg:px-0 fade-in" style="animation-delay: 900ms;">
                     <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 mb-4 group">
@@ -144,11 +146,9 @@
                         <span class="ml-4 lg:block" x-text="darkMode ? 'Mode Clair' : 'Mode Sombre'"></span>
                     </button>
 
-                    <a href="https://www.imaginaryconception.com/" target="_blank" class="flex items-center justify-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 group" title="by Imaginary Conception">
-                        <div class="flex items-center justify-center">
-                            <i class="fas fa-code text-xl"></i>
-                            <span class="ml-4 lg:block lg:text-center">Imaginary Conception</span>
-                        </div>
+                    <a href="https://www.imaginaryconception.com/" target="_blank" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 800ms;">
+                        <i class="fas fa-code text-xl"></i>
+                        <span class="ml-4 lg:block lg:text-center">Imaginary<br>Conception</span>
                     </a>
                 </div>
             </div>

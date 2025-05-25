@@ -25,7 +25,7 @@ class DeploymentController extends AbstractController
 
         if (!$prompt || $prompt->getUser() !== $this->getUser()) {
             $this->addFlash('error', 'Accès refusé ou prompt introuvable.');
-            return $this->redirectToRoute('app_my_sites');
+            return $this->redirectToRoute('app_my_sites', ['id' => $promptId]);
         }
 
         $form = $this->createForm(DomainType::class);
@@ -48,7 +48,7 @@ class DeploymentController extends AbstractController
 
         if (!$result['success']) {
             $this->addFlash('error', $result['error'] ?? 'Erreur lors du déploiement');
-            return $this->redirectToRoute('app_my_sites');
+            return $this->redirectToRoute('app_my_sites', ['id' => $promptId]);
         }
 
         return $this->render('deployment/success.html.twig', [

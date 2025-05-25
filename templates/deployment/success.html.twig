@@ -25,7 +25,7 @@
             </div>
 
             <div class="flex justify-center space-x-4">
-                <a href="{{ path('app_my_sites') }}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200">
+                <a href="{{ path('app_my_sites', {'id': app.request.attributes.get('promptId')}) }}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200">
                     Retour à mes sites
                 </a>
                 <a href="https://{{ domain }}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200">

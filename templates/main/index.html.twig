@@ -21,7 +21,7 @@
             <p class="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">Transformez vos idées en sites web professionnels grâce à notre technologie d'intelligence artificielle avancée. Créez, personnalisez et déployez en quelques minutes.</p>
             {% if app.user %}
                 {% if not app.user.isSubscribed %}
-                    <div class="max-w-3xl mx-auto bg-gradient-to-br from-accent/10 to-primary/10 dark:from-accent/20 dark:to-primary/20 rounded-2xl p-8 mb-8 border border-accent/20 dark:border-accent/30 backdrop-blur-sm">
+                    <div class="max-w-3xl mx-auto bg-gradient-to-br mt-5 from-accent/10 to-primary/10 dark:from-accent/20 dark:to-primary/20 rounded-2xl p-8 mb-8 border border-accent/20 dark:border-accent/30 backdrop-blur-sm">
                         <div class="flex items-center justify-center mb-6">
                             <i class="fas fa-crown text-4xl text-yellow-500 mr-3"></i>
                             <h2 class="text-2xl font-bold bg-gradient-to-r from-yellow-500 to-yellow-600 bg-clip-text text-transparent">Version Premium</h2>
@@ -54,7 +54,7 @@
                 {% endif %}
                 <div class="max-w-3xl mx-auto mb-8 grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="inline-block">
-                        <a href="{{ path('app_my_sites') }}" class="flex items-center justify-center p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 group">
+                        <a href="{{ path('app_list_sites') }}" class="flex items-center justify-center p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 group">
                             <i class="fas fa-globe text-2xl text-primary group-hover:text-white mr-3 transition-colors duration-200"></i>
                             <span class="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors duration-200">Mes sites générés</span>
                         </a>
@@ -74,7 +74,7 @@
                             {{ form_widget(form.content, {'attr': {'class': 'w-full px-6 py-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-colors duration-200 text-lg min-h-[150px]', 'placeholder': 'Ex: Je veux un site web moderne pour mon restaurant avec un menu interactif...'}}) }}
                         </div>
                         <div class="flex items-center justify-between">
-                            <button type="submit" class="flex-1 bg-gradient-to-r from-primary to-secondary text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center justify-center group">
+                            <button type="submit" id="generate-button" class="flex-1 bg-gradient-to-r from-primary to-secondary text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center justify-center group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-lg" {% if app.user.count >= 3 and not app.user.isSubscribed %}disabled{% endif %}>
                                 <i class="fas fa-wand-magic-sparkles mr-2 group-hover:rotate-12 transition-transform duration-200"></i>
                                 <span id="submit-text">
                                     {% if app.user.count == 0 and not app.user.isSubscribed %}
@@ -83,7 +83,7 @@
                                         Générer mon site (2 générations gratuites)
                                     {% elseif app.user.count == 2 and not app.user.isSubscribed %}
                                         Générer mon site (1 génération gratuite)
-                                    {% elseif app.user.count == 3 and not app.user.isSubscribed %}
+                                    {% elseif app.user.count >= 3 and not app.user.isSubscribed %}
                                         <i class="fas fa-lock mr-2"></i> Génération bloquée
                                     {% elseif app.user.isSubscribed %}
                                         Générer mon site
@@ -114,7 +114,7 @@
                         <div class="ml-3">
                             <h3 class="text-sm font-medium text-green-800 dark:text-green-200">{{ message }}</h3>
                             <div class="mt-2">
-                                <a href="{{ path('app_my_sites') }}" class="inline-flex items-center text-sm font-medium text-green-700 dark:text-green-300 hover:text-green-600 dark:hover:text-green-200">
+                                <a href="{{ path('app_list_sites') }}" class="inline-flex items-center text-sm font-medium text-green-700 dark:text-green-300 hover:text-green-600 dark:hover:text-green-200">
                                     <i class="fas fa-external-link-alt mr-1"></i>
                                     Voir mes sites générés
                                 </a>
@@ -146,7 +146,7 @@
                 </div>
                 <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Site Généré avec Succès !</h2>
                 <p class="text-lg text-gray-600 dark:text-gray-300 mb-8">Votre site a été généré avec succès. Vous pouvez maintenant le consulter dans votre espace personnel.</p>
-                <a href="{{ path('app_my_sites') }}" class="inline-flex items-center px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
+                <a href="{{ path('app_list_sites') }}" class="inline-flex items-center px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
                     <i class="fas fa-external-link-alt mr-2"></i>
                     Voir mes sites générés
                 </a>
@@ -190,6 +190,8 @@
             if (form) {
                 form.addEventListener('submit', async function(e) {
                     e.preventDefault();
+                    const generateButton = document.getElementById('generate-button');
+                    generateButton.disabled = true;
                     submitText.classList.add('hidden');
                     loadingSpinner.classList.remove('hidden');
 
@@ -205,7 +207,6 @@
 
                         const data = await response.json();
                         if (response.ok && data.success && data.data && data.data.id) {
-                            // Affichage de la clé API masquée dans la console
                             if (data.maskedApiKey) {
                                 console.log('Clé API utilisée (masquée):', data.maskedApiKey);
                             }
@@ -218,8 +219,9 @@
                         throw new Error(data.error || 'Une erreur est survenue lors de la génération');
                         }
                     } catch (error) {
-                        // alert('Erreur: ' + error.message);
+                        // Gestion des erreurs
                     } finally {
+                        generateButton.disabled = false;
                         submitText.classList.remove('hidden');
                         loadingSpinner.classList.add('hidden');
                     }
@@ -292,28 +294,16 @@
                 }
             }
 
-            function displayResults(files) {
-                // S'assurer que files est un objet JSON valide
-                if (typeof files === 'string') {
-                    try {
-                        files = JSON.parse(files);
-                    } catch (e) {
-                        console.error('Erreur lors du parsing JSON:', e);
-                        return;
-                    }
-                }
-
-                // Afficher le message de succès
+            async function displayResults(files) {
                 const successSection = document.getElementById('success-section');
-                successSection.classList.remove('hidden');
-
-                // Masquer le formulaire
                 const promptForm = document.getElementById('prompt-form');
+                
                 if (promptForm) {
-                    promptForm.closest('.bg-white').classList.add('hidden');
+                    promptForm.classList.add('hidden');
                 }
-
-                // Fin de la fonction displayResults
+                
+                successSection.classList.remove('hidden');
+                currentFiles = files;
             }
 
         });

@@ -19,6 +19,21 @@
         .dark .file-btn.active {
             background-color: rgba(59, 130, 246, 0.2);
         }
+        .delete-confirmation-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .delete-confirmation-modal.show {
+            display: flex;
+        }
     </style>
 {% endblock %}
 
@@ -86,9 +101,44 @@
                                                 <p class="text-sm text-red-700 dark:text-red-200">
                                                     Une erreur est survenue : {{ prompt.error }}
                                                 </p>
-                                                <p class="mt-2 text-sm text-red-600 dark:text-red-300">
-                                                    La restauration automatique de la dernière version stable est en cours...
-                                                </p>
+                                                <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Historique des versions</h4>
+                                    <div class="versions-list space-y-2 mb-4 max-h-64 overflow-y-auto">
+                                    {% if prompt.allVersions is defined and prompt.allVersions is not empty %}
+                                        {% for version in prompt.allVersions %}
+                                            <div class="version-item p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2 {% if version.status == 'archived' %}opacity-75{% endif %}">
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <div class="version-header">
+                                                        <span class="font-medium text-white text-lg">Version {{ version.version }}</span>
+                                                        <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">{{ version.createdAt|date('d/m/Y H:i') }}</span>
+                                                        {% if version.status == 'archived' %}
+                                                            <span class="ml-2 px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs rounded">Archivée</span>
+                                                        {% elseif version.status == 'completed' %}
+                                                            <span class="ml-2 px-2 py-1 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 text-xs rounded">Version actuelle</span>
+                                                        {% elseif version.status == 'error' %}
+                                                            <span class="ml-2 px-2 py-1 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 text-xs rounded">Version en erreur</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if version.status == 'archived' and version.id != prompt.id %}
+                                                        <button type="button" class="restore-version-btn bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-200 px-3 py-1 rounded-full text-sm transition-colors duration-200" data-version-id="{{ version.id }}">
+                                                            Restaurer cette version
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+
+                                                {% if version.modificationRequest %}
+                                                    <div class="version-content mt-2 p-2 bg-white dark:bg-gray-600 rounded">
+                                                        <p class="text-sm text-gray-600 dark:text-gray-300">
+                                                            <span class="font-medium">Modifications apportées :</span><br>
+                                                            {{ version.modificationRequest }}
+                                                        </p>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-gray-500 dark:text-gray-400 text-sm">Aucune version disponible</p>
+                                    {% endif %}
+                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -97,6 +147,7 @@
                         </div>
 
                         <div class="flex flex-col gap-6">
+                            {% if prompt.status != 'error' %}
                             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Code généré</h3>
                                 <div class="flex justify-end mb-4">
@@ -108,15 +159,35 @@
                                 </div>
                                 <div class="editor-container h-[600px] relative" data-prompt-id="{{ prompt.id }}"></div>
                                 <div class="flex space-x-4 mt-4">
+                            {% endif %}
                                 {% if not app.user.isSubscribed %}
                                     <div class="w-full bg-yellow-300 dark:bg-yellow-900 rounded-lg p-4 text-center">
-                                        <p class="text-yellow-700 dark:text-yellow-300 mb-3">Pour télécharger, déployer et modifier vos sites, abonnez-vous à Web Forge !</p>
+                                        <p class="text-yellow-700 dark:text-yellow-300 mb-3">Pour télécharger et déployer votre site, abonnez-vous à Web Forge !</p>
                                         <a href="{{ path('app_subscription') }}" class="inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Découvrir l'abonnement</a>
                                     </div>
                                 {% else %}
-                                    <button class="download-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
-                                        Télécharger le site
-                                    </button>
+                                    {% if prompt.status != 'error' %}
+                                    <div class="flex space-x-4">
+                                        <button class="download-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
+                                            Télécharger le site
+                                        </button>
+                                        <button class="delete-site-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
+                                            <i class="fas fa-trash-alt mr-2"></i>Supprimer le site
+                                        </button>
+
+                                        <!-- Modal de confirmation de suppression -->
+                                        <div id="deleteConfirmationModal-{{ prompt.id }}" class="delete-confirmation-modal">
+                                            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm mx-auto">
+                                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Confirmer la suppression</h3>
+                                                <p class="text-gray-600 dark:text-gray-400 mb-6">Êtes-vous sûr de vouloir supprimer ce site ? Pour une restauration, merci de nous contacter.</p>
+                                                <div class="flex justify-end space-x-3">
+                                                    <button class="cancel-delete-confirmation px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Annuler</button>
+                                                    <button class="confirm-delete-site px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700" data-prompt-id="{{ prompt.id }}">Confirmer la suppression</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
                                     <div class="flex flex-col space-y-2">
                                         {% if prompt.deployed %}
                                             <div class="flex space-x-4">
@@ -130,6 +201,7 @@
                                                 </form>
                                             </div>
                                         {% else %}
+                                            {% if prompt.status != 'error' %}
                                             {{ form_start(domain_form, {'action': path('payDomain', {'type': 'site', 'id': prompt.id}), 'attr': {'class': 'space-y-2'}}) }}
                                                 <div class="flex space-x-2">
                                                     {{ domain_name_widget|raw }}
@@ -139,6 +211,7 @@
                                                     <button type="submit" id="publish-button-{{ prompt.id }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">
                                                     Publier le site
                                                     </button>
+                                                {% endif %}
                                         {% endif %}
                                                     <script>
                                                         document.addEventListener('DOMContentLoaded', function() {
@@ -167,6 +240,46 @@
                                 </div>
                             </div>
 
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const restoreButtons = document.querySelectorAll('.restore-version-btn');
+                                    
+                                    restoreButtons.forEach(button => {
+                                        button.addEventListener('click', function() {
+                                            const promptId = this.getAttribute('data-prompt-id');
+                                            
+                                            // Désactiver le bouton pendant la requête
+                                            this.disabled = true;
+                                            this.innerHTML = 'Restauration en cours...';
+                                            
+                                            fetch(`/restore-version/${promptId}`, {
+                                                method: 'POST',
+                                                headers: {
+                                                    'X-Requested-With': 'XMLHttpRequest'
+                                                }
+                                            })
+                                            .then(response => response.json())
+                                            .then(data => {
+                                                if (data.success) {
+                                                    // Recharger la page après la restauration
+                                                    window.location.reload();
+                                                } else {
+                                                    // Réactiver le bouton en cas d'erreur
+                                                    this.disabled = false;
+                                                    this.innerHTML = 'Restaurer la version précédente';
+                                                }
+                                            })
+                                            .catch(error => {
+                                                // Réactiver le bouton en cas d'erreur
+                                                this.disabled = false;
+                                                this.innerHTML = 'Restaurer la version précédente';
+                                            });
+                                        });
+                                    });
+                                });
+                            </script>
+
+                            {% if prompt.status != 'error' %}
                             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                                 <div class="flex justify-between items-center mb-4">
                                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Aperçu en direct</h3>
@@ -177,8 +290,9 @@
                                     </button>
                                 </div>
                                 <div class="preview-container h-[500px] w-full bg-white border rounded-lg overflow-hidden relative" data-prompt-id="{{ prompt.id }}">
-                                    <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}" src="{{ path('app_preview_template', {'id': prompt.id}) }}"></iframe>
+                                    <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}" src="{{ path('app_preview_template', {'id': prompt.id, 'template': 'index.html.twig'}) }}"></iframe>
                                 </div>
+                            {% endif %}
 
                                 <!-- Modal de création de fichier -->
                                 <div id="newFileModal-{{ prompt.id }}" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center" data-modal-type="creation">
@@ -188,10 +302,10 @@
                                             <label for="fileName-{{ prompt.id }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nom du fichier</label>
                                             <input type="text" id="fileName-{{ prompt.id }}" class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="mon-template">
                                         </div>
-                                        <div class="mb-4">
+                                        {# <div class="mb-4">
                                             <label for="fileContent-{{ prompt.id }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Contenu de la page</label>
                                             <textarea id="fileContent-{{ prompt.id }}" class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white h-32" placeholder="Décrivez le contenu souhaité pour votre page (structure, style, fonctionnalités...)"></textarea>
-                                        </div>
+                                        </div> #}
                                         <div class="flex justify-end space-x-3">
                                             <button type="button" class="cancel-file-btn px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600" data-prompt-id="{{ prompt.id }}">Annuler</button>
                                             <button type="button" class="create-file-btn px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center space-x-2" data-prompt-id="{{ prompt.id }}">
@@ -218,6 +332,7 @@
                                 </div>
                                     </div>
                                 </div>
+                                {% if prompt.status != 'error' %}
                                 <div class="mb-6">
                                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Explorateur de fichiers</h3>
@@ -268,8 +383,8 @@
                                                                 {% for file in typeFiles %}
                                                                     <li>
                                                                         <div class="flex items-center justify-between w-full px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 group">
-                                                                            <button class="file-btn text-left flex-grow flex items-center" 
-                                                                                    data-prompt-id="{{ prompt.id }}" 
+                                                                            <button class="file-btn text-left flex-grow flex items-center"
+                                                                                    data-prompt-id="{{ prompt.id }}"
                                                                                     data-file-path="{{ file.path }}">
                                                                                 <span class="flex-grow text-gray-700 dark:text-gray-300 truncate">{{ file.name }}</span>
                                                                                 <span class="hidden group-hover:inline-flex ml-2 text-gray-500 dark:text-gray-400">
@@ -281,7 +396,7 @@
                                                                             </button>
                                                                             {% if type == 'html.twig' and file.name != 'index.html.twig' %}
                                                                                 <button class="delete-file-btn hidden group-hover:inline-flex text-red-500 hover:text-red-700 ml-2" 
-                                                                                        data-prompt-id="{{ prompt.id }}" 
+                                                                                        data-prompt-id="{{ prompt.id }}"
                                                                                         data-file-path="{{ file.path }}">
                                                                                     <i class="fas fa-trash-alt"></i>
                                                                                 </button>
@@ -300,18 +415,13 @@
                                 <div class="mt-4">
                                     <div class="modification-section mb-6">
                                         <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Modifier le site</h4>
-                                        {% if not app.user.isSubscribed %}
-                                            <div class="bg-yellow-300 dark:bg-yellow-900 rounded-lg p-4 text-center">
-                                                <p class="text-yellow-700 dark:text-yellow-300 mb-3">La modification de sites est réservée aux abonnés Web Forge.</p>
-                                                <a href="{{ path('app_subscription') }}" class="inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded-lg transition duration-200">S'abonner maintenant</a>
-                                            </div>
-                                        {% else %}
                                             <textarea class="modification-prompt w-full h-24 p-2 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600" data-prompt-id="{{ prompt.id }}" placeholder="Décrivez les modifications que vous souhaitez apporter au site..."></textarea>
-                                            <button class="modify-btn mt-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
-                                                Appliquer les modifications
-                                            </button>
-                                        {% endif %}
+                                            <button class="modify-btn mt-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-lg" data-prompt-id="{{ prompt.id }}" {% if app.user.count >= 3 and not app.user.isSubscribed %}disabled{% endif %}>
+                                            Appliquer les modifications {% if not app.user.isSubscribed %}({{ 3 - app.user.count }} restante{% if 3 - app.user.count != 1 %}s{% endif %}){% endif %}
+                                        </button>
                                     </div>
+                                    {% endif %}
+                                    {% if prompt.status != 'error' %}
                                     <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Historique des versions</h4>
                                     <div class="versions-list space-y-2 mb-4 max-h-64 overflow-y-auto">
                                     {% if prompt.allVersions is defined and prompt.allVersions is not empty %}
@@ -325,6 +435,8 @@
                                                             <span class="ml-2 px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs rounded">Archivée</span>
                                                         {% elseif version.status == 'completed' %}
                                                             <span class="ml-2 px-2 py-1 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 text-xs rounded">Version actuelle</span>
+                                                        {% elseif version.status == 'error' %}
+                                                            <span class="ml-2 px-2 py-1 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 text-xs rounded">Version en erreur</span>
                                                         {% endif %}
                                                     </div>
                                                     {% if version.status == 'archived' and version.id != prompt.id %}
@@ -348,6 +460,7 @@
                                         <p class="text-gray-500 dark:text-gray-400 text-sm">Aucune version disponible</p>
                                     {% endif %}
                                 </div>
+                                {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -371,9 +484,6 @@
                                                 <p class="text-sm text-red-700 dark:text-red-200">
                                                     Une erreur est survenue : {{ prompt.error }}
                                                 </p>
-                                                <p class="mt-2 text-sm text-red-600 dark:text-red-300">
-                                                    La restauration automatique de la dernière version stable est en cours...
-                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -382,6 +492,7 @@
                         </div>
 
                         <div class="flex flex-col gap-6">
+                            {% if prompt.status != 'error' %}
                             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Code généré</h3>
                                 <div class="flex justify-end mb-4">
@@ -393,9 +504,28 @@
                                 </div>
                                 <div class="editor-container h-[600px] relative" data-prompt-id="{{ prompt.id }}"></div>
                                 <div class="flex space-x-4 mt-4">
-                                    <button class="download-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
-                                        Télécharger le site
-                                    </button>
+                            {% endif %}
+                            
+                                    <div class="flex space-x-4">
+                                        <button class="download-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
+                                            Télécharger le site
+                                        </button>
+                                        <button class="delete-site-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
+                                            <i class="fas fa-trash-alt mr-2"></i>Supprimer le site
+                                        </button>
+
+                                        <!-- Modal de confirmation de suppression -->
+                                        <div id="deleteConfirmationModal-{{ prompt.id }}" class="delete-confirmation-modal">
+                                            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm mx-auto">
+                                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Confirmer la suppression</h3>
+                                                <p class="text-gray-600 dark:text-gray-400 mb-6">Êtes-vous sûr de vouloir supprimer ce site ? Pour une restauration, merci de nous contacter.</p>
+                                                <div class="flex justify-end space-x-3">
+                                                    <button class="cancel-delete-confirmation px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Annuler</button>
+                                                    <button class="confirm-delete-site px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700" data-prompt-id="{{ prompt.id }}">Confirmer la suppression</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <div class="flex flex-col space-y-2">
                                         <div class="flex space-x-2">
                                             <input type="text" class="custom-domain-input flex-grow px-4 py-2 border rounded-l-lg dark:bg-gray-700 dark:text-white dark:border-gray-600" data-prompt-id="{{ prompt.id }}" placeholder="Votre nom de domaine">
@@ -424,7 +554,7 @@
                                     </button>
                                 </div>
                                 <div class="preview-container h-[500px] w-full bg-white border rounded-lg overflow-hidden relative" data-prompt-id="{{ prompt.id }}">
-                                    <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}" src="{{ path('app_preview_template', {'id': prompt.id}) }}"></iframe>
+                                    <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}" src="{{ path('app_preview_template', {'id': prompt.id, 'template': 'index.html.twig'}) }}"></iframe>
                                 </div>
 
                                 <!-- Modal pour la création de fichier -->
@@ -436,10 +566,10 @@
                                             <label for="fileName-{{ prompt.id }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nom du fichier</label>
                                             <input type="text" id="fileName-{{ prompt.id }}" class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="mon-template">
                                         </div>
-                                        <div class="mb-4">
+                                        {# <div class="mb-4">
                                             <label for="fileContent-{{ prompt.id }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Contenu de la page</label>
                                             <textarea id="fileContent-{{ prompt.id }}" class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white h-32" placeholder="Décrivez le contenu souhaité pour votre page (structure, style, fonctionnalités...)"></textarea>
-                                        </div>
+                                        </div> #}
                                         <div class="flex justify-end space-x-3">
                                             <button type="button" class="cancel-file-btn px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600" data-prompt-id="{{ prompt.id }}">Annuler</button>
                                             <button type="button" class="create-file-btn px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center space-x-2" data-prompt-id="{{ prompt.id }}">
@@ -489,6 +619,8 @@
                                                             <span class="ml-2 px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs rounded">Archivée</span>
                                                         {% elseif version.status == 'completed' %}
                                                             <span class="ml-2 px-2 py-1 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 text-xs rounded">Version actuelle</span>
+                                                        {% elseif version.status == 'error' %}
+                                                            <span class="ml-2 px-2 py-1 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 text-xs rounded">Version en erreur</span>
                                                         {% endif %}
                                                     </div>
                                                     {% if version.status == 'archived' and version.id != prompt.id %}
@@ -580,10 +712,29 @@
                                     </div>
                                     <div class="modification-section">
                                         <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Modifier le site</h4>
-                                        <textarea class="modification-prompt w-full h-24 p-2 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600" data-prompt-id="{{ prompt.id }}" placeholder="Décrivez les modifications que vous souhaitez apporter au site..."></textarea>
-                                        <button class="modify-btn mt-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
-                                            Appliquer les modifications
-                                        </button>
+                                        {% if not app.user.isSubscribed and app.user.count >= 3 %}
+                                            <div class="bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 p-4 mb-4">
+                                                <p class="text-yellow-700 dark:text-yellow-200">
+                                                    Vous avez atteint la limite de modifications gratuites. <a href="{{ path('app_subscription') }}" class="underline hover:text-yellow-600">Passez à la version premium</a> pour des modifications illimitées.
+                                                </p>
+                                            </div>
+                                            <textarea class="modification-prompt w-full h-24 p-2 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600 opacity-50 cursor-not-allowed" data-prompt-id="{{ prompt.id }}" placeholder="Décrivez les modifications que vous souhaitez apporter au site..." disabled></textarea>
+                                            <button class="modify-btn mt-2 bg-purple-600 text-white font-bold py-2 px-4 rounded opacity-50 cursor-not-allowed" data-prompt-id="{{ prompt.id }}" disabled>
+                                                Modifications bloquées
+                                            </button>
+                                        {% else %}
+                                            <textarea class="modification-prompt w-full h-24 p-2 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600" data-prompt-id="{{ prompt.id }}" placeholder="Décrivez les modifications que vous souhaitez apporter au site..."></textarea>
+                                            <div class="flex justify-between items-center mt-2">
+                                                <button class="modify-btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
+                                                    Appliquer les modifications
+                                                </button>
+                                                {% if not app.user.isSubscribed %}
+                                                    <span class="text-gray-600 dark:text-gray-400">
+                                                        {{ 3 - app.user.count }} modification{% if 3 - app.user.count != 1 %}s{% endif %} restante{% if 3 - app.user.count != 1 %}s{% endif %}
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -602,6 +753,54 @@
 
 {% block javascripts %}
     {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Gestionnaire pour les boutons de suppression
+            document.querySelectorAll('.delete-site-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const promptId = this.dataset.promptId;
+                    const modal = document.querySelector(`#deleteConfirmationModal-${promptId}`);
+                    modal.classList.add('show');
+                });
+            });
+
+            // Gestionnaire pour les boutons d'annulation
+            document.querySelectorAll('.cancel-delete-confirmation').forEach(button => {
+                button.addEventListener('click', function() {
+                    const modal = this.closest('.delete-confirmation-modal');
+                    modal.classList.remove('show');
+                });
+            });
+
+            // Gestionnaire pour les boutons de confirmation
+            document.querySelectorAll('.confirm-delete-site').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const promptId = this.dataset.promptId;
+                    try {
+                        const response = await fetch(`/delete-site/${promptId}`, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+
+                        const data = await response.json();
+                        if (data.success) {
+                            // Recharger la page après la suppression
+                            window.location.reload();
+                        } else {
+                            alert(data.error || 'Une erreur est survenue lors de la suppression');
+                        }
+                    } catch (error) {
+                        alert('Une erreur est survenue lors de la suppression');
+                    } finally {
+                        const modal = this.closest('.delete-confirmation-modal');
+                        modal.classList.remove('show');
+                    }
+                });
+            });
+        });
+    </script>
     <style>
         .tab-btn {
             padding: 0.5rem 1rem;
@@ -966,9 +1165,9 @@
                 const promptId = this.dataset.promptId;
                 const modal = document.querySelector(`#newFileModal-${promptId}`);
                 const input = document.querySelector(`#fileName-${promptId}`);
-                const contentInput = document.querySelector(`#fileContent-${promptId}`);
+                // const contentInput = document.querySelector(`#fileContent-${promptId}`);
                 const fileName = input.value.trim();
-                const fileContent = contentInput.value.trim();
+                // const fileContent = contentInput.value.trim();
                 const btnText = this.querySelector('.create-btn-text');
                 const btnSpinner = this.querySelector('.create-btn-spinner');
                 const cancelBtn = modal.querySelector('.cancel-file-btn');
@@ -978,10 +1177,10 @@
                     return;
                 }
 
-                if (!fileContent) {
-                    alert('Veuillez décrire le contenu souhaité pour votre page');
-                    return;
-                }
+                // if (!fileContent) {
+                //     alert('Veuillez décrire le contenu souhaité pour votre page');
+                //     return;
+                // }
 
                 const fullFileName = `${fileName}.html.twig`;
 
@@ -1001,7 +1200,7 @@
                             'X-Requested-With': 'XMLHttpRequest'
                         },
                         body: new URLSearchParams({
-                            'content': `Créer un nouveau fichier ${fullFileName} qui hérite de base.html.twig avec le contenu suivant : ${fileContent}`
+                            'content': `Créer un nouveau fichier ${fullFileName} qui hérite de base.html.twig`
                         })
                     });
 
