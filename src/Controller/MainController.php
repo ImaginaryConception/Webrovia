@@ -362,7 +362,7 @@ class MainController extends AbstractController
 
         $checkoutSession = $stripe->checkout->sessions->create([
             'line_items' => [[
-                'price' => 'price_1RLmFaPWgJeaubFaxBHYVrcz',
+                'price' => 'price_1RQFAkBtUGEFOuHvakQdWcqY',
                 'quantity' => 1,
             ]],
             'mode' => 'subscription',

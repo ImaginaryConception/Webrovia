@@ -38,6 +38,12 @@ class AIService
         $promptText .= "  * Commencer par {% extends 'base.html.twig' %}\n";
         $promptText .= "  * Définir leur contenu dans {% block body %}\n";
         $promptText .= "  * Hériter automatiquement de app.js et app.css\n";
+        $promptText .= "Ajoute beaucoup d'animations pour les boutons, textes etc\n";
+        $promptText .= "Pour les images, assures-toi de récupérer des images sur internet avec des liens uniquement, pas de chemin relatif\n";
+        $promptText .= "Ajoute souvent des images pour rendre le site attractif\n";
+        $promptText.= "Préfère les sites one page avec des liens de navbar qui mène à des ancres de la page\n";
+        $promptText.= "Je veux que tu mettes des vrais images, pas de #\n";
+        $promptText.= "Il faut que ce soit ULTRA MODERNE VISUELLEMENT avec du contenu ULTRA COMPLET, une mise en page ULTRA PROFESSIONNELLE !\n";
         $promptText .= "IMPORTANT : NE JAMAIS générer le fichier base.html.twig\n\n";
 
         if ($existingFiles) {
@@ -46,8 +52,8 @@ class AIService
         } else {
             $promptText .= "Chaque valeur doit être une string contenant le code. Ne rajoute pas de texte autour. Pas de commentaires, pas d'explications, pas de blabla, QUE DU JSON. Voici la demande : ";
         }
-        
-        $promptText .= $prompt . " IMPORTANT : Il faut que ce soit ULTRA MODERNE VISUELLEMENT avec du contenu ULTRA COMPLET et une mise en page ULTRA PROFESSIONNELLE !";
+
+        $promptText .= $prompt . " IMPORTANT : Il faut que ce soit ULTRA MODERNE VISUELLEMENT avec du contenu ULTRA COMPLET, une mise en page ULTRA PROFESSIONNELLE !";
 
         $response = $this->client->request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
             'headers' => [
