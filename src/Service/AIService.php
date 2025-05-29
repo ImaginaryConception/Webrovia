@@ -44,6 +44,7 @@ class AIService
         $promptText.= "Préfère les sites one page avec des liens de navbar qui mène à des ancres de la page\n";
         $promptText.= "Je veux que tu mettes des vrais images, pas de #\n";
         $promptText.= "Il faut que ce soit ULTRA MODERNE VISUELLEMENT avec du contenu ULTRA COMPLET, une mise en page ULTRA PROFESSIONNELLE !\n";
+        $promptText.= "Il faut que ce soit ultra animé, avec un effet de glissement quand on va dans une encre.\n";
         $promptText .= "IMPORTANT : NE JAMAIS générer le fichier base.html.twig\n\n";
 
         if ($existingFiles) {
@@ -93,7 +94,7 @@ class AIService
             throw new \RuntimeException('Réponse JSON invalide: ' . json_last_error_msg());
         }
 
-        // Filtrer les clés pour ne garder que les fichiers .twig, app.css et app.js
+        // Filtrer les clés pour ne garder que les fichiers frontend et backend
         $result = [];
         foreach ($json as $filename => $content) {
             if ($filename === 'app.css' || $filename === 'app.js' || str_ends_with($filename, '.html.twig')) {

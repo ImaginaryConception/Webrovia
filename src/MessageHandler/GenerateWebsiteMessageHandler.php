@@ -28,7 +28,6 @@ class GenerateWebsiteMessageHandler
     {
         $prompt = $this->promptRepository->find($message->getPromptId());
         if (!$prompt) {
-            // error_log("Prompt non trouvé : ID " . $message->getPromptId());
             return;
         }
 
@@ -50,7 +49,7 @@ class GenerateWebsiteMessageHandler
         $user = $this->security->getUser();
 
         if (!$user instanceof User) {
-            throw new \LogicException('L’utilisateur connecté n’est pas une instance de App\Entity\User');
+            throw new \LogicException('L\'utilisateur connecté n\'est pas une instance de App\Entity\User');
         }
 
         do {
@@ -69,7 +68,6 @@ class GenerateWebsiteMessageHandler
                 $lastError = $e;
                 $retryCount++;
                 if ($retryCount < self::MAX_RETRIES) {
-                    // error_log("Tentative $retryCount/$this::MAX_RETRIES échouée : " . $e->getMessage());
                     sleep(pow(2, $retryCount));
                 }
             }
@@ -81,7 +79,6 @@ class GenerateWebsiteMessageHandler
     private function handleError(Prompt $prompt, \Exception $e): void
     {
         $errorMessage = $this->formatErrorMessage($e);
-        // error_log("Erreur lors de la génération : " . $errorMessage);
         $prompt->setStatus('error');
         $prompt->setError($errorMessage);
     }
