@@ -8,10 +8,14 @@ class AIService
 {
     private HttpClientInterface $client;
     private string $apiKey;
+    private BackendGeneratorService $backendGenerator;
 
-    public function __construct(HttpClientInterface $client)
-    {
+    public function __construct(
+        HttpClientInterface $client,
+        BackendGeneratorService $backendGenerator
+    ) {
         $this->client = $client;
+        $this->backendGenerator = $backendGenerator;
         $this->apiKey = $_ENV['GEMINI_API_KEY'] ?? throw new \RuntimeException('GEMINI_API_KEY non définie');
     }
 
@@ -82,21 +86,106 @@ class AIService
             throw new \RuntimeException('Réponse vide de Gemini');
         }
 
-        // Nettoyage du contenu
+        // Nettoyage initial du contenu
         $text = trim($text);
-        $text = preg_replace('/```(json)?\s*/', '', $text);
-        $text = preg_replace('/```$/', '', $text);
-        $text = str_replace('\n', '', $text);
-        $text = str_replace('\r', '', $text);
-
-        $json = json_decode($text, true);
-        if (!is_array($json)) {
-            throw new \RuntimeException('Réponse JSON invalide: ' . json_last_error_msg());
+        $text = str_replace(['```json', '```'], '', $text);
+        
+        // Suppression des caractères de contrôle tout en préservant les espaces
+        $text = preg_replace('/[\x00-\x09\x0B-\x0C\x0E-\x1F\x7F]/', '', $text);
+        
+        // Normalisation des sauts de ligne et espaces
+        $text = str_replace(["\r\n", "\r", "\t"], ["\n", "\n", " "], $text);
+        $text = preg_replace('/\n\s+/', "\n", $text);
+        
+        // Forcer la structure en objet si nécessaire
+        $text = trim($text);
+        if (str_starts_with($text, '[')) {
+            // Convertir le tableau en objet avant le décodage
+            $text = preg_replace('/^\[\s*{/', '{"file_1":{', $text);
+            $text = preg_replace('/}\s*,\s*{/', '},"file_2":{', $text);
+            $text = preg_replace('/}\s*\]$/', '}', $text);
+        } elseif (!str_starts_with($text, '{')) {
+            $text = '{' . $text . '}';
         }
-
+        
+        // Vérification et conversion du format JSON
+        $preCheck = json_decode($text, true);
+        if ($preCheck !== null) {
+            if (!is_array($preCheck)) {
+                throw new \RuntimeException('Le JSON doit être un objet.');
+            }
+            
+            // Vérifier que toutes les clés sont des chaînes
+            foreach ($preCheck as $key => $value) {
+                if (is_numeric($key)) {
+                    throw new \RuntimeException('Le JSON doit être un objet avec des clés nommées, pas un tableau indexé.');
+                }
+            }
+            $decoded = $preCheck;
+        } else {
+            // Validation de la structure JSON de base
+            if (!str_starts_with(trim($text), '{')) {
+                $firstBrace = strpos($text, '{');
+                if ($firstBrace !== false) {
+                    $text = substr($text, $firstBrace);
+                } else {
+                    $text = '{' . $text;
+                }
+            }
+            
+            if (!str_ends_with(trim($text), '}')) {
+                $lastBrace = strrpos($text, '}');
+                if ($lastBrace !== false) {
+                    $text = substr($text, 0, $lastBrace + 1);
+                } else {
+                    $text .= '}';
+                }
+            }
+            
+            // Pré-traitement du JSON
+            $text = preg_replace('/,\s*([\]}])/', '$1', $text); // Supprime les virgules trailing
+            $text = preg_replace('/([{,])\s*([^"\s{\[]+)\s*:/', '$1"$2":', $text); // Ajoute les guillemets aux clés non quotées
+            
+            // Nettoyage des caractères spéciaux et tentative de décodage
+            $text = str_replace('\\', '\\\\', $text); // Double les backslashes
+            $text = str_replace('\"', '"', $text); // Supprime les guillemets déjà échappés
+            $text = str_replace('"', '\"', $text); // Échappe les guillemets
+            
+            $decoded = json_decode($text, true);
+            
+            if ($decoded === null || !is_array($decoded)) {
+                // Si le décodage échoue, essayons de normaliser avec json_encode
+                $text = str_replace('\\\\', '\\', $text); // Normalise les backslashes
+                $text = str_replace('\"', '"', $text); // Supprime les guillemets échappés
+                $text = json_encode(json_decode($text), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                
+                $decoded = json_decode($text, true);
+                if ($decoded === null || !is_array($decoded)) {
+                    throw new \RuntimeException('Le JSON doit être un objet avec des clés nommées, pas un tableau indexé.');
+                }
+                
+                // Vérifie si c'est un tableau indexé et tente de le convertir
+                if (array_keys($decoded) === range(0, count($decoded) - 1)) {
+                    $converted = [];
+                    foreach ($decoded as $index => $content) {
+                        if (is_array($content) && isset($content['filename'], $content['content'])) {
+                            $converted[$content['filename']] = $content['content'];
+                        } else {
+                            $converted['file_' . ($index + 1)] = $content;
+                        }
+                    }
+                    if (!empty($converted)) {
+                        $decoded = $converted;
+                    } else {
+                        throw new \RuntimeException('Impossible de convertir le tableau en objet avec des clés nommées.');
+                    }
+                }
+            }
+        }
+        
         // Filtrer les clés pour ne garder que les fichiers frontend et backend
         $result = [];
-        foreach ($json as $filename => $content) {
+        foreach ($decoded as $filename => $content) {
             if ($filename === 'app.css' || $filename === 'app.js' || str_ends_with($filename, '.html.twig')) {
                 $result[$filename] = $content;
             }
@@ -107,6 +196,13 @@ class AIService
         if (!isset($result['app.css'])) $result['app.css'] = '';
         if (!isset($result['app.js'])) $result['app.js'] = '';
 
-        return $result;
+        // Génération du backend après la génération des fichiers Twig
+        $twigFiles = array_filter($result, function ($filename) {
+            return str_ends_with($filename, '.html.twig');
+        }, ARRAY_FILTER_USE_KEY);
+
+        // Récupérer les fichiers backend générés et les fusionner avec les fichiers frontend
+        $backendFiles = $this->backendGenerator->generateBackend($twigFiles);
+        return array_merge($result, $backendFiles);
     }
 }

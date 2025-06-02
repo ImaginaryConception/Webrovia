@@ -102,7 +102,7 @@
                                                     Une erreur est survenue : {{ prompt.error }}
                                                 </p>
                                                 <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Historique des versions</h4>
-                                    <div class="versions-list space-y-2 mb-4 max-h-64 overflow-y-auto">
+                                    <div>
                                     {% if prompt.allVersions is defined and prompt.allVersions is not empty %}
                                         {% for version in prompt.allVersions %}
                                             <div class="version-item p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2 {% if version.status == 'archived' %}opacity-75{% endif %}">
@@ -114,7 +114,7 @@
                                                             <span class="ml-2 px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs rounded">Archivée</span>
                                                         {% elseif version.status == 'completed' %}
                                                             <span class="ml-2 px-2 py-1 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 text-xs rounded">Version actuelle</span>
-                                                        {% elseif version.status == 'error' %}
+                                                        {% elseif version.status == 'error_archived' %}
                                                             <span class="ml-2 px-2 py-1 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 text-xs rounded">Version en erreur</span>
                                                         {% endif %}
                                                     </div>
@@ -423,19 +423,19 @@
                                     {% endif %}
                                     {% if prompt.status != 'error' %}
                                     <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Historique des versions</h4>
-                                    <div class="versions-list space-y-2 mb-4 max-h-64 overflow-y-auto">
+                                    <div>
                                     {% if prompt.allVersions is defined and prompt.allVersions is not empty %}
                                         {% for version in prompt.allVersions %}
                                             <div class="version-item p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2 {% if version.status == 'archived' %}opacity-75{% endif %}">
                                                 <div class="flex justify-between items-start mb-2">
                                                     <div class="version-header">
-                                                        <span class="font-medium text-white text-lg">Version {{ version.version }}</span>
+                                                        <span class="font-medium text-black dark:text-white text-lg">Version {{ version.version }}</span>
                                                         <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">{{ version.createdAt|date('d/m/Y H:i') }}</span>
                                                         {% if version.status == 'archived' %}
                                                             <span class="ml-2 px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs rounded">Archivée</span>
                                                         {% elseif version.status == 'completed' %}
                                                             <span class="ml-2 px-2 py-1 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 text-xs rounded">Version actuelle</span>
-                                                        {% elseif version.status == 'error' %}
+                                                        {% elseif version.status == 'error_archived' %}
                                                             <span class="ml-2 px-2 py-1 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 text-xs rounded">Version en erreur</span>
                                                         {% endif %}
                                                     </div>
@@ -598,7 +598,7 @@
                                 </div>
                                 <div class="mt-4">
                                     <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Historique des versions</h4>
-                                    <div class="versions-list space-y-2 mb-4 max-h-64 overflow-y-auto">
+                                    <div>
                                         {% set allVersions = [prompt] %}
                                         {% set currentPrompt = prompt %}
                                         {% if currentPrompt.originalPrompt is not null %}
@@ -613,13 +613,13 @@
                                             <div class="version-item p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2 {% if version.status == 'archived' %}opacity-75{% endif %}">
                                                 <div class="flex justify-between items-start mb-2">
                                                     <div class="version-header">
-                                                        <span class="font-medium text-lg">Version {{ version.version }}</span>
+                                                        <span class="font-medium text-black dark:text-white text-lg">Version {{ version.version }}</span>
                                                         <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">{{ version.createdAt|date('d/m/Y H:i') }}</span>
                                                         {% if version.status == 'archived' %}
                                                             <span class="ml-2 px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs rounded">Archivée</span>
                                                         {% elseif version.status == 'completed' %}
                                                             <span class="ml-2 px-2 py-1 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 text-xs rounded">Version actuelle</span>
-                                                        {% elseif version.status == 'error' %}
+                                                        {% elseif version.status == 'error_archived' %}
                                                             <span class="ml-2 px-2 py-1 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 text-xs rounded">Version en erreur</span>
                                                         {% endif %}
                                                     </div>
@@ -1468,7 +1468,7 @@
                     const result = await response.json();
 
                     if (result.success) {
-                        window.location.href = result.redirect_url;
+                        window.location.href = "{{ path('app_list_sites') }}";
                     } else {
                         throw new Error(result.error || 'Une erreur est survenue lors du déploiement');
                     }
@@ -1550,7 +1550,7 @@
                     const result = await response.json();
 
                     if (result.success) {
-                        window.location.href = result.redirect_url;
+                        window.location.href = "{{ path('app_list_sites') }}";
                     } else {
                         throw new Error(result.error || 'Une erreur est survenue lors du redéploiement');
                     }
@@ -1598,12 +1598,27 @@
 
                     const data = await response.json();
                     if (response.ok && data.success) {
-                        location.reload();
+                        if (data.data && data.data.status === 'completed') {
+                            window.location.reload();
+                        } else if (data.data && data.data.status === 'error') {
+                            window.location.href = "{{ path('app_list_sites') }}";
+                        }
                     } else {
-                        throw new Error(data.error || 'Une erreur est survenue');
+                        if (data.data && data.data.id) {
+                            if (data.data.status === 'completed') {
+                                window.location.reload();
+                            } else if (data.data.status === 'error') {
+                                window.location.href = "{{ path('app_list_sites') }}";
+                            }
+                        } else {
+                            throw new Error(data.error || 'Une erreur est survenue');
+                        }
                     }
                 } catch (error) {
                     showError('Erreur: ' + error.message);
+                    if (error.data && error.data.id) {
+                        window.location.href = "{{ path('app_list_sites') }}";
+                    }
                 } finally {
                     this.disabled = false;
                     this.innerHTML = 'Appliquer les modifications';

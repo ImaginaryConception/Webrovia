@@ -5,6 +5,7 @@ namespace App\MessageHandler;
 use App\Entity\Prompt;
 use App\Entity\User;
 use App\Service\AIService;
+use App\Service\BackendGeneratorService;
 use App\Repository\PromptRepository;
 use App\Message\GenerateWebsiteMessage;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -21,7 +22,8 @@ class GenerateWebsiteMessageHandler
         private PromptRepository $promptRepository,
         private EntityManagerInterface $entityManager,
         private AIService $aiService,
-        private Security $security
+        private Security $security,
+        private BackendGeneratorService $backendGeneratorService
     ) {}
 
     public function __invoke(GenerateWebsiteMessage $message)
@@ -54,6 +56,7 @@ class GenerateWebsiteMessageHandler
 
         do {
             try {
+                // Génération des fichiers frontend et backend
                 $files = $this->aiService->generateWebsiteFromPrompt($promptContent, $existingFiles);
 
                 if (empty($files)) {

@@ -55,13 +55,13 @@
                 <div class="max-w-3xl mx-auto mb-8 grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="inline-block">
                         <a href="{{ path('app_list_sites') }}" class="flex items-center justify-center p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 group">
-                            <i class="fas fa-globe text-2xl text-primary group-hover:text-white mr-3 transition-colors duration-200"></i>
+                            <i class="fas fa-globe text-2xl text-primary dark:group-hover:text-white group-hover:text-black mr-3 transition-colors duration-200"></i>
                             <span class="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors duration-200">Mes sites générés</span>
                         </a>
                     </div>
                     <div class="inline-block">
                         <a href="{{ path('app_my_clones') }}" class="flex items-center justify-center p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 group">
-                            <i class="fas fa-copy text-2xl text-accent group-hover:text-white mr-3 transition-colors duration-200"></i>
+                            <i class="fas fa-copy text-2xl text-accent dark:group-hover:text-white group-hover:text-black mr-3 transition-colors duration-200"></i>
                             <span class="font-semibold text-gray-900 dark:text-white group-hover:text-accent transition-colors duration-200">Mes clones générés</span>
                         </a>
                     </div>
@@ -187,6 +187,20 @@
             const loadingSpinner = document.getElementById('loading-spinner');
             let currentFiles = {};
 
+            // Fonction pour créer et gérer la barre de progression
+            function createProgressBar() {
+                const progressBar = document.createElement('div');
+                progressBar.className = 'fixed top-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-700';
+                progressBar.innerHTML = '<div class="h-1 bg-gradient-to-r from-primary to-secondary transition-all duration-500 ease-out" style="width: 0%"></div>';
+                document.body.appendChild(progressBar);
+                return progressBar;
+            }
+
+            // Fonction pour mettre à jour la barre de progression
+            function updateProgress(progressBar, progress) {
+                progressBar.querySelector('div').style.width = `${progress}%`;
+            }
+
             if (form) {
                 form.addEventListener('submit', async function(e) {
                     e.preventDefault();
@@ -194,6 +208,13 @@
                     generateButton.disabled = true;
                     submitText.classList.add('hidden');
                     loadingSpinner.classList.remove('hidden');
+
+                    const progressBar = createProgressBar();
+                    let progress = 0;
+                    const progressInterval = setInterval(() => {
+                        progress = Math.min(progress + 2, 90);
+                        updateProgress(progressBar, progress);
+                    }, 500);
 
                     try {
                         const formData = new FormData(form);
@@ -210,15 +231,19 @@
                             if (data.maskedApiKey) {
                                 console.log('Clé API utilisée (masquée):', data.maskedApiKey);
                             }
-                            await checkStatus(data.data.id);
+                            await checkStatus(data.data.id, progressBar, progressInterval);
                         } else {
+                            clearInterval(progressInterval);
+                            progressBar.remove();
                             const errorAlert = document.getElementById('error-alert');
-                        const errorMessage = document.getElementById('error-message');
-                        errorMessage.textContent = data.error || 'Une erreur est survenue lors de la génération';
-                        errorAlert.classList.remove('hidden');
-                        throw new Error(data.error || 'Une erreur est survenue lors de la génération');
+                            const errorMessage = document.getElementById('error-message');
+                            errorMessage.textContent = data.error || 'Une erreur est survenue lors de la génération';
+                            errorAlert.classList.remove('hidden');
+                            throw new Error(data.error || 'Une erreur est survenue lors de la génération');
                         }
                     } catch (error) {
+                        clearInterval(progressInterval);
+                        progressBar.remove();
                         // Gestion des erreurs
                     } finally {
                         generateButton.disabled = false;
@@ -228,7 +253,7 @@
                 });
             }
 
-            async function checkStatus(promptId, retryCount = 0, backoffDelay = 1000) {
+            async function checkStatus(promptId, progressBar, progressInterval, retryCount = 0, backoffDelay = 1000) {
                 const maxRetries = 5;
                 const maxBackoffDelay = 16000; // 16 secondes maximum
                 const errorAlert = document.getElementById('error-alert');
@@ -246,7 +271,7 @@
                             const nextBackoffDelay = Math.min(backoffDelay * 2, maxBackoffDelay);
                             console.log(`Rate limit atteint, nouvelle tentative dans ${backoffDelay/1000} secondes...`);
                             await new Promise(resolve => setTimeout(resolve, backoffDelay));
-                            return checkStatus(promptId, retryCount + 1, nextBackoffDelay);
+                            return checkStatus(promptId, progressBar, progressInterval, retryCount + 1, nextBackoffDelay);
                         }
                         throw new Error(`Veuillez réessayer.`);
                     }
@@ -258,33 +283,33 @@
 
                     const data = await response.json();
                     
-                    // Vérifier d'abord le statut d'erreur
-                    if (data.status === 'error' || data.error) {
-                        // Afficher l'erreur immédiatement
-                        errorMessage.textContent = data.error || data.message || 'Une erreur est survenue lors de la génération';
-                        errorAlert.classList.remove('hidden');
-                        submitText.classList.remove('hidden');
-                        loadingSpinner.classList.add('hidden');
-                        // Arrêter la génération
-                        return;
-                    }
-                    
-                    // Traiter les autres statuts
-                    if (data.status === 'completed' && data.files) {
-                        errorAlert.classList.add('hidden');
-                        displayResults(data.files);
+                    if (data.status === 'completed' || data.status === 'error') {
+                        clearInterval(progressInterval);
+                        updateProgress(progressBar, 100);
+                        
+                        setTimeout(() => {
+                            progressBar.remove();
+                            if (data.status === 'error' || data.error) {
+                                errorMessage.textContent = data.error || data.message || 'Une erreur est survenue lors de la génération';
+                                errorAlert.classList.remove('hidden');
+                            } else if (data.files) {
+                                errorAlert.classList.add('hidden');
+                                displayResults(data.files);
+                            }
+                        }, 500);
                         return;
                     } else if (data.status === 'pending' || data.status === 'processing') {
-                        // Vérification automatique toutes les secondes
                         await new Promise(resolve => setTimeout(resolve, 1000));
-                        return checkStatus(promptId, retryCount, backoffDelay);
+                        return checkStatus(promptId, progressBar, progressInterval, retryCount, backoffDelay);
                     }
                 } catch (error) {
+                    clearInterval(progressInterval);
+                    progressBar.remove();
                     if (retryCount < maxRetries && (error.message.includes('500') || error.message.includes('429'))) {
                         const nextBackoffDelay = Math.min(backoffDelay * 2, maxBackoffDelay);
                         console.log(`Erreur ${error.message}, nouvelle tentative dans ${backoffDelay/1000} secondes...`);
                         await new Promise(resolve => setTimeout(resolve, backoffDelay));
-                        return checkStatus(promptId, retryCount + 1, nextBackoffDelay);
+                        return checkStatus(promptId, progressBar, progressInterval, retryCount + 1, nextBackoffDelay);
                     }
                     console.error('Erreur lors de la vérification du statut:', error);
                     errorMessage.textContent = error.message;
@@ -305,7 +330,6 @@
                 successSection.classList.remove('hidden');
                 currentFiles = files;
             }
-
         });
     </script>
 {% endblock %}

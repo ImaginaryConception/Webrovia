@@ -122,7 +122,11 @@ class MainController extends AbstractController
         } catch (Exception $e) {
             return $this->json([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'data' => [
+                    'id' => $newPrompt->getId(),
+                    'status' => $newPrompt->getStatus(),
+                ]
             ], Response::HTTP_BAD_REQUEST);
         }
     }
@@ -437,7 +441,10 @@ class MainController extends AbstractController
         } catch (Exception $e) {
             return $this->json([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'data' => [
+                    'id' => $id
+                ]
             ], Response::HTTP_BAD_REQUEST);
         }
     }
@@ -467,7 +474,7 @@ class MainController extends AbstractController
             }
             
             // Si le prompt actuel n'est pas complété, chercher la dernière version complétée
-            if ($prompt->getStatus() == 'archived') {
+            if ($prompt->getStatus() == 'archived' || $prompt->getStatus() == 'error_archived') {
                 $latestPrompt = $em->getRepository(Prompt::class)->findOneBy(
                     [
                         'user' => $this->getUser(),
@@ -727,7 +734,9 @@ class MainController extends AbstractController
             // Archiver toutes les versions du site, sauf la version cible
             foreach ($allPrompts as $prompt) {
                 if ($prompt->getId() !== $targetPrompt->getId()) {
-                    if($prompt->getStatus() != 'error') {
+                    if ($prompt->getStatus() === 'error' || $prompt->getStatus() === 'error_archived') {
+                        $prompt->setStatus('error_archived');
+                    } else {
                         $prompt->setStatus('archived');
                     }
                 }
