@@ -1,0 +1,86 @@
+namespace App\Controller;
+
+use App\Entity\{{entity_name}};
+use App\Form\{{entity_name}}Type;
+use App\Repository\{{entity_name}}Repository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+#[Route('/{{route_prefix}}')]
+class {{entity_name}}Controller extends AbstractController
+{
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager
+    ) {}
+
+    #[Route('/', name: 'app_{{route_prefix}}_index', methods: ['GET'])]
+    public function index({{entity_name}}Repository $repository): Response
+    {
+        return $this->render('{{template_prefix}}/index.html.twig', [
+            '{{entity_var_plural}}' => $repository->findAll(),
+        ]);
+    }
+
+    #[Route('/new', name: 'app_{{route_prefix}}_new', methods: ['GET', 'POST'])]
+    public function new(Request $request): Response
+    {
+        ${{entity_var}} = new {{entity_name}}();
+        $form = $this->createForm({{entity_name}}Type::class, ${{entity_var}});
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $this->entityManager->persist(${{entity_var}});
+            $this->entityManager->flush();
+
+            $this->addFlash('success', '{{entity_name}} créé avec succès.');
+            return $this->redirectToRoute('app_{{route_prefix}}_index');
+        }
+
+        return $this->render('{{template_prefix}}/new.html.twig', [
+            '{{entity_var}}' => ${{entity_var}},
+            'form' => $form->createView(),
+        ]);
+    }
+
+    #[Route('/{id}', name: 'app_{{route_prefix}}_show', methods: ['GET'])]
+    public function show({{entity_name}} ${{entity_var}}): Response
+    {
+        return $this->render('{{template_prefix}}/show.html.twig', [
+            '{{entity_var}}' => ${{entity_var}},
+        ]);
+    }
+
+    #[Route('/{id}/edit', name: 'app_{{route_prefix}}_edit', methods: ['GET', 'POST'])]
+    public function edit(Request $request, {{entity_name}} ${{entity_var}}): Response
+    {
+        $form = $this->createForm({{entity_name}}Type::class, ${{entity_var}});
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $this->entityManager->flush();
+
+            $this->addFlash('success', '{{entity_name}} modifié avec succès.');
+            return $this->redirectToRoute('app_{{route_prefix}}_index');
+        }
+
+        return $this->render('{{template_prefix}}/edit.html.twig', [
+            '{{entity_var}}' => ${{entity_var}},
+            'form' => $form->createView(),
+        ]);
+    }
+
+    #[Route('/{id}', name: 'app_{{route_prefix}}_delete', methods: ['POST'])]
+    public function delete(Request $request, {{entity_name}} ${{entity_var}}): Response
+    {
+        if ($this->isCsrfTokenValid('delete'.${{entity_var}}->getId(), $request->request->get('_token'))) {
+            $this->entityManager->remove(${{entity_var}});
+            $this->entityManager->flush();
+            $this->addFlash('success', '{{entity_name}} supprimé avec succès.');
+        }
+
+        return $this->redirectToRoute('app_{{route_prefix}}_index');
+    }
+}

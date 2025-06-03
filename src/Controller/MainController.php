@@ -430,7 +430,7 @@ class MainController extends AbstractController
                 throw new Exception('Accès non autorisé');
             }
 
-            $prompt->setStatus('archived');
+            $prompt->setStatus('deleted');
             $em->flush();
 
             return $this->json([

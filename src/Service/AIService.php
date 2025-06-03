@@ -8,19 +8,22 @@ class AIService
 {
     private HttpClientInterface $client;
     private string $apiKey;
-    private BackendGeneratorService $backendGenerator;
+
+    private StubProcessor $stubProcessor;
 
     public function __construct(
         HttpClientInterface $client,
-        BackendGeneratorService $backendGenerator
+        StubProcessor $stubProcessor
     ) {
         $this->client = $client;
-        $this->backendGenerator = $backendGenerator;
+        $this->stubProcessor = $stubProcessor;
         $this->apiKey = $_ENV['GEMINI_API_KEY'] ?? throw new \RuntimeException('GEMINI_API_KEY non définie');
     }
 
     public function generateWebsiteFromPrompt(string $prompt, ?array $existingFiles = null): array
     {
+        $frontendData = [];
+
         // Gestion de la création et suppression des fichiers Twig
         if (preg_match('/^Créer un nouveau fichier ([\w.-]+\.html\.twig)/', $prompt, $matches)) {
             $fileName = $matches[1];
@@ -43,7 +46,9 @@ class AIService
         $promptText .= "  * Définir leur contenu dans {% block body %}\n";
         $promptText .= "  * Hériter automatiquement de app.js et app.css\n";
         $promptText .= "Ajoute beaucoup d'animations pour les boutons, textes etc\n";
+        $promptText .= "Le site doit être de type glassmorphism\n";
         $promptText .= "Pour les images, assures-toi de récupérer des images sur internet avec des liens uniquement, pas de chemin relatif\n";
+        $promptText .= "Pour les formulaires, assures-toi de les faire uniquement sous forme de Twig, pas HTML.\n";
         $promptText .= "Ajoute souvent des images pour rendre le site attractif\n";
         $promptText.= "Préfère les sites one page avec des liens de navbar qui mène à des ancres de la page\n";
         $promptText.= "Je veux que tu mettes des vrais images, pas de #\n";
@@ -74,8 +79,17 @@ class AIService
                     ]]
                 ]],
                 'generationConfig' => [
-                    'temperature' => 1.5,
+                    'temperature' => 1.0,
+                    'maxOutputTokens' => 8192,
+                    'topP' => 0.8,
+                    'topK' => 40
                 ],
+                'safetySettings' => [
+                    ['category' => 'HARM_CATEGORY_HARASSMENT', 'threshold' => 'BLOCK_NONE'],
+                    ['category' => 'HARM_CATEGORY_HATE_SPEECH', 'threshold' => 'BLOCK_NONE'],
+                    ['category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold' => 'BLOCK_NONE'],
+                    ['category' => 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold' => 'BLOCK_NONE']
+                ]
             ],
         ]);
 
@@ -100,10 +114,25 @@ class AIService
         // Forcer la structure en objet si nécessaire
         $text = trim($text);
         if (str_starts_with($text, '[')) {
-            // Convertir le tableau en objet avant le décodage
-            $text = preg_replace('/^\[\s*{/', '{"file_1":{', $text);
-            $text = preg_replace('/}\s*,\s*{/', '},"file_2":{', $text);
-            $text = preg_replace('/}\s*\]$/', '}', $text);
+            // Amélioration de la conversion tableau vers objet
+            $decoded = json_decode($text, true);
+            if (is_array($decoded)) {
+                $converted = [];
+                foreach ($decoded as $index => $item) {
+                    if (is_array($item) && isset($item['filename'], $item['content'])) {
+                        // Format {"filename": "...", "content": "..."}
+                        $converted[$item['filename']] = $item['content'];
+                    } elseif (is_array($item) && count($item) === 1) {
+                        // Format [{"file.html.twig": "content"}]
+                        $key = array_key_first($item);
+                        $converted[$key] = $item[$key];
+                    } else {
+                        // Fallback avec un nom de fichier générique
+                        $converted[sprintf('%s_%d.html.twig', 'template', $index + 1)] = is_array($item) ? json_encode($item) : $item;
+                    }
+                }
+                $text = json_encode($converted);
+            }
         } elseif (!str_starts_with($text, '{')) {
             $text = '{' . $text . '}';
         }
@@ -183,7 +212,159 @@ class AIService
             }
         }
         
-        // Filtrer les clés pour ne garder que les fichiers frontend et backend
+        // Transmettre les données du front-end au StubProcessor
+        $this->stubProcessor->setFrontendData($decoded);
+
+        // Générer le backend basé sur le frontend
+        $backendPrompt = "Tu es un expert en développement Symfony qui va générer un contrôleur parfaitement adapté au frontend suivant :\n";
+        $backendPrompt .= json_encode($decoded, JSON_PRETTY_PRINT) . "\n\n";
+        $backendPrompt .= "Analyse en détail les templates Twig fournis et génère un contrôleur Symfony qui :\n";
+        $backendPrompt .= "1. Implémente toutes les routes nécessaires en analysant :\n";
+        $backendPrompt .= "   - Les liens (balises <a>)\n";
+        $backendPrompt .= "   - Les formulaires et leurs attributs action/method\n";
+        $backendPrompt .= "   - Les redirections potentielles\n";
+        $backendPrompt .= "2. Gère les formulaires en :\n";
+        $backendPrompt .= "   - Créant les types de formulaire appropriés\n";
+        $backendPrompt .= "   - Validant les données soumises\n";
+        $backendPrompt .= "   - Traitant les fichiers uploadés si présents\n";
+        $backendPrompt .= "3. Implémente la logique métier en :\n";
+        $backendPrompt .= "   - Gérant les entités et leurs relations\n";
+        $backendPrompt .= "   - Utilisant les repositories pour les requêtes\n";
+        $backendPrompt .= "   - Respectant les bonnes pratiques Symfony\n";
+        $backendPrompt .= "4. Gère la sécurité en :\n";
+        $backendPrompt .= "   - Ajoutant les annotations/attributs de sécurité\n";
+        $backendPrompt .= "   - Vérifiant les permissions\n";
+        $backendPrompt .= "   - Protégeant contre les attaques CSRF\n";
+        $backendPrompt .= "5. Améliore l'expérience utilisateur avec :\n";
+        $backendPrompt .= "   - Des messages flash appropriés\n";
+        $backendPrompt .= "   - Une gestion d'erreurs robuste\n";
+        $backendPrompt .= "   - Des redirections pertinentes\n";
+        $backendPrompt .= "6. Optimise les performances en :\n";
+        $backendPrompt .= "   - Utilisant le cache quand c'est pertinent\n";
+        $backendPrompt .= "   - Optimisant les requêtes database\n";
+        $backendPrompt .= "   - Paginant les résultats si nécessaire\n";
+        $backendPrompt .= "\nRetourne UNIQUEMENT le code PHP du contrôleur, sans commentaires ni explications. Le code doit être complet et fonctionnel, incluant toutes les importations nécessaires.";
+
+        $backendResponse = $this->client->request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
+            'headers' => [
+                'Content-Type' => 'application/json',
+            ],
+            'query' => [
+                'key' => $this->apiKey,
+            ],
+            'json' => [
+                'contents' => [[
+                    'parts' => [[
+                        'text' => $backendPrompt
+                    ]]
+                ]],
+                'generationConfig' => [
+                    'temperature' => 0.7,
+                    'maxOutputTokens' => 8192,
+                    'topP' => 0.8,
+                    'topK' => 40
+                ]
+            ],
+        ]);
+
+        $backendData = $backendResponse->toArray(false);
+        $backendCode = $backendData['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+        if ($backendCode) {
+            // Nettoyer et formater le code du contrôleur
+            $backendCode = trim($backendCode);
+            $backendCode = str_replace(['```php', '```'], '', $backendCode);
+            
+            // Sauvegarder le contrôleur généré
+            $this->stubProcessor->setControllerCode($backendCode);
+        }
+
+        // Générer les entités
+        $entityPrompt = "Tu es un expert en développement Symfony qui va générer les entités nécessaires pour le frontend suivant :\n";
+        $entityPrompt .= json_encode($decoded, JSON_PRETTY_PRINT) . "\n\n";
+        $entityPrompt .= "Analyse les templates Twig et génère les entités Doctrine avec :\n";
+        $entityPrompt .= "- Les propriétés appropriées basées sur les formulaires\n";
+        $entityPrompt .= "- Les types de données corrects\n";
+        $entityPrompt .= "- Les relations entre entités\n";
+        $entityPrompt .= "- Les validations nécessaires\n";
+        $entityPrompt .= "Retourne un tableau JSON avec les noms des entités comme clés et leur code PHP comme valeurs.";
+
+        $entityResponse = $this->client->request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
+            'headers' => ['Content-Type' => 'application/json'],
+            'query' => ['key' => $this->apiKey],
+            'json' => [
+                'contents' => [['parts' => [['text' => $entityPrompt]]]],
+                'generationConfig' => ['temperature' => 0.7, 'maxOutputTokens' => 8192]
+            ],
+        ]);
+
+        $entityData = $entityResponse->toArray(false);
+        $entityCode = $entityData['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+        if ($entityCode) {
+            $entityCode = trim($entityCode);
+            $entityCode = str_replace(['```json', '```'], '', $entityCode);
+            $entities = json_decode($entityCode, true) ?? [];
+            $this->stubProcessor->setEntityCode($entities);
+        }
+
+        // Générer les repositories
+        $repoPrompt = "Tu es un expert en développement Symfony qui va générer les repositories pour les entités suivantes :\n";
+        $repoPrompt .= json_encode($entities, JSON_PRETTY_PRINT) . "\n\n";
+        $repoPrompt .= "Génère les repositories avec :\n";
+        $repoPrompt .= "- Les méthodes de recherche courantes\n";
+        $repoPrompt .= "- Les requêtes DQL optimisées\n";
+        $repoPrompt .= "- La pagination si nécessaire\n";
+        $repoPrompt .= "Retourne un tableau JSON avec les noms des repositories comme clés et leur code PHP comme valeurs.";
+
+        $repoResponse = $this->client->request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
+            'headers' => ['Content-Type' => 'application/json'],
+            'query' => ['key' => $this->apiKey],
+            'json' => [
+                'contents' => [['parts' => [['text' => $repoPrompt]]]],
+                'generationConfig' => ['temperature' => 0.7, 'maxOutputTokens' => 8192]
+            ],
+        ]);
+
+        $repoData = $repoResponse->toArray(false);
+        $repoCode = $repoData['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+        if ($repoCode) {
+            $repoCode = trim($repoCode);
+            $repoCode = str_replace(['```json', '```'], '', $repoCode);
+            $repositories = json_decode($repoCode, true) ?? [];
+            $this->stubProcessor->setRepositoryCode($repositories);
+        }
+
+        // Générer les form types
+        $formPrompt = "Tu es un expert en développement Symfony qui va générer les form types pour les entités suivantes :\n";
+        $formPrompt .= json_encode($entities, JSON_PRETTY_PRINT) . "\n\n";
+        $formPrompt .= "Génère les form types avec :\n";
+        $formPrompt .= "- Les champs appropriés\n";
+        $formPrompt .= "- Les contraintes de validation\n";
+        $formPrompt .= "- Les options de champs personnalisées\n";
+        $formPrompt .= "Retourne un tableau JSON avec les noms des form types comme clés et leur code PHP comme valeurs.";
+
+        $formResponse = $this->client->request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
+            'headers' => ['Content-Type' => 'application/json'],
+            'query' => ['key' => $this->apiKey],
+            'json' => [
+                'contents' => [['parts' => [['text' => $formPrompt]]]],
+                'generationConfig' => ['temperature' => 0.7, 'maxOutputTokens' => 8192]
+            ],
+        ]);
+
+        $formData = $formResponse->toArray(false);
+        $formCode = $formData['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+        if ($formCode) {
+            $formCode = trim($formCode);
+            $formCode = str_replace(['```json', '```'], '', $formCode);
+            $formTypes = json_decode($formCode, true) ?? [];
+            $this->stubProcessor->setFormTypeCode($formTypes);
+        }
+
+        // Filtrer les clés pour ne garder que les fichiers frontend
         $result = [];
         foreach ($decoded as $filename => $content) {
             if ($filename === 'app.css' || $filename === 'app.js' || str_ends_with($filename, '.html.twig')) {
@@ -196,13 +377,48 @@ class AIService
         if (!isset($result['app.css'])) $result['app.css'] = '';
         if (!isset($result['app.js'])) $result['app.js'] = '';
 
-        // Génération du backend après la génération des fichiers Twig
-        $twigFiles = array_filter($result, function ($filename) {
-            return str_ends_with($filename, '.html.twig');
-        }, ARRAY_FILTER_USE_KEY);
+        // Générer les fichiers backend
+        $backendFiles = $this->generateBackendFiles();
+        
+        // Ajouter tous les fichiers backend générés au résultat
+        foreach ($backendFiles as $path => $content) {
+            $result[$path] = $content;
+        }
 
-        // Récupérer les fichiers backend générés et les fusionner avec les fichiers frontend
-        $backendFiles = $this->backendGenerator->generateBackend($twigFiles);
-        return array_merge($result, $backendFiles);
+        // Ajouter les fichiers frontend
+        foreach ($decoded as $filename => $content) {
+            if ($filename === 'app.css' || $filename === 'app.js' || str_ends_with($filename, '.html.twig')) {
+                $result[$filename] = $content;
+            }
+        }
+
+        // S'assurer que les fichiers requis existent
+        if (!isset($result['index.html.twig'])) $result['index.html.twig'] = '';
+        if (!isset($result['app.css'])) $result['app.css'] = '';
+        if (!isset($result['app.js'])) $result['app.js'] = '';
+
+        return $result;
+    }
+
+    private function generateBackendFiles(): array
+    {
+        $backendFiles = [];
+        
+        // Générer MainController.php (obligatoire)
+        $mainControllerReplacements = $this->stubProcessor->generateEntityReplacements('Main');
+        $backendFiles['src/Controller/MainController.php'] = $this->stubProcessor->processStub('controller', $mainControllerReplacements);
+        
+        // Générer les fichiers pour chaque entité détectée
+        foreach ($this->stubProcessor->getEntityFields() as $entityName => $fields) {
+            $replacements = $this->stubProcessor->generateEntityReplacements($entityName);
+            
+            // Générer les fichiers pour cette entité
+            $backendFiles["src/Entity/{$entityName}.php"] = $this->stubProcessor->processStub('entity', $replacements);
+            $backendFiles["src/Repository/{$entityName}Repository.php"] = $this->stubProcessor->processStub('repository', $replacements);
+            $backendFiles["src/Controller/{$entityName}Controller.php"] = $this->stubProcessor->processStub('controller', $replacements);
+            $backendFiles["src/Form/{$entityName}Type.php"] = $this->stubProcessor->processStub('form', $replacements);
+        }
+        
+        return $backendFiles;
     }
 }
