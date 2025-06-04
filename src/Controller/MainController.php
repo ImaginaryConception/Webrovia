@@ -83,6 +83,7 @@ class MainController extends AbstractController
             $newPrompt->setGeneratedFiles($prompt->getGeneratedFiles());
             $newPrompt->setOriginalPrompt($prompt);
             $newPrompt->setWebsiteIdentification($prompt->getWebsiteIdentification() ?: Uuid::uuid4()->toString());
+            $newPrompt->setGenerationMessage('Initialisation de la modification du site web...');
 
             // Calcul version
             $highestVersion = $em->getRepository(Prompt::class)
@@ -183,6 +184,7 @@ class MainController extends AbstractController
             $prompt->setStatus('pending');
             $prompt->setWebsiteIdentification(Uuid::uuid4()->toString());
             $prompt->setVersion(1);
+            $prompt->setGenerationMessage('Initialisation de la génération du site web...');
 
             // Gérer la modification d'un site existant
             $originalPromptId = $request->request->get('originalPromptId');
@@ -241,7 +243,8 @@ class MainController extends AbstractController
         try {
             $response = [
                 'status' => $prompt->getStatus(),
-                'files' => $promptRestorationService->getPromptFiles($prompt)
+                'files' => $promptRestorationService->getPromptFiles($prompt),
+                'generationMessage' => $prompt->getGenerationMessage()
             ];
 
             if ($prompt->getStatus() === 'error') {
@@ -396,7 +399,7 @@ class MainController extends AbstractController
             ->from('support@imaginaryconception.com')
             ->to('anishamouche@gmail.com')
             ->bcc('imaginaryconception.com+7d8eac2120@invite.trustpilot.com')
-            ->subject('Confirmation de votre paiement Web Forge AI.')
+            ->subject('Confirmation de votre paiement Webrovia.')
             ->textTemplate('emails/payment_confirmation.txt.twig')
             ->htmlTemplate('emails/payment_confirmation.html.twig')
         ;
@@ -685,6 +688,64 @@ class MainController extends AbstractController
                 ['Content-Type' => 'application/json']
             );
 
+        } catch (Exception $e) {
+            return new Response(
+                json_encode([
+                    'success' => false,
+                    'message' => $e->getMessage()
+                ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+                Response::HTTP_BAD_REQUEST,
+                ['Content-Type' => 'application/json']
+            );
+        }
+    }
+    
+    #[Route('/api/file-content/{id}', name: 'app_update_file_content', methods: ['POST'])]
+    #[IsGranted('ROLE_USER')]
+    public function updateFileContent(Request $request, EntityManagerInterface $em, int $id): Response
+    {
+        try {
+            if (!$request->headers->has('X-Requested-With') || $request->headers->get('X-Requested-With') !== 'XMLHttpRequest') {
+                throw new Exception('Cette action nécessite une requête AJAX');
+            }
+            
+            // Récupérer les données JSON du corps de la requête
+            $data = json_decode($request->getContent(), true);
+            if (!$data || !isset($data['path']) || !isset($data['content'])) {
+                throw new Exception('Le chemin et le contenu du fichier sont requis');
+            }
+            
+            $path = $data['path'];
+            $content = $data['content'];
+            
+            // Vérifier l'accès au prompt
+            $prompt = $em->getRepository(Prompt::class)->find($id);
+            if (!$prompt || $prompt->getUser() !== $this->getUser()) {
+                throw new Exception('Accès non autorisé');
+            }
+            
+            // Vérifier que le fichier existe
+            $files = $prompt->getGeneratedFiles();
+            if (!isset($files[$path])) {
+                throw new Exception('Fichier non trouvé');
+            }
+            
+            // Mettre à jour le contenu du fichier
+            $files[$path] = $content;
+            $prompt->setGeneratedFiles($files);
+            
+            // Persister les changements
+            $em->flush();
+            
+            return new Response(
+                json_encode([
+                    'success' => true,
+                    'message' => 'Fichier mis à jour avec succès'
+                ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+                Response::HTTP_OK,
+                ['Content-Type' => 'application/json']
+            );
+            
         } catch (Exception $e) {
             return new Response(
                 json_encode([

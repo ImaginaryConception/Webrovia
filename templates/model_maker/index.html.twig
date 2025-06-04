@@ -1,0 +1,377 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Model Maker - Générateur de Maquettes{% endblock %}
+
+{% block page_title %}Model Maker{% endblock %}
+{% block page_subtitle %}Créez des maquettes de sites web en quelques secondes grâce à l'intelligence artificielle{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style type="text/tailwindcss">
+        .model-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .model-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .model-image {
+            transition: transform 0.5s ease;
+        }
+        .model-image:hover {
+            transform: scale(1.02);
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="min-h-screen transition-colors duration-200">
+    <div class="container mx-auto px-4 py-8">
+        <div class="text-center mb-12">
+            <h2 class="text-5xl font-extrabold mb-6">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">Model Maker</span>
+            </h2>
+            <p class="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                Générez des maquettes visuelles pour vos sites web en quelques secondes grâce à l'intelligence artificielle.
+            </p>
+        </div>
+
+        <!-- Formulaire de génération -->
+        <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 mb-12">
+            <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Créer une nouvelle maquette</h3>
+            
+            <div id="error-alert" class="hidden mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 dark:bg-red-900 dark:text-red-200" role="alert">
+                <p id="error-message"></p>
+            </div>
+            
+            {{ form_start(form, {'attr': {'id': 'model-maker-form', 'class': 'space-y-6'}}) }}
+                <div class="space-y-2">
+                    {{ form_label(form.title, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+                    {{ form_widget(form.title) }}
+                    {{ form_errors(form.title, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
+                </div>
+                
+                <div class="space-y-2">
+                    {{ form_label(form.prompt, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+                    {{ form_widget(form.prompt) }}
+                    {{ form_errors(form.prompt, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
+                </div>
+                
+                <div class="flex justify-center">
+                    <button type="submit" id="generate-button" class="group relative w-full sm:w-auto flex justify-center py-3 px-6 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-primary to-accent hover:from-primary-dark hover:to-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200">
+                        <span id="button-text" class="flex items-center">
+                            <i class="fas fa-wand-magic-sparkles mr-2 group-hover:rotate-12 transition-transform duration-200"></i>
+                            Générer ma maquette
+                        </span>
+                        <span id="loading-spinner" class="hidden ml-3">
+                            <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </span>
+                    </button>
+                </div>
+            {{ form_end(form) }}
+        </div>
+        
+        <!-- Zone de génération en cours -->
+        <div id="generation-container" class="hidden max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 mb-12 text-center">
+            <div class="flex justify-center mb-6">
+                <svg class="animate-spin h-12 w-12 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Génération en cours...</h3>
+            <p id="generation-message" class="text-gray-600 dark:text-gray-300">Initialisation de la génération...</p>
+        </div>
+        
+        <!-- Zone de prévisualisation -->
+        <div id="preview-container" class="hidden max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 mb-12">
+            <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">Votre maquette</h3>
+            <div class="flex justify-center">
+                <img id="preview-image" src="" alt="Maquette générée" class="max-w-full h-auto rounded-lg shadow-lg model-image">
+            </div>
+            <div class="mt-6 text-center">
+                <h4 id="preview-title" class="text-xl font-semibold text-gray-800 dark:text-white mb-2"></h4>
+                <p id="preview-prompt" class="text-gray-600 dark:text-gray-300 mb-4"></p>
+                <div class="flex justify-center space-x-4">
+                    <a id="download-link" href="#" download class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200">
+                        <i class="fas fa-download mr-2"></i> Télécharger
+                    </a>
+                    <button id="new-model-button" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-secondary hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary transition-all duration-200">
+                        <i class="fas fa-plus mr-2"></i> Nouvelle maquette
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liste des maquettes générées -->
+        {% if models|length > 0 %}
+            <div class="max-w-7xl mx-auto mt-16">
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center">Vos maquettes générées</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {% for model in models %}
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden model-card">
+                            <div class="relative pb-2/3">
+                                {% if model.imageUrl %}
+                                    <img src="{{ model.imageUrl }}" alt="{{ model.title }}" class="w-full h-48 object-cover">
+                                {% else %}
+                                    <div class="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                        {% if model.status == 'pending' %}
+                                            <div class="text-center">
+                                                <svg class="animate-spin h-8 w-8 text-primary mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">Génération en cours...</p>
+                                            </div>
+                                        {% elseif model.status == 'error' %}
+                                            <div class="text-center text-red-500 dark:text-red-400">
+                                                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
+                                                <p class="text-sm">Erreur de génération</p>
+                                            </div>
+                                        {% else %}
+                                            <div class="text-center text-gray-500 dark:text-gray-400">
+                                                <i class="fas fa-image text-4xl mb-2"></i>
+                                                <p class="text-sm">Image non disponible</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="p-6">
+                                <h4 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">{{ model.title }}</h4>
+                                <p class="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-2">{{ model.prompt|length > 100 ? model.prompt|slice(0, 100) ~ '...' : model.prompt }}</p>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ model.createdAt|date('d/m/Y H:i') }}</span>
+                                    <div class="flex space-x-2">
+                                        {% if model.imageUrl %}
+                                            <a href="{{ model.imageUrl }}" target="_blank" class="text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary transition-colors duration-200">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ model.imageUrl }}" download class="text-secondary hover:text-secondary-dark dark:text-secondary-light dark:hover:text-secondary transition-colors duration-200">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                        {% endif %}
+                                        <form action="{{ path('app_model_maker_delete', {'id': model.id}) }}" method="post" class="inline delete-form">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ model.id) }}">
+                                            <button type="submit" class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors duration-200">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('model-maker-form');
+            const generateButton = document.getElementById('generate-button');
+            const buttonText = document.getElementById('button-text');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const errorAlert = document.getElementById('error-alert');
+            const errorMessage = document.getElementById('error-message');
+            const generationContainer = document.getElementById('generation-container');
+            const generationMessage = document.getElementById('generation-message');
+            const previewContainer = document.getElementById('preview-container');
+            const previewImage = document.getElementById('preview-image');
+            const previewTitle = document.getElementById('preview-title');
+            const previewPrompt = document.getElementById('preview-prompt');
+            const downloadLink = document.getElementById('download-link');
+            const newModelButton = document.getElementById('new-model-button');
+            
+            // Gestionnaire pour le formulaire de génération
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Réinitialiser les messages d'erreur
+                errorAlert.classList.add('hidden');
+                
+                // Afficher le spinner de chargement
+                buttonText.classList.add('hidden');
+                loadingSpinner.classList.remove('hidden');
+                generateButton.disabled = true;
+                
+                // Afficher le conteneur de génération
+                form.parentElement.classList.add('hidden');
+                generationContainer.classList.remove('hidden');
+                
+                // Envoyer la requête AJAX
+                const formData = new FormData(form);
+                
+                fetch('{{ path("app_model_maker_generate") }}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Si la génération a réussi immédiatement (rare)
+                        showPreview(data.modelId, data.imageUrl, form);
+                    } else {
+                        // Si la génération a échoué
+                        showError(data.error || data.errors.join(', '));
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    showError('Une erreur est survenue lors de la communication avec le serveur');
+                });
+                
+                // Vérifier périodiquement le statut de la génération
+                let modelId = null;
+                const checkStatus = setInterval(function() {
+                    if (modelId) {
+                        fetch(`{{ path('app_model_maker_status', {'id': 'MODEL_ID'}) }}`.replace('MODEL_ID', modelId), {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Mettre à jour le message de génération
+                                generationMessage.textContent = data.message;
+                                
+                                if (data.status === 'completed' && data.imageUrl) {
+                                    // La génération est terminée avec succès
+                                    clearInterval(checkStatus);
+                                    showPreview(modelId, data.imageUrl, form);
+                                } else if (data.status === 'error') {
+                                    // La génération a échoué
+                                    clearInterval(checkStatus);
+                                    showError(data.error || 'Une erreur est survenue lors de la génération');
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur:', error);
+                        });
+                    }
+                }, 2000); // Vérifier toutes les 2 secondes
+                
+                // Récupérer l'ID du modèle après la soumission du formulaire
+                setTimeout(function() {
+                    fetch('{{ path("app_model_maker") }}', {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const latestModel = doc.querySelector('.model-card');
+                        if (latestModel) {
+                            const deleteForm = latestModel.querySelector('.delete-form');
+                            if (deleteForm) {
+                                const action = deleteForm.getAttribute('action');
+                                modelId = action.split('/').pop();
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                    });
+                }, 1000); // Attendre 1 seconde pour que le modèle soit créé
+            });
+            
+            // Fonction pour afficher la prévisualisation
+            function showPreview(modelId, imageUrl, form) {
+                // Masquer le conteneur de génération
+                generationContainer.classList.add('hidden');
+                
+                // Afficher le conteneur de prévisualisation
+                previewContainer.classList.remove('hidden');
+                
+                // Mettre à jour l'image et les informations
+                previewImage.src = imageUrl;
+                previewTitle.textContent = form.querySelector('#model_maker_title').value;
+                previewPrompt.textContent = form.querySelector('#model_maker_prompt').value;
+                downloadLink.href = imageUrl;
+                
+                // Réinitialiser le formulaire
+                form.reset();
+                buttonText.classList.remove('hidden');
+                loadingSpinner.classList.add('hidden');
+                generateButton.disabled = false;
+                
+                // Gestionnaire pour le bouton "Nouvelle maquette"
+                newModelButton.addEventListener('click', function() {
+                    previewContainer.classList.add('hidden');
+                    form.parentElement.classList.remove('hidden');
+                });
+                
+                // Recharger la page après 5 secondes pour afficher la nouvelle maquette dans la liste
+                setTimeout(function() {
+                    window.location.reload();
+                }, 5000);
+            }
+            
+            // Fonction pour afficher une erreur
+            function showError(message) {
+                // Masquer le conteneur de génération
+                generationContainer.classList.add('hidden');
+                
+                // Afficher le formulaire
+                form.parentElement.classList.remove('hidden');
+                
+                // Afficher le message d'erreur
+                errorMessage.textContent = message;
+                errorAlert.classList.remove('hidden');
+                
+                // Réinitialiser le bouton
+                buttonText.classList.remove('hidden');
+                loadingSpinner.classList.add('hidden');
+                generateButton.disabled = false;
+            }
+            
+            // Gestionnaire pour les formulaires de suppression
+            document.querySelectorAll('.delete-form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    if (confirm('Êtes-vous sûr de vouloir supprimer cette maquette ?')) {
+                        const formData = new FormData(this);
+                        
+                        fetch(this.action, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Supprimer la carte du modèle du DOM
+                                this.closest('.model-card').remove();
+                            } else {
+                                alert(data.error || 'Une erreur est survenue lors de la suppression');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur:', error);
+                            alert('Une erreur est survenue lors de la communication avec le serveur');
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+{% endblock %}

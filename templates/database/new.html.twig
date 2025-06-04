@@ -1,0 +1,336 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Créer une nouvelle base de données{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<link rel="stylesheet" href="{{ asset('css/database.css') }}">
+{% endblock %}
+
+{% block page_title %}Créer une nouvelle base de données{% endblock %}
+{% block page_subtitle %}Associez une base de données à l'un de vos prompts{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="db-card">
+        <div class="db-card-header">
+            <h2>Nouvelle base de données</h2>
+        </div>
+        <div class="db-card-body">
+            {{ form_start(form, {'attr': {'class': 'db-form'}}) }}
+                <div class="db-form-group">
+                    {{ form_label(form.name, 'Nom de la base de données', {'label_attr': {'class': 'db-form-label'}}) }}
+                    {{ form_widget(form.name, {'attr': {'class': 'db-form-input', 'placeholder': 'Entrez un nom pour votre base de données'}}) }}
+                    {{ form_errors(form.name) }}
+                    <div class="db-form-help">Le nom doit être unique et descriptif.</div>
+                </div>
+                
+                <div class="db-form-group">
+                    <label class="db-form-label">Sélectionnez un prompt <span class="db-required">*</span></label>
+                    <div class="db-prompt-grid">
+                        {% if prompts is empty %}
+                            <div class="db-empty-state db-empty-state-sm">
+                                <i class="fas fa-lightbulb"></i>
+                                <h3>Aucun prompt disponible</h3>
+                                <p>Vous devez d'abord créer un prompt avant de pouvoir créer une base de données.</p>
+                                <a href="{{ path('app_home') }}" class="db-btn db-btn-primary db-btn-icon">
+                                    <i class="fas fa-plus"></i> Créer un prompt
+                                </a>
+                            </div>
+                        {% else %}
+                            {% for prompt in prompts %}
+                                <div class="db-prompt-item" data-prompt-id="{{ prompt.id }}" onclick="selectPrompt(this, {{ prompt.id }})">
+                                    <div class="db-prompt-header">
+                                        <strong>{{ prompt.websiteType }}</strong>
+                                        <span class="db-prompt-date">{{ prompt.createdAt|date('d/m/Y H:i') }}</span>
+                                    </div>
+                                    <div class="db-prompt-content">{{ prompt.content|slice(0, 100) }}{% if prompt.content|length > 100 %}...{% endif %}</div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <input type="hidden" name="prompt_id" id="selectedPromptId" value="">
+                    {% if promptError is defined %}
+                        <div class="db-form-error">{{ promptError }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="db-form-actions">
+                    <a href="{{ path('app_database_index') }}" class="db-btn db-btn-secondary db-btn-icon">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                    <button type="submit" class="db-btn db-btn-primary db-btn-icon">
+                        <i class="fas fa-save"></i> Créer la base de données
+                    </button>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const promptItems = document.querySelectorAll('.db-prompt-item');
+        const selectedPromptId = document.getElementById('selectedPromptId');
+        
+        // Vérifier si un prompt était déjà sélectionné (par exemple après un rechargement de page)
+        if (selectedPromptId.value) {
+            const selectedItem = document.querySelector(`.db-prompt-item[data-prompt-id="${selectedPromptId.value}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('db-prompt-item-selected');
+            }
+        }
+        
+        // Ajouter un effet de pulsation au survol des prompts
+        promptItems.forEach(item => {
+            item.addEventListener('mouseenter', function() {
+                if (!this.classList.contains('db-prompt-item-selected')) {
+                    this.style.transform = 'translateY(-5px) scale(1.02)';
+                }
+            });
+            
+            item.addEventListener('mouseleave', function() {
+                if (!this.classList.contains('db-prompt-item-selected')) {
+                    this.style.transform = '';
+                }
+            });
+        });
+        
+        // Validation du formulaire
+        form.addEventListener('submit', function(event) {
+            const promptId = selectedPromptId.value;
+            
+            if (!promptId) {
+                event.preventDefault();
+                
+                // Animation d'alerte visuelle sur les prompts
+                promptItems.forEach(item => {
+                    item.classList.add('prompt-alert');
+                    setTimeout(() => {
+                        item.classList.remove('prompt-alert');
+                    }, 1000);
+                });
+                
+                // Message d'alerte amélioré
+                const alertBox = document.createElement('div');
+                alertBox.className = 'db-alert db-alert-danger';
+                alertBox.innerHTML = '<i class="fas fa-exclamation-circle"></i> Veuillez sélectionner un prompt pour votre base de données.';
+                
+                // Insérer l'alerte avant les actions du formulaire
+                const formActions = document.querySelector('.db-form-actions');
+                formActions.parentNode.insertBefore(alertBox, formActions);
+                
+                // Faire défiler jusqu'à l'alerte
+                alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Supprimer l'alerte après 5 secondes
+                setTimeout(() => {
+                    alertBox.classList.add('db-alert-fade-out');
+                    setTimeout(() => {
+                        alertBox.remove();
+                    }, 300);
+                }, 5000);
+                
+                return false;
+            }
+        });
+    });
+    
+    function selectPrompt(element, promptId) {
+        // Supprimer la classe selected de tous les éléments
+        document.querySelectorAll('.db-prompt-item').forEach(item => {
+            item.classList.remove('db-prompt-item-selected');
+            item.style.transform = '';
+        });
+        
+        // Ajouter la classe selected à l'élément cliqué avec animation
+        element.classList.add('db-prompt-item-selected');
+        element.style.transform = 'translateY(-5px) scale(1.02)';
+        
+        // Effet de pulsation
+        element.animate([
+            { transform: 'translateY(-5px) scale(1.02)' },
+            { transform: 'translateY(-5px) scale(1.05)' },
+            { transform: 'translateY(-5px) scale(1.02)' }
+        ], {
+            duration: 300,
+            iterations: 1
+        });
+        
+        // Mettre à jour la valeur de l'input hidden
+        document.getElementById('selectedPromptId').value = promptId;
+        
+        // Feedback visuel supplémentaire
+        const feedbackEl = document.createElement('div');
+        feedbackEl.className = 'prompt-selected-feedback';
+        feedbackEl.textContent = 'Prompt sélectionné';
+        
+        // Supprimer tout feedback existant
+        document.querySelectorAll('.prompt-selected-feedback').forEach(el => el.remove());
+        
+        // Ajouter le nouveau feedback
+        document.querySelector('.db-form-group').appendChild(feedbackEl);
+        
+        // Faire disparaître le feedback après 2 secondes
+        setTimeout(() => {
+            feedbackEl.style.opacity = '0';
+            setTimeout(() => {
+                feedbackEl.remove();
+            }, 300);
+        }, 2000);
+    }
+</script>
+<style>
+    .db-prompt-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .db-prompt-item {
+        position: relative;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        background-color: var(--card-bg);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .db-prompt-item:hover {
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary-color-light);
+    }
+    
+    .db-prompt-item-selected {
+        border: 2px solid var(--primary-color);
+        box-shadow: 0 5px 15px rgba(var(--primary-color-rgb), 0.2);
+        background-color: rgba(var(--primary-color-rgb), 0.03);
+    }
+    
+    .db-prompt-item-selected::after {
+        content: '✓';
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        width: 30px;
+        height: 30px;
+        background-color: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .db-prompt-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+    }
+    
+    .db-prompt-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: var(--text-color);
+        margin: 0;
+    }
+    
+    .db-prompt-date {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+    }
+    
+    .db-prompt-content {
+        flex: 1;
+        font-size: 0.9rem;
+        color: var(--text-color-light);
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        margin-bottom: 0.5rem;
+    }
+    
+    .db-alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        animation: slide-in 0.3s ease;
+    }
+    
+    .db-alert i {
+        margin-right: 0.5rem;
+    }
+    
+    .db-alert-danger {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .db-alert-fade-out {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .prompt-alert {
+        animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+    }
+    
+    .prompt-selected-feedback {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: var(--primary-color);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 30px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        animation: fade-in 0.3s ease;
+        transition: opacity 0.3s ease;
+        z-index: 1000;
+    }
+    
+    @keyframes shake {
+        10%, 90% { transform: translate3d(-1px, 0, 0); }
+        20%, 80% { transform: translate3d(2px, 0, 0); }
+        30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+        40%, 60% { transform: translate3d(3px, 0, 0); }
+    }
+    
+    @keyframes pop-in {
+        0% { transform: scale(0); }
+        80% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+    }
+    
+    @keyframes slide-in {
+        0% { transform: translateY(-20px); opacity: 0; }
+        100% { transform: translateY(0); opacity: 1; }
+    }
+    
+    @keyframes fade-in {
+        0% { opacity: 0; }
+        100% { opacity: 1; }
+    }
+</style>
+{% endblock %}

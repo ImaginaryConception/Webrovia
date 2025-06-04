@@ -1,12 +1,13 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Mes Sites Web Générés - Web Forge{% endblock %}
+{% block title %}Mes Sites Web Générés - Webrovia{% endblock %}
 
 {% block stylesheets %}
     {{ parent() }}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .CodeMirror {
             height: 100%;
@@ -56,19 +57,9 @@
                 </div>
             </div>
         {% endif %}
-        {# <div id="error-alert" class="hidden max-w-3xl mx-auto mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <strong class="font-bold">Erreur!</strong>
-            <span id="error-message" class="block sm:inline"></span>
-            <span class="absolute top-0 bottom-0 right-0 px-4 py-3">
-                <svg class="fill-current h-6 w-6 text-red-500" role="button" id="close-error" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                    <title>Fermer</title>
-                    <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
-                </svg>
-            </span>
-        </div> #}
         <div class="text-center mb-12">
             <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">Mes Sites Web</h1>
-            <p class="text-lg text-gray-600 dark:text-gray-300">Gérez vos sites web générés par Web Forge AI</p>
+            <p class="text-lg text-gray-600 dark:text-gray-300">Gérez vos sites web générés par Webrovia</p>
             <a href="{{ path('app_home') }}" class="inline-block mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Générer un nouveau site</a>
         </div>
 
@@ -162,7 +153,7 @@
                             {% endif %}
                                 {% if not app.user.isSubscribed %}
                                     <div class="w-full bg-yellow-300 dark:bg-yellow-900 rounded-lg p-4 text-center">
-                                        <p class="text-yellow-700 dark:text-yellow-300 mb-3">Pour télécharger et déployer votre site, abonnez-vous à Web Forge !</p>
+                                        <p class="text-yellow-700 dark:text-yellow-300 mb-3">Pour télécharger et déployer votre site, abonnez-vous à Webrovia !</p>
                                         <a href="{{ path('app_subscription') }}" class="inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Découvrir l'abonnement</a>
                                     </div>
                                 {% else %}
@@ -171,6 +162,9 @@
                                         <button class="download-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
                                             Télécharger le site
                                         </button>
+                                        <a href="{{ path('app_database_index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                                            <i class="fas fa-database mr-2"></i>Bases de données
+                                        </a>
                                         <button class="delete-site-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
                                             <i class="fas fa-trash-alt mr-2"></i>Supprimer le site
                                         </button>
@@ -282,7 +276,20 @@
                             {% if prompt.status != 'error' %}
                             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                                 <div class="flex justify-between items-center mb-4">
-                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Aperçu en direct</h3>
+                                    <div class="flex items-center">
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Aperçu en direct</h3>
+                                        <div class="visual-edit-buttons ml-4">
+                                            <button class="visual-edit-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded text-sm mr-2" data-prompt-id="{{ prompt.id }}" data-mode="edit">
+                                                <i class="fas fa-edit mr-1"></i> Edit
+                                            </button>
+                                            <button class="visual-save-btn bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm mr-2" data-prompt-id="{{ prompt.id }}" style="display: none;">
+                                                <i class="fas fa-save mr-1"></i> Sauvegarder
+                                            </button>
+                                            <button class="visual-preview-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm" data-prompt-id="{{ prompt.id }}" data-mode="preview">
+                                                <i class="fas fa-eye mr-1"></i> Preview
+                                            </button>
+                                        </div>
+                                    </div>
                                     <button class="preview-fullscreen-btn text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5m-7 11h4m-4 0v4m0-4l5 5m5-9v4m0-4h4m-4 0l5 5-5-5z" />
@@ -510,6 +517,9 @@
                                         <button class="download-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
                                             Télécharger le site
                                         </button>
+                                        <a href="{{ path('app_database_index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                                            <i class="fas fa-database mr-2"></i>Bases de données
+                                        </a>
                                         <button class="delete-site-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
                                             <i class="fas fa-trash-alt mr-2"></i>Supprimer le site
                                         </button>
@@ -546,7 +556,20 @@
 
                             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                                 <div class="flex justify-between items-center mb-4">
-                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Aperçu en direct</h3>
+                                    <div class="flex items-center">
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Aperçu en direct</h3>
+                                        <div class="visual-edit-buttons ml-4">
+                                            <button class="visual-edit-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm mr-2" data-prompt-id="{{ prompt.id }}" data-mode="edit">
+                                                <i class="fas fa-edit mr-1"></i> Edit
+                                            </button>
+                                            <button class="visual-save-btn bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm mr-2" data-prompt-id="{{ prompt.id }}" style="display: none;">
+                                                <i class="fas fa-save mr-1"></i> Sauvegarder
+                                            </button>
+                                            <button class="visual-preview-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded text-sm" data-prompt-id="{{ prompt.id }}" data-mode="preview">
+                                                <i class="fas fa-eye mr-1"></i> Preview
+                                            </button>
+                                        </div>
+                                    </div>
                                     <button class="preview-fullscreen-btn text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5m-7 11h4m-4 0v4m0-4l5 5m5-9v4m0-4h4m-4 0l5 5-5-5z" />
@@ -1022,17 +1045,131 @@
                 }
 
                 const data = await response.json();
+                
+                // Afficher le message de génération s'il est disponible
+                if (data.generationMessage) {
+                    // Utiliser uniquement le conteneur existant sous le formulaire
+                    const messageElement = document.getElementById('generation-message');
+                    if (messageElement) {
+                        messageElement.textContent = data.generationMessage;
+                    }
+                }
 
                 if (data.status === 'completed') {
-                    window.location.reload();
+                    // Au lieu de recharger la page, mettre à jour l'interface dynamiquement
+                    const messageContainer = document.getElementById('generation-message-container');
+                    if (messageContainer) {
+                        messageContainer.style.display = 'none';
+                    }
+                    
+                    // Mettre à jour le statut du site dans la liste
+                    updateSiteStatus(promptId, 'completed');
+                    
+                    // Arrêter le polling
+                    return;
                 } else if (data.status === 'error') {
+                    // Masquer le conteneur de message de génération
+                    const messageContainer = document.getElementById('generation-message-container');
+                    if (messageContainer) {
+                        messageContainer.style.display = 'none';
+                    }
+                    
+                    // Mettre à jour le statut du site et afficher l'erreur
+                    updateSiteStatus(promptId, 'error');
                     showError(data.error || 'Une erreur est survenue lors de la génération');
+                    
+                    // Arrêter le polling
+                    return;
                 } else {
+                    // Continuer le polling
                     setTimeout(() => pollPromptStatus(promptId), 2000);
                 }
             } catch (error) {
+                console.error('Erreur lors du polling:', error);
+                
+                // Masquer le conteneur de message de génération en cas d'erreur
+                const messageContainer = document.getElementById('generation-message-container');
+                if (messageContainer) {
+                    messageContainer.style.display = 'none';
+                }
+                
+                // Afficher l'erreur
                 showError(error.message || 'Erreur lors du suivi du statut');
             }
+        }
+        
+        // Fonction pour mettre à jour le statut d'un site dans l'interface
+        function updateSiteStatus(promptId, status) {
+            // Trouver l'élément du site correspondant au promptId
+            const siteElement = document.querySelector(`[data-prompt-id="${promptId}"]`);
+            if (!siteElement) return;
+            
+            // Mettre à jour l'indicateur de statut si présent
+            const statusIndicator = siteElement.querySelector('.status-indicator');
+            if (statusIndicator) {
+                // Supprimer les classes de statut existantes
+                statusIndicator.classList.remove('pending', 'completed', 'error');
+                
+                // Ajouter la classe correspondant au nouveau statut
+                statusIndicator.classList.add(status);
+                
+                // Mettre à jour le texte du statut
+                if (status === 'completed') {
+                    statusIndicator.textContent = 'Terminé';
+                } else if (status === 'error') {
+                    statusIndicator.textContent = 'Erreur';
+                }
+            }
+            
+            // Activer les boutons d'action si le statut est 'completed'
+            if (status === 'completed') {
+                const actionButtons = siteElement.querySelectorAll('.action-button');
+                actionButtons.forEach(button => {
+                    button.disabled = false;
+                    button.classList.remove('disabled');
+                });
+                
+                // Afficher une notification de succès
+                showNotification('Site généré avec succès!', 'success');
+            }
+        }
+        
+        // Fonction pour afficher une notification
+        function showNotification(message, type = 'info') {
+            // Créer un élément de notification
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            notification.style.position = 'fixed';
+            notification.style.top = '20px';
+            notification.style.right = '20px';
+            notification.style.padding = '10px 15px';
+            notification.style.borderRadius = '4px';
+            notification.style.zIndex = '1000';
+            notification.style.maxWidth = '300px';
+            notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+            
+            // Définir les couleurs en fonction du type
+            if (type === 'success') {
+                notification.style.backgroundColor = '#4CAF50';
+                notification.style.color = 'white';
+            } else if (type === 'error') {
+                notification.style.backgroundColor = '#F44336';
+                notification.style.color = 'white';
+            } else {
+                notification.style.backgroundColor = '#2196F3';
+                notification.style.color = 'white';
+            }
+            
+            // Ajouter la notification au DOM
+            document.body.appendChild(notification);
+            
+            // Supprimer la notification après quelques secondes
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.5s';
+                setTimeout(() => notification.remove(), 500);
+            }, 5000);
         }
 
         // --- Validation du nom de domaine et gestion des boutons de déploiement ---
@@ -1580,6 +1717,15 @@
                         Modification en cours...
                     </span>
                 `;
+                
+                // Créer un élément pour afficher le message de génération juste après le formulaire de modification
+                const generationMessageContainer = document.createElement('div');
+                generationMessageContainer.id = 'generation-message-container';
+                generationMessageContainer.className = 'mt-4 mb-4 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 text-center';
+                generationMessageContainer.innerHTML = '<p id="generation-message" class="text-gray-700 dark:text-gray-300 text-lg font-medium">Initialisation de la modification...</p>';
+                
+                // Insérer le message après le textarea de modification
+                textarea.parentNode.insertBefore(generationMessageContainer, textarea.nextSibling);
 
                 if (!content) {
                     showError('Veuillez décrire les modifications souhaitées');
@@ -1598,23 +1744,55 @@
 
                     const data = await response.json();
                     if (response.ok && data.success) {
+                        // Mettre à jour le message initial si disponible
+                        if (data.data && data.data.message) {
+                            const messageElement = document.getElementById('generation-message');
+                            if (messageElement) {
+                                messageElement.textContent = data.data.message;
+                            }
+                        }
+                        
                         if (data.data && data.data.status === 'completed') {
                             window.location.reload();
                         } else if (data.data && data.data.status === 'error') {
+                            // Supprimer le conteneur de message de génération
+                            const messageContainer = document.getElementById('generation-message-container');
+                            if (messageContainer) {
+                                messageContainer.remove();
+                            }
                             window.location.href = "{{ path('app_list_sites') }}";
+                        } else if (data.data && data.data.id) {
+                            // Démarrer le polling immédiatement pour obtenir les mises à jour en temps réel
+                            pollPromptStatus(data.data.id);
                         }
                     } else {
                         if (data.data && data.data.id) {
                             if (data.data.status === 'completed') {
                                 window.location.reload();
                             } else if (data.data.status === 'error') {
+                                // Supprimer le conteneur de message de génération
+                                const messageContainer = document.getElementById('generation-message-container');
+                                if (messageContainer) {
+                                    messageContainer.remove();
+                                }
                                 window.location.href = "{{ path('app_list_sites') }}";
                             }
                         } else {
+                            // Supprimer le conteneur de message de génération
+                            const messageContainer = document.getElementById('generation-message-container');
+                            if (messageContainer) {
+                                messageContainer.remove();
+                            }
                             throw new Error(data.error || 'Une erreur est survenue');
                         }
                     }
                 } catch (error) {
+                    // Supprimer le conteneur de message de génération
+                    const messageContainer = document.getElementById('generation-message-container');
+                    if (messageContainer) {
+                        messageContainer.remove();
+                    }
+                    
                     showError('Erreur: ' + error.message);
                     if (error.data && error.data.id) {
                         window.location.href = "{{ path('app_list_sites') }}";
@@ -1648,6 +1826,619 @@
                     container.requestFullscreen();
                 } else {
                     document.exitFullscreen();
+                }
+            });
+        });
+        
+        // Fonctions pour afficher les messages de succès et d'erreur
+        function showSuccess(message) {
+            const successMessage = document.createElement('div');
+            successMessage.className = 'alert alert-success fixed top-4 right-4 z-50 p-4 rounded-lg bg-green-100 text-green-800 shadow-lg';
+            successMessage.textContent = message;
+            document.body.appendChild(successMessage);
+            
+            // Supprimer le message après 3 secondes
+            setTimeout(() => {
+                successMessage.remove();
+            }, 3000);
+        }
+        
+        function showError(message) {
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'alert alert-danger fixed top-4 right-4 z-50 p-4 rounded-lg bg-red-100 text-red-800 shadow-lg';
+            errorMessage.textContent = message;
+            document.body.appendChild(errorMessage);
+            
+            // Supprimer le message après 5 secondes
+            setTimeout(() => {
+                errorMessage.remove();
+            }, 5000);
+        }
+
+        // --- Gestion de l'édition visuelle ---
+        // Créer un objet pour stocker l'état d'édition pour chaque iframe
+        const visualEditState = {};
+
+        // Fonction pour injecter le CSS d'édition visuelle dans l'iframe
+        function injectVisualEditCSS(iframe) {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            let styleEl = iframeDoc.getElementById('visual-edit-styles');
+            
+            if (!styleEl) {
+                styleEl = iframeDoc.createElement('style');
+                styleEl.id = 'visual-edit-styles';
+                iframeDoc.head.appendChild(styleEl);
+            }
+            
+            styleEl.textContent = `
+                .visual-edit-highlight {
+                    outline: 2px dashed #3b82f6 !important;
+                    cursor: pointer !important;
+                    position: relative;
+                }
+                .visual-edit-highlight:hover {
+                    outline: 2px solid #2563eb !important;
+                    background-color: rgba(59, 130, 246, 0.1) !important;
+                }
+                .visual-edit-highlight.dragging {
+                    opacity: 0.6 !important;
+                    outline: 2px solid #2563eb !important;
+                }
+                .visual-edit-highlight.drop-before {
+                    border-top: 3px solid #3b82f6 !important;
+                    margin-top: -3px !important;
+                }
+                .visual-edit-highlight.drop-after {
+                    border-bottom: 3px solid #3b82f6 !important;
+                    margin-bottom: -3px !important;
+                }
+                .visual-edit-panel {
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    background: white;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 8px;
+                    padding: 12px;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    z-index: 9999;
+                    width: 300px;
+                }
+                .visual-edit-panel h3 {
+                    margin-top: 0;
+                    margin-bottom: 10px;
+                    font-weight: bold;
+                    font-size: 16px;
+                }
+                .visual-edit-panel label {
+                    display: block;
+                    margin-bottom: 5px;
+                    font-size: 14px;
+                }
+                .visual-edit-panel input, .visual-edit-panel select {
+                    width: 100%;
+                    padding: 6px;
+                    margin-bottom: 10px;
+                    border: 1px solid #d1d5db;
+                    border-radius: 4px;
+                }
+                .visual-edit-panel button {
+                    background: #3b82f6;
+                    color: white;
+                    border: none;
+                    padding: 6px 12px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    margin-right: 5px;
+                }
+                .visual-edit-panel button:hover {
+                    background: #2563eb;
+                }
+                .visual-edit-panel .cancel {
+                    background: #6b7280;
+                }
+                .visual-edit-panel .cancel:hover {
+                    background: #4b5563;
+                }
+                .visual-edit-buttons {
+                    display: flex;
+                    justify-content: flex-end;
+                    margin-top: 10px;
+                }
+            `;
+        }
+
+        // Fonction pour injecter le JavaScript d'édition visuelle dans l'iframe
+        function injectVisualEditJS(iframe, promptId) {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            const iframeWin = iframe.contentWindow;
+            
+            // Supprimer les anciens event listeners si nécessaire
+            if (visualEditState[promptId] && visualEditState[promptId].cleanup) {
+                visualEditState[promptId].cleanup();
+            }
+            
+            // Stocker les éléments modifiables et leurs valeurs originales
+            const editableElements = {};
+            const editableSelectors = 'h1, h2, h3, h4, h5, h6, p, span, a, button, li';
+            
+            // Ajouter des event listeners aux éléments modifiables
+            const elements = iframeDoc.querySelectorAll(editableSelectors);
+            elements.forEach(el => {
+                // Stocker le contenu original
+                editableElements[getElementPath(el)] = {
+                    originalContent: el.innerHTML,
+                    originalStyle: el.getAttribute('style') || ''
+                };
+                
+                // Ajouter la classe de surbrillance
+                el.classList.add('visual-edit-highlight');
+                
+                // Ajouter l'event listener pour l'édition
+                el.addEventListener('click', handleElementClick);
+                
+                // Ajouter les event listeners pour le drag and drop
+                el.setAttribute('draggable', 'true');
+                el.addEventListener('dragstart', handleDragStart);
+                el.addEventListener('dragend', handleDragEnd);
+            });
+            
+            // Ajouter les event listeners pour les zones de drop
+            iframeDoc.body.addEventListener('dragover', handleDragOver);
+            iframeDoc.body.addEventListener('drop', handleDrop);
+            
+            // Fonction pour obtenir le chemin unique d'un élément
+            function getElementPath(el) {
+                let path = '';
+                while (el && el !== iframeDoc.body) {
+                    let selector = el.tagName.toLowerCase();
+                    if (el.id) {
+                        selector += '#' + el.id;
+                    } else {
+                        let sibling = el;
+                        let nth = 1;
+                        while (sibling = sibling.previousElementSibling) {
+                            if (sibling.tagName === el.tagName) nth++;
+                        }
+                        selector += ':nth-of-type(' + nth + ')';
+                    }
+                    path = selector + (path ? ' > ' + path : '');
+                    el = el.parentElement;
+                }
+                return path;
+            }
+            
+            // Fonction pour gérer le clic sur un élément
+            function handleElementClick(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const el = e.currentTarget;
+                const path = getElementPath(el);
+                
+                // Supprimer le panel d'édition existant s'il y en a un
+                const existingPanel = iframeDoc.querySelector('.visual-edit-panel');
+                if (existingPanel) {
+                    existingPanel.remove();
+                }
+                
+                // Créer le panel d'édition
+                const panel = iframeDoc.createElement('div');
+                panel.className = 'visual-edit-panel';
+                panel.innerHTML = `
+                    <h3>Modifier l'élément</h3>
+                    <label for="content-edit">Contenu:</label>
+                    <input type="text" id="content-edit" value="${el.textContent}">
+                    
+                    <label for="color-edit">Couleur du texte:</label>
+                    <input type="color" id="color-edit" value="${getComputedStyle(el).color ? rgbToHex(getComputedStyle(el).color) : '#000000'}">
+                    
+                    <label for="bg-color-edit">Couleur de fond:</label>
+                    <input type="color" id="bg-color-edit" value="${getComputedStyle(el).backgroundColor && getComputedStyle(el).backgroundColor !== 'rgba(0, 0, 0, 0)' ? rgbToHex(getComputedStyle(el).backgroundColor) : '#ffffff'}">
+                    
+                    <label for="font-size-edit">Taille de police:</label>
+                    <select id="font-size-edit">
+                        <option value="">Par défaut</option>
+                        <option value="12px">Très petit</option>
+                        <option value="14px">Petit</option>
+                        <option value="16px">Normal</option>
+                        <option value="18px">Grand</option>
+                        <option value="24px">Très grand</option>
+                        <option value="32px">Énorme</option>
+                    </select>
+                    
+                    <label for="font-weight-edit">Graisse de police:</label>
+                    <select id="font-weight-edit">
+                        <option value="">Par défaut</option>
+                        <option value="normal">Normal</option>
+                        <option value="bold">Gras</option>
+                    </select>
+                    
+                    <div class="visual-edit-buttons">
+                        <button class="apply">Appliquer</button>
+                        <button class="cancel">X</button>
+                    </div>
+                `;
+                
+                iframeDoc.body.appendChild(panel);
+                
+                // Définir les valeurs actuelles dans le formulaire
+                const fontSizeSelect = panel.querySelector('#font-size-edit');
+                const fontWeightSelect = panel.querySelector('#font-weight-edit');
+                
+                const computedStyle = getComputedStyle(el);
+                fontSizeSelect.value = computedStyle.fontSize || '';
+                fontWeightSelect.value = computedStyle.fontWeight === '700' ? 'bold' : (computedStyle.fontWeight === '400' ? 'normal' : '');
+                
+                // Gérer le bouton Appliquer
+                panel.querySelector('.apply').addEventListener('click', () => {
+                    const content = panel.querySelector('#content-edit').value;
+                    const color = panel.querySelector('#color-edit').value;
+                    const bgColor = panel.querySelector('#bg-color-edit').value;
+                    const fontSize = panel.querySelector('#font-size-edit').value;
+                    const fontWeight = panel.querySelector('#font-weight-edit').value;
+                    
+                    // Appliquer les modifications
+                    el.textContent = content;
+                    
+                    let styleStr = el.getAttribute('style') || '';
+                    if (color && color !== '#000000') {
+                        styleStr = updateStyle(styleStr, 'color', color);
+                    }
+                    if (bgColor && bgColor !== '#ffffff') {
+                        styleStr = updateStyle(styleStr, 'background-color', bgColor);
+                    }
+                    if (fontSize) {
+                        styleStr = updateStyle(styleStr, 'font-size', fontSize);
+                    }
+                    if (fontWeight) {
+                        styleStr = updateStyle(styleStr, 'font-weight', fontWeight);
+                    }
+                    
+                    el.setAttribute('style', styleStr);
+                    
+                    // Mettre à jour le contenu dans l'éditeur CodeMirror
+                    updateCodeMirrorContent(promptId);
+                    
+                    panel.remove();
+                });
+                
+                // Gérer le bouton Annuler
+                panel.querySelector('.cancel').addEventListener('click', () => {
+                    panel.remove();
+                });
+            }
+            
+            // Variables pour le drag and drop
+            let draggedElement = null;
+            
+            // Fonction pour gérer le début du drag
+            function handleDragStart(e) {
+                // Stocker l'élément en cours de déplacement
+                draggedElement = e.target;
+                
+                // Définir les données de transfert (nécessaire pour Firefox)
+                e.dataTransfer.setData('text/plain', '');
+                
+                // Ajouter une classe pour indiquer l'élément en cours de déplacement
+                draggedElement.classList.add('dragging');
+                
+                // Supprimer le panel d'édition s'il existe
+                const existingPanel = iframeDoc.querySelector('.visual-edit-panel');
+                if (existingPanel) {
+                    existingPanel.remove();
+                }
+            }
+            
+            // Fonction pour gérer la fin du drag
+            function handleDragEnd(e) {
+                // Supprimer la classe de l'élément déplacé
+                if (draggedElement) {
+                    draggedElement.classList.remove('dragging');
+                    draggedElement = null;
+                }
+            }
+            
+            // Fonction pour gérer le survol pendant le drag
+            function handleDragOver(e) {
+                // Empêcher le comportement par défaut pour permettre le drop
+                e.preventDefault();
+                
+                // Ajouter un indicateur visuel de la zone de drop
+                const dropTarget = getDropTarget(e.clientX, e.clientY);
+                if (dropTarget) {
+                    // Supprimer les indicateurs précédents
+                    iframeDoc.querySelectorAll('.drop-before, .drop-after').forEach(el => {
+                        el.classList.remove('drop-before', 'drop-after');
+                    });
+                    
+                    // Déterminer si on doit placer avant ou après l'élément cible
+                    const rect = dropTarget.getBoundingClientRect();
+                    const middle = rect.top + rect.height / 2;
+                    
+                    if (e.clientY < middle) {
+                        dropTarget.classList.add('drop-before');
+                    } else {
+                        dropTarget.classList.add('drop-after');
+                    }
+                }
+            }
+            
+            // Fonction pour gérer le drop
+            function handleDrop(e) {
+                // Empêcher le comportement par défaut
+                e.preventDefault();
+                
+                // Vérifier qu'on a un élément à déplacer
+                if (!draggedElement) return;
+                
+                // Trouver la cible du drop
+                const dropTarget = getDropTarget(e.clientX, e.clientY);
+                if (!dropTarget) return;
+                
+                // Déterminer si on doit placer avant ou après l'élément cible
+                const rect = dropTarget.getBoundingClientRect();
+                const middle = rect.top + rect.height / 2;
+                
+                // Déplacer l'élément
+                if (e.clientY < middle) {
+                    dropTarget.parentNode.insertBefore(draggedElement, dropTarget);
+                } else {
+                    dropTarget.parentNode.insertBefore(draggedElement, dropTarget.nextSibling);
+                }
+                
+                // Supprimer les indicateurs visuels
+                iframeDoc.querySelectorAll('.drop-before, .drop-after').forEach(el => {
+                    el.classList.remove('drop-before', 'drop-after');
+                });
+                
+                // Mettre à jour le contenu dans l'éditeur CodeMirror
+                updateCodeMirrorContent(promptId);
+            }
+            
+            // Fonction pour trouver l'élément cible du drop
+            function getDropTarget(x, y) {
+                // Obtenir l'élément à la position donnée
+                const elementsAtPoint = iframeDoc.elementsFromPoint(x, y);
+                
+                // Trouver le premier élément modifiable
+                for (const el of elementsAtPoint) {
+                    if (el.classList.contains('visual-edit-highlight') && el !== draggedElement) {
+                        return el;
+                    }
+                }
+                
+                return null;
+            }
+            
+            // Fonction pour mettre à jour une propriété de style
+            function updateStyle(styleStr, property, value) {
+                const styleObj = {};
+                
+                // Analyser la chaîne de style existante
+                if (styleStr) {
+                    styleStr.split(';').forEach(style => {
+                        if (style.trim()) {
+                            const [prop, val] = style.split(':').map(s => s.trim());
+                            styleObj[prop] = val;
+                        }
+                    });
+                }
+                
+                // Mettre à jour ou ajouter la propriété
+                styleObj[property] = value;
+                
+                // Reconstruire la chaîne de style
+                return Object.entries(styleObj)
+                    .map(([prop, val]) => `${prop}: ${val}`)
+                    .join('; ');
+            }
+            
+            // Fonction pour convertir RGB en HEX
+            function rgbToHex(rgb) {
+                if (!rgb || rgb === 'rgba(0, 0, 0, 0)') return '#ffffff';
+                
+                // Extraire les valeurs RGB
+                const rgbValues = rgb.match(/\d+/g);
+                if (!rgbValues || rgbValues.length < 3) return '#000000';
+                
+                return '#' + rgbValues.slice(0, 3).map(x => {
+                    const hex = parseInt(x).toString(16);
+                    return hex.length === 1 ? '0' + hex : hex;
+                }).join('');
+            }
+            
+            // Fonction pour mettre à jour le contenu dans l'éditeur CodeMirror
+            function updateCodeMirrorContent(promptId) {
+                // Récupérer le contenu HTML modifié
+                const htmlContent = iframeDoc.documentElement.outerHTML;
+                
+                // Mettre à jour l'éditeur CodeMirror avec le nouveau contenu
+                const editor = editors[promptId];
+                if (editor) {
+                    // Trouver le fichier HTML actif
+                    const activeFile = currentFiles[promptId].find(file => file.type === 'html' || file.path.endsWith('.html.twig'));
+                    if (activeFile) {
+                        // Mettre à jour le contenu du fichier
+                        activeFile.content = htmlContent;
+                        
+                        // Mettre à jour l'éditeur si c'est le fichier actuellement affiché
+                        const activeTab = document.querySelector(`.file-tab[data-prompt-id="${promptId}"][data-active="true"]`);
+                        if (activeTab && activeTab.dataset.path === activeFile.path) {
+                            editor.setValue(htmlContent);
+                        }
+                    }
+                }
+            }
+            
+            // Fonction de nettoyage pour supprimer les event listeners
+            function cleanup() {
+                elements.forEach(el => {
+                    el.classList.remove('visual-edit-highlight');
+                    el.classList.remove('dragging');
+                    el.classList.remove('drop-before');
+                    el.classList.remove('drop-after');
+                    el.removeEventListener('click', handleElementClick);
+                    el.removeEventListener('dragstart', handleDragStart);
+                    el.removeEventListener('dragend', handleDragEnd);
+                    el.removeAttribute('draggable');
+                });
+                
+                // Supprimer les event listeners du body
+                iframeDoc.body.removeEventListener('dragover', handleDragOver);
+                iframeDoc.body.removeEventListener('drop', handleDrop);
+                
+                const panel = iframeDoc.querySelector('.visual-edit-panel');
+                if (panel) {
+                    panel.remove();
+                }
+            }
+            
+            // Stocker la fonction de nettoyage pour une utilisation ultérieure
+            visualEditState[promptId] = {
+                cleanup: cleanup,
+                editableElements: editableElements
+            };
+        }
+
+        // Gérer les boutons d'édition visuelle
+        document.querySelectorAll('.visual-edit-btn, .visual-preview-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const promptId = this.dataset.promptId;
+                const mode = this.dataset.mode;
+                const iframe = document.querySelector(`.preview-frame[data-prompt-id="${promptId}"]`);
+                const saveBtn = document.querySelector(`.visual-save-btn[data-prompt-id="${promptId}"]`);
+                
+                // Mettre à jour l'apparence des boutons
+                document.querySelector(`.visual-edit-btn[data-prompt-id="${promptId}"]`).classList.toggle('bg-blue-600', mode === 'edit');
+                document.querySelector(`.visual-edit-btn[data-prompt-id="${promptId}"]`).classList.toggle('bg-gray-600', mode !== 'edit');
+                document.querySelector(`.visual-preview-btn[data-prompt-id="${promptId}"]`).classList.toggle('bg-blue-600', mode === 'preview');
+                document.querySelector(`.visual-preview-btn[data-prompt-id="${promptId}"]`).classList.toggle('bg-gray-600', mode !== 'preview');
+                
+                // Afficher ou masquer le bouton de sauvegarde
+                if (saveBtn) {
+                    saveBtn.style.display = mode === 'edit' ? 'inline-block' : 'none';
+                }
+                
+                if (mode === 'edit') {
+                    // Activer le mode d'édition visuelle
+                    iframe.addEventListener('load', function onLoad() {
+                        injectVisualEditCSS(iframe);
+                        injectVisualEditJS(iframe, promptId);
+                        iframe.removeEventListener('load', onLoad);
+                    });
+                    
+                    // Recharger l'iframe pour s'assurer que tout est propre
+                    iframe.src = iframe.src;
+                } else {
+                    // Désactiver le mode d'édition visuelle
+                    if (visualEditState[promptId] && visualEditState[promptId].cleanup) {
+                        visualEditState[promptId].cleanup();
+                    }
+                    
+                    // Recharger l'iframe pour revenir à l'état normal
+                    iframe.src = iframe.src;
+                }
+            });
+        });
+        
+        // Gérer le bouton de sauvegarde
+        document.querySelectorAll('.visual-save-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const promptId = this.dataset.promptId;
+                
+                // Récupérer l'iframe et son contenu
+                const iframe = document.querySelector(`.preview-frame[data-prompt-id="${promptId}"]`);
+                if (!iframe) {
+                    showError('Iframe non trouvé');
+                    return;
+                }
+                
+                const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+                if (!iframeDocument) {
+                    showError('Impossible d\'accéder au contenu de l\'iframe');
+                    return;
+                }
+                
+                // Récupérer le contenu HTML complet
+                const htmlContent = iframeDocument.documentElement.outerHTML;
+                
+                // Trouver le fichier HTML actif
+                const htmlPath = 'index.html.twig'; // Chemin par défaut pour le fichier HTML principal
+                
+                try {
+                    // Désactiver le bouton pendant la sauvegarde
+                    this.disabled = true;
+                    const originalText = this.innerHTML;
+                    this.innerHTML = `
+                        <span class="inline-flex items-center">
+                            <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Sauvegarde...
+                        </span>
+                    `;
+                    
+                    console.log('Envoi du contenu HTML au serveur:', htmlContent.substring(0, 100) + '...');
+                    
+                    // Envoyer le contenu modifié au serveur
+                    const response = await fetch(`/api/file-content/${promptId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            path: htmlPath,
+                            content: htmlContent
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Afficher un message de succès
+                        showSuccess('Modifications sauvegardées avec succès');
+                        
+                        // Mettre à jour l'état pour indiquer que les modifications sont sauvegardées
+                        if (visualEditState[promptId]) {
+                            visualEditState[promptId].savedContent = htmlContent;
+                            
+                            // Nettoyer les éléments d'édition visuelle
+                            if (visualEditState[promptId].cleanup) {
+                                visualEditState[promptId].cleanup();
+                            }
+                        }
+                        
+                        // Mettre à jour currentFiles pour que les modifications persistent
+                        if (currentFiles[promptId]) {
+                            // Mettre à jour directement l'objet avec le chemin comme clé
+                            currentFiles[promptId][htmlPath] = htmlContent;
+                        }
+                        
+                        // Mettre à jour l'éditeur de code avec le nouveau contenu
+                        const editor = editors[promptId];
+                        if (editor) {
+                            // Vérifier si l'onglet HTML est actif
+                            const activeTab = document.querySelector(`.tab-btn[data-prompt-id="${promptId}"].active`);
+                            if (activeTab && activeTab.dataset.file === 'html') {
+                                editor.setValue(htmlContent);
+                            }
+                        }
+                        
+                        // Recharger l'iframe pour s'assurer que tout est propre
+                        iframe.src = iframe.src;
+                    } else {
+                        throw new Error(data.message || 'Erreur lors de la sauvegarde');
+                    }
+                } catch (error) {
+                    console.error('Erreur de sauvegarde:', error);
+                    showError('Erreur: ' + error.message);
+                } finally {
+                    // Réactiver le bouton
+                    this.disabled = false;
+                    this.innerHTML = `<i class="fas fa-save mr-1"></i> Sauvegarder`;
                 }
             });
         });

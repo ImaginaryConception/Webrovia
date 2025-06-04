@@ -1,9 +1,5 @@
 TODO :
 
-- Backend des sites générés (contrôleurs, entités, repository, formtype).
-- Base de données intéractif pour chaque site.
 - Système de commande Symfony CLI intéractif en bouton pour chaque site.
 - Utilisation API O2Switch pour le paiement du nom de domaine.
-- ModelMaker intégré.
 - Générer la structure Symfony directement après la génération, non plus après FTP.
-- Gérer les clones.

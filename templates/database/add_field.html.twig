@@ -1,0 +1,146 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Ajouter un champ{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<link rel="stylesheet" href="{{ asset('css/database.css') }}">
+{% endblock %}
+
+{% block page_title %}Ajouter un champ{% endblock %}
+{% block page_subtitle %}Table: {{ table_name }} | Base de données: {{ database_name }}{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="db-card">
+        <div class="db-card-header">
+            <h2>Nouveau champ</h2>
+        </div>
+        <div class="db-card-body">
+            <div class="db-info-grid">
+                <div class="db-info-item">
+                    <i class="fas fa-database"></i>
+                    <span>Base de données: {{ database_name }}</span>
+                </div>
+                <div class="db-info-item">
+                    <i class="fas fa-table"></i>
+                    <span>Table: {{ table_name }}</span>
+                </div>
+            </div>
+
+            {% if existing_fields|length > 0 %}
+            <div class="db-section">
+                <h3 class="db-section-title">Champs existants</h3>
+                <div class="db-table-responsive">
+                    <table class="db-table">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for field_name, field_type in existing_fields %}
+                            <tr>
+                                <td>{{ field_name }}</td>
+                                <td><span class="db-badge db-badge-{{ field_type }}">{{ field_type }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="post" class="db-form" id="fieldForm">
+                <div class="db-form-group">
+                    <label for="field_name" class="db-form-label">Nom du champ</label>
+                    <input type="text" id="field_name" name="field_name" class="db-form-input" required>
+                    <div class="db-form-help">Le nom doit commencer par une lettre et ne contenir que des lettres, chiffres et underscores</div>
+                </div>
+
+                <div class="db-form-group">
+                    <label for="field_type" class="db-form-label">Type du champ</label>
+                    <select id="field_type" name="field_type" class="db-form-select" required>
+                        <option value="string">String (Texte court)</option>
+                        <option value="text">Text (Texte long)</option>
+                        <option value="integer">Integer (Nombre entier)</option>
+                        <option value="float">Float (Nombre décimal)</option>
+                        <option value="boolean">Boolean (Vrai/Faux)</option>
+                        <option value="date">Date</option>
+                        <option value="datetime">DateTime (Date et heure)</option>
+                        <option value="time">Time (Heure)</option>
+                        <option value="email">Email</option>
+                        <option value="url">URL</option>
+                    </select>
+                    <div class="db-form-help">Type de données pour ce champ</div>
+                </div>
+
+                <div class="db-form-actions">
+                    <a href="{{ path('app_database_table_detail', {'id': database_id, 'tableName': table_name}) }}" class="db-btn db-btn-secondary db-btn-icon">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                    <button type="submit" class="db-btn db-btn-primary db-btn-icon">
+                        <i class="fas fa-save"></i> Ajouter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('fieldForm');
+        const fieldNameInput = document.getElementById('field_name');
+        
+        form.addEventListener('submit', function(event) {
+            let hasErrors = false;
+            const fieldName = fieldNameInput.value.trim();
+            
+            // Validation du nom du champ
+            if (!validateFieldName(fieldName)) {
+                event.preventDefault();
+                fieldNameInput.classList.add('db-form-input-error');
+                const helpText = fieldNameInput.nextElementSibling;
+                helpText.textContent = 'Le nom du champ doit commencer par une lettre et ne contenir que des lettres, chiffres et underscores';
+                helpText.classList.add('db-form-help-error');
+                hasErrors = true;
+            } else {
+                fieldNameInput.classList.remove('db-form-input-error');
+                const helpText = fieldNameInput.nextElementSibling;
+                helpText.textContent = 'Le nom doit commencer par une lettre et ne contenir que des lettres, chiffres et underscores';
+                helpText.classList.remove('db-form-help-error');
+            }
+            
+            // Vérifier que le nom du champ n'existe pas déjà
+            const existingFields = [
+                {% for field_name, field_type in existing_fields %}
+                '{{ field_name }}',
+                {% endfor %}
+            ];
+            
+            if (existingFields.includes(fieldName)) {
+                event.preventDefault();
+                fieldNameInput.classList.add('db-form-input-error');
+                const helpText = fieldNameInput.nextElementSibling;
+                helpText.textContent = 'Ce nom de champ existe déjà dans la table';
+                helpText.classList.add('db-form-help-error');
+                hasErrors = true;
+            }
+            
+            if (hasErrors) {
+                event.preventDefault();
+            }
+        });
+        
+        function validateFieldName(name) {
+            const re = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+            return re.test(name);
+        }
+    });
+</script>
+{% endblock %}

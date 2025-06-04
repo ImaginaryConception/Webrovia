@@ -66,6 +66,13 @@ class GenerateWebsiteMessageHandler
                 if (empty($files)) {
                     throw new \RuntimeException("Aucun fichier généré.");
                 }
+                
+                // Extraire le message de génération
+                $generationMessage = null;
+                if (isset($files['__generation_message__'])) {
+                    $generationMessage = $files['__generation_message__'];
+                    unset($files['__generation_message__']);
+                }
 
                 // Fusionner la structure Symfony avec les fichiers générés
                 if ($symfonyStructure['success']) {
@@ -73,6 +80,7 @@ class GenerateWebsiteMessageHandler
                 }
 
                 $prompt->setGeneratedFiles($files);
+                $prompt->setGenerationMessage($generationMessage);
                 $prompt->setStatus('completed');
                 $user->setCount($user->getCount() + 1);
                 return;

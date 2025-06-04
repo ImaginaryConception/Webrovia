@@ -23,19 +23,60 @@ class StubProcessor
         $this->controllerCode = $code;
     }
 
-    public function setEntityCode(array $code): void
+    public function setEntityCode(?string $code, ?string $name = null): void
     {
-        $this->entityCode = $code;
+        if ($name) {
+            $this->entityCode[$name] = $code;
+        } else {
+            $this->entityCode['default'] = $code;
+        }
     }
 
-    public function setRepositoryCode(array $code): void
+    public function setRepositoryCode(?string $code, ?string $name = null): void
     {
-        $this->repositoryCode = $code;
+        if ($name) {
+            $this->repositoryCode[$name] = $code;
+        } else {
+            $this->repositoryCode['default'] = $code;
+        }
     }
 
-    public function setFormTypeCode(array $code): void
+    public function setFormTypeCode(?string $code, ?string $name = null): void
     {
-        $this->formTypeCode = $code;
+        if ($name) {
+            $this->formTypeCode[$name] = $code;
+        } else {
+            $this->formTypeCode['default'] = $code;
+        }
+    }
+
+    public function getControllerCode(): ?string
+    {
+        return $this->controllerCode;
+    }
+    
+    public function getEntityCode(?string $name = null): ?string
+    {
+        if ($name && isset($this->entityCode[$name])) {
+            return $this->entityCode[$name];
+        }
+        return $this->entityCode['default'] ?? null;
+    }
+    
+    public function getRepositoryCode(?string $name = null): ?string
+    {
+        if ($name && isset($this->repositoryCode[$name])) {
+            return $this->repositoryCode[$name];
+        }
+        return $this->repositoryCode['default'] ?? null;
+    }
+    
+    public function getFormTypeCode(?string $name = null): ?string
+    {
+        if ($name && isset($this->formTypeCode[$name])) {
+            return $this->formTypeCode[$name];
+        }
+        return $this->formTypeCode['default'] ?? null;
     }
 
     public function processStub(string $stubName, array $replacements): string
@@ -48,12 +89,21 @@ class StubProcessor
         // Vérifier si nous avons du code généré pour ce type de fichier
         if ($stubName === 'controller' && $this->controllerCode !== null) {
             return $this->controllerCode;
-        } elseif ($stubName === 'entity' && isset($this->entityCode[$replacements['entity_name']])) {
-            return $this->entityCode[$replacements['entity_name']];
-        } elseif ($stubName === 'repository' && isset($this->repositoryCode[$replacements['entity_name'] . 'Repository'])) {
-            return $this->repositoryCode[$replacements['entity_name'] . 'Repository'];
-        } elseif ($stubName === 'form' && isset($this->formTypeCode[$replacements['entity_name'] . 'Type'])) {
-            return $this->formTypeCode[$replacements['entity_name'] . 'Type'];
+        } elseif ($stubName === 'entity') {
+            $entityCode = $this->getEntityCode($replacements['entity_name']);
+            if ($entityCode !== null) {
+                return $entityCode;
+            }
+        } elseif ($stubName === 'repository') {
+            $repositoryCode = $this->getRepositoryCode($replacements['entity_name'] . 'Repository');
+            if ($repositoryCode !== null) {
+                return $repositoryCode;
+            }
+        } elseif ($stubName === 'form') {
+            $formTypeCode = $this->getFormTypeCode($replacements['entity_name'] . 'Type');
+            if ($formTypeCode !== null) {
+                return $formTypeCode;
+            }
         }
 
         $content = "<?php\n\n" . file_get_contents($stubPath);

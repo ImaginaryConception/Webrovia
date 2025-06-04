@@ -1,0 +1,195 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Détails de la table {{ tableName }}{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<link rel="stylesheet" href="{{ asset('css/database.css') }}">
+{% endblock %}
+
+{% block page_title %}Table: {{ tableName }}{% endblock %}
+{% block page_subtitle %}Base de données: {{ database.name }}{% endblock %}
+
+{% block body %}
+{# Extraction des données de la table #}
+{% set fields = tableData.fields|default({}) %}
+{% set records = tableData.records|default([]) %}
+
+<div class="container">
+    <div class="db-actions-bar">
+        <a href="{{ path('app_database_show', {'id': database.id}) }}" class="db-btn db-btn-secondary db-btn-icon">
+            <i class="fas fa-arrow-left"></i> Retour à la base de données
+        </a>
+        <div class="db-actions-group">
+            <a href="{{ path('app_database_table_detail', {'id': database.id, 'tableName': tableName}) }}" class="db-btn db-btn-primary db-btn-icon">
+                <i class="fas fa-edit"></i> Modifier la structure
+            </a>
+            <form method="post" action="{{ path('app_database_delete_table', {'id': database.id, 'tableName': tableName}) }}" style="display:inline;">
+                <input type="hidden" name="_token" value="{{ csrf_token('delete-table-' ~ tableName) }}">
+                <button type="submit" class="db-btn db-btn-danger db-btn-icon" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette table?')">
+                    <i class="fas fa-trash"></i> Supprimer la table
+                </button>
+            </form>
+            <!-- Suppression du lien d'exportation qui fait référence à une route inexistante -->
+        </div>
+    </div>
+
+    <!-- Structure Card -->
+    <div class="db-card mb-4">
+        <div class="db-card-header">
+            <h2>Structure</h2>
+            <a href="{{ path('app_database_add_field', {'id': database.id, 'tableName': tableName}) }}" class="db-btn db-btn-primary db-btn-icon">
+                <i class="fas fa-plus"></i> Ajouter un champ
+            </a>
+        </div>
+        <div class="db-card-body">
+            {% if fields is empty %}
+                <div class="db-empty-state">
+                    <i class="fas fa-columns"></i>
+                    <h3>Aucun champ</h3>
+                    <p>Cette table ne contient aucun champ. Ajoutez des champs pour définir la structure de votre table.</p>
+                    <a href="{{ path('app_database_add_field', {'id': database.id, 'tableName': tableName}) }}" class="db-btn db-btn-primary db-btn-icon">
+                        <i class="fas fa-plus"></i> Ajouter un champ
+                    </a>
+                </div>
+            {% else %}
+                <div class="db-table-responsive">
+                    <table class="db-table">
+                        <thead>
+                            <tr>
+                                <th>Nom du champ</th>
+                                <th>Type</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for field_name, field_type in fields %}
+                                <tr>
+                                    <td>{{ field_name }}</td>
+                                    <td><span class="db-badge db-badge-secondary">{{ field_type }}</span></td>
+                                    <td>
+                                        <div class="db-table-actions">
+                                            <a href="{{ path('app_database_add_field', {'id': database.id, 'tableName': tableName}) }}" class="db-btn db-btn-secondary db-btn-icon-only" title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% if field_name != 'id' %}
+                                                <form method="post" action="{{ path('app_database_delete_field', {'id': database.id, 'tableName': tableName, 'fieldName': field_name}) }}" style="display:inline;">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('delete-field-' ~ field_name) }}">
+                                                    <button type="submit" class="db-btn db-btn-danger db-btn-icon-only" title="Supprimer" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce champ?')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Data Card -->
+    <div class="db-card">
+        <div class="db-card-header">
+            <h2>Données</h2>
+            <a href="{{ path('app_database_add_record', {'id': database.id, 'tableName': tableName}) }}" class="db-btn db-btn-primary db-btn-icon">
+                <i class="fas fa-plus"></i> Ajouter un enregistrement
+            </a>
+        </div>
+        <div class="db-card-body">
+            <div class="db-search-box">
+                <form action="{{ path('app_database_table_detail', {'id': database.id, 'tableName': tableName}) }}" method="get" class="db-search-form">
+                    <input type="text" class="db-search-input" name="search" placeholder="Rechercher dans les données..." value="{{ app.request.query.get('search') }}">
+                    <button type="submit" class="db-btn db-btn-primary">Rechercher</button>
+                </form>
+            </div>
+
+            {% if records is empty %}
+                <div class="db-empty-state">
+                    <i class="fas fa-table"></i>
+                    <h3>Aucune donnée</h3>
+                    <p>Cette table ne contient aucun enregistrement. Ajoutez des données pour commencer à utiliser cette table.</p>
+                    <a href="{{ path('app_database_add_record', {'id': database.id, 'tableName': tableName}) }}" class="db-btn db-btn-primary db-btn-icon">
+                        <i class="fas fa-plus"></i> Ajouter un enregistrement
+                    </a>
+                </div>
+            {% else %}
+                <div class="db-table-responsive">
+                    <table class="db-table">
+                        <thead>
+                            <tr>
+                                {% for field_name, field_type in fields %}
+                                    <th>{{ field_name }}</th>
+                                {% endfor %}
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in records %}
+                                <tr>
+                                    {% for field_name, field_type in fields %}
+                                        <td>
+                                            {% if field_type == 'boolean' %}
+                                                {% if record[field_name] %}
+                                                    <span class="db-badge db-badge-success">Oui</span>
+                                                {% else %}
+                                                    <span class="db-badge db-badge-danger">Non</span>
+                                                {% endif %}
+                                            {% elseif field_type == 'date' or field_type == 'datetime' %}
+                                                {{ record[field_name] is not empty ? record[field_name]|date('d/m/Y') : '' }}
+                                            {% elseif field_type == 'time' %}
+                                                {{ record[field_name] is not empty ? record[field_name]|date('H:i') : '' }}
+                                            {% elseif field_type == 'url' %}
+                                                {% if record[field_name] is not empty %}
+                                                    <a href="{{ record[field_name] }}" target="_blank" class="db-link">{{ record[field_name]|length > 30 ? record[field_name]|slice(0, 30) ~ '...' : record[field_name] }}</a>
+                                                {% endif %}
+                                            {% elseif field_type == 'email' %}
+                                                {% if record[field_name] is not empty %}
+                                                    <a href="mailto:{{ record[field_name] }}" class="db-link">{{ record[field_name] }}</a>
+                                                {% endif %}
+                                            {% elseif field_type == 'text' and record[field_name]|length > 50 %}
+                                                {{ record[field_name]|slice(0, 50) }}...
+                                            {% else %}
+                                                {{ record[field_name] }}
+                                            {% endif %}
+                                        </td>
+                                    {% endfor %}
+                                    <td>
+                                        <div class="db-table-actions">
+                                            <a href="{{ path('app_database_edit_record', {'id': database.id, 'tableName': tableName, 'recordId': record.id}) }}" class="db-btn db-btn-secondary db-btn-icon-only" title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form method="post" action="{{ path('app_database_delete_record', {'id': database.id, 'tableName': tableName, 'recordId': record.id}) }}" style="display:inline;">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('delete-record-' ~ record.id) }}">
+                                                <button type="submit" class="db-btn db-btn-danger db-btn-icon-only" title="Supprimer" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet enregistrement?')">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if records|length > 10 %}
+                    <div class="db-pagination">
+                        <p>La pagination n'est pas encore implémentée pour cette vue.</p>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modal de suppression de table supprimée -->
+
+    <!-- Modales de suppression de champ supprimées -->
+
+    <!-- Modales de suppression d'enregistrement supprimées -->
+</div>
+{% endblock %}

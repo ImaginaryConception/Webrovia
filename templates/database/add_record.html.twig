@@ -1,0 +1,161 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Ajouter un enregistrement{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<link rel="stylesheet" href="{{ asset('css/database.css') }}">
+{% endblock %}
+
+{% block page_title %}Ajouter un enregistrement{% endblock %}
+{% block page_subtitle %}Table: {{ table_name }} | Base de données: {{ database_name }}{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="db-card">
+        <div class="db-card-header">
+            <h2>Nouvel enregistrement</h2>
+        </div>
+        <div class="db-card-body">
+            <div class="db-info-grid">
+                <div class="db-info-item">
+                    <i class="fas fa-database"></i>
+                    <span>Base de données: {{ database_name }}</span>
+                </div>
+                <div class="db-info-item">
+                    <i class="fas fa-table"></i>
+                    <span>Table: {{ table_name }}</span>
+                </div>
+            </div>
+
+            <form method="post" action="{{ path('app_database_add_record', {'id': database_id, 'tableName': table_name}) }}" class="db-form" id="recordForm">
+                {% for field_name, field_type in fields %}
+                    {% if field_name != 'id' %}
+                        <div class="db-form-group">
+                            <label for="{{ field_name }}" class="db-form-label">{{ field_name }}</label>
+                            
+                            {% if field_type == 'string' %}
+                                <input type="text" id="{{ field_name }}" name="record[{{ field_name }}]" class="db-form-input" required>
+                                <div class="db-form-help">Texte court (max 255 caractères)</div>
+                            
+                            {% elseif field_type == 'text' %}
+                                <textarea id="{{ field_name }}" name="record[{{ field_name }}]" class="db-form-textarea" rows="4"></textarea>
+                                <div class="db-form-help">Texte long</div>
+                            
+                            {% elseif field_type == 'integer' %}
+                                <input type="number" id="{{ field_name }}" name="record[{{ field_name }}]" class="db-form-input" step="1">
+                                <div class="db-form-help">Nombre entier</div>
+                            
+                            {% elseif field_type == 'float' or field_type == 'decimal' %}
+                                <input type="number" id="{{ field_name }}" name="record[{{ field_name }}]" class="db-form-input" step="0.01">
+                                <div class="db-form-help">Nombre décimal</div>
+                            
+                            {% elseif field_type == 'boolean' %}
+                                <div class="db-form-checkbox-wrapper">
+                                    <input type="checkbox" id="{{ field_name }}" name="record[{{ field_name }}]" class="db-form-checkbox">
+                                    <div class="db-form-help">Cochez pour Oui, décochez pour Non</div>
+                                </div>
+                            
+                            {% elseif field_type == 'date' %}
+                                <input type="date" id="{{ field_name }}" name="record[{{ field_name }}]" class="db-form-input">
+                                <div class="db-form-help">Format: JJ/MM/AAAA</div>
+                            
+                            {% elseif field_type == 'datetime' %}
+                                <input type="datetime-local" id="{{ field_name }}" name="record[{{ field_name }}]" class="db-form-input">
+                                <div class="db-form-help">Date et heure</div>
+                            
+                            {% elseif field_type == 'time' %}
+                                <input type="time" id="{{ field_name }}" name="record[{{ field_name }}]" class="db-form-input">
+                                <div class="db-form-help">Format: HH:MM</div>
+                            
+                            {% elseif field_type == 'email' %}
+                                <input type="email" id="{{ field_name }}" name="record[{{ field_name }}]" class="db-form-input" data-validate="email">
+                                <div class="db-form-help">Adresse email valide</div>
+                            
+                            {% elseif field_type == 'url' %}
+                                <input type="url" id="{{ field_name }}" name="record[{{ field_name }}]" class="db-form-input" data-validate="url">
+                                <div class="db-form-help">URL valide (commençant par http:// ou https://)</div>
+                            
+                            {% else %}
+                                <input type="text" id="{{ field_name }}" name="record[{{ field_name }}]" class="db-form-input">
+                                <div class="db-form-help">Type: {{ field_type }}</div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+
+                <div class="db-form-actions">
+                    <a href="{{ path('app_database_table_detail', {'id': database_id, 'tableName': table_name}) }}" class="db-btn db-btn-secondary db-btn-icon">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                    <button type="submit" class="db-btn db-btn-primary db-btn-icon">
+                        <i class="fas fa-save"></i> Ajouter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('recordForm');
+        
+        form.addEventListener('submit', function(event) {
+            let hasErrors = false;
+            
+            // Validation des emails
+            const emailInputs = document.querySelectorAll('input[data-validate="email"]');
+            emailInputs.forEach(function(input) {
+                if (input.value && !validateEmail(input.value)) {
+                    event.preventDefault();
+                    input.classList.add('db-form-input-error');
+                    const helpText = input.nextElementSibling;
+                    helpText.textContent = 'Veuillez entrer une adresse email valide';
+                    helpText.classList.add('db-form-help-error');
+                    hasErrors = true;
+                } else {
+                    input.classList.remove('db-form-input-error');
+                    const helpText = input.nextElementSibling;
+                    helpText.textContent = 'Adresse email valide';
+                    helpText.classList.remove('db-form-help-error');
+                }
+            });
+            
+            // Validation des URLs
+            const urlInputs = document.querySelectorAll('input[data-validate="url"]');
+            urlInputs.forEach(function(input) {
+                if (input.value && !validateUrl(input.value)) {
+                    event.preventDefault();
+                    input.classList.add('db-form-input-error');
+                    const helpText = input.nextElementSibling;
+                    helpText.textContent = 'Veuillez entrer une URL valide (commençant par http:// ou https://)';
+                    helpText.classList.add('db-form-help-error');
+                    hasErrors = true;
+                } else {
+                    input.classList.remove('db-form-input-error');
+                    const helpText = input.nextElementSibling;
+                    helpText.textContent = 'URL valide (commençant par http:// ou https://)';
+                    helpText.classList.remove('db-form-help-error');
+                }
+            });
+            
+            if (hasErrors) {
+                event.preventDefault();
+            }
+        });
+        
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+        
+        function validateUrl(url) {
+            return url.startsWith('http://') || url.startsWith('https://');
+        }
+    });
+</script>
+{% endblock %}

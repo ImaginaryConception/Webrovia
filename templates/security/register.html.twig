@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Inscription - Web Forge{% endblock %}
+{% block title %}Inscription - Webrovia{% endblock %}
 
 {% block body %}
 <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-6 flex flex-col justify-center sm:py-12">
@@ -32,6 +32,61 @@
                                         'placeholder': 'Votre mot de passe'
                                     }}) }}
                                     {{ form_errors(registrationForm.plainPassword, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                {{ form_label(registrationForm.contactEmail, 'Email de contact', {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+                                <div class="mt-1 relative rounded-md shadow-sm">
+                                    {{ form_widget(registrationForm.contactEmail, {'attr': {
+                                        'class': 'appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white sm:text-sm transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-400',
+                                        'placeholder': 'Email pour recevoir les messages de contact des sites générés'
+                                    }}) }}
+                                    {{ form_errors(registrationForm.contactEmail, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                {{ form_label(registrationForm.preferredStyle, 'Style visuel préféré', {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+                                <div class="mt-1 relative rounded-md shadow-sm">
+                                    {{ form_widget(registrationForm.preferredStyle, {'attr': {
+                                        'class': 'appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white sm:text-sm transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-400'
+                                    }}) }}
+                                    {{ form_errors(registrationForm.preferredStyle, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                {{ form_label(registrationForm.businessType, 'Type d\'activité', {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+                                <div class="mt-1 relative rounded-md shadow-sm">
+                                    {{ form_widget(registrationForm.businessType, {'attr': {
+                                        'class': 'appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white sm:text-sm transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-400',
+                                        'placeholder': 'Ex: E-commerce, Blog, Portfolio, etc.'
+                                    }}) }}
+                                    {{ form_errors(registrationForm.businessType, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                {{ form_label(registrationForm.colorScheme, 'Schéma de couleurs préféré', {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+                                <div class="mt-1 relative rounded-md shadow-sm">
+                                    {{ form_widget(registrationForm.colorScheme, {'attr': {
+                                        'class': 'appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white sm:text-sm transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-400',
+                                        'placeholder': 'Ex: Bleu/Violet, Rouge/Orange, Vert/Bleu, etc.'
+                                    }}) }}
+                                    {{ form_errors(registrationForm.colorScheme, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                {{ form_label(registrationForm.additionalPreferences, 'Préférences additionnelles', {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+                                <div class="mt-1 relative rounded-md shadow-sm">
+                                    {{ form_widget(registrationForm.additionalPreferences, {'attr': {
+                                        'class': 'appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white sm:text-sm transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-400',
+                                        'placeholder': 'Autres préférences pour vos sites générés',
+                                        'rows': 3
+                                    }}) }}
+                                    {{ form_errors(registrationForm.additionalPreferences, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
                                 </div>
                             </div>
 

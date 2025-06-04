@@ -1,0 +1,109 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Gérer mon compte{% endblock %}
+{% block page_title %}Gérer mon compte{% endblock %}
+{% block page_subtitle %}Modifiez vos informations et préférences pour la génération de sites{% endblock %}
+
+{% block body %}
+<div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6 fade-in">
+    {{ form_start(accountForm, {'attr': {'class': 'space-y-6'}}) }}
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Informations de base</h3>
+            
+            <div class="space-y-2">
+                {{ form_label(accountForm.email, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+                <div class="mt-1 relative rounded-md shadow-sm">
+                    {{ form_widget(accountForm.email, {'attr': {
+                        'class': 'appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white sm:text-sm transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-400 bg-gray-100 dark:bg-gray-600'
+                    }}) }}
+                    {{ form_errors(accountForm.email, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
+                </div>
+            </div>
+            
+            <div class="space-y-2">
+                {{ form_label(accountForm.contactEmail, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+                <div class="mt-1 relative rounded-md shadow-sm">
+                    {{ form_widget(accountForm.contactEmail, {'attr': {
+                        'class': 'appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white sm:text-sm transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-400'
+                    }}) }}
+                    <p class="text-black dark:text-white">Cet email sera utilisé pour recevoir les messages de contact sur votre site généré</p>
+                    {{ form_errors(accountForm.contactEmail, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ form_help(accountForm.contactEmail) }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="space-y-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Préférences de génération</h3>
+            
+            <div class="space-y-2">
+                {{ form_label(accountForm.preferredStyle, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+                <div class="mt-1 relative rounded-md shadow-sm">
+                    {{ form_widget(accountForm.preferredStyle, {'attr': {
+                        'class': 'appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white sm:text-sm transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-400'
+                    }}) }}
+                    {{ form_errors(accountForm.preferredStyle, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
+                </div>
+            </div>
+            
+            <div class="space-y-2">
+                {{ form_label(accountForm.businessType, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+                <div class="mt-1 relative rounded-md shadow-sm">
+                    {{ form_widget(accountForm.businessType, {'attr': {
+                        'class': 'appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white sm:text-sm transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-400'
+                    }}) }}
+                    {{ form_errors(accountForm.businessType, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
+                </div>
+            </div>
+            
+            <div class="space-y-2">
+                {{ form_label(accountForm.colorScheme, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+                <div class="mt-1 relative rounded-md shadow-sm">
+                    {{ form_widget(accountForm.colorScheme, {'attr': {
+                        'class': 'appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white sm:text-sm transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-400'
+                    }}) }}
+                    {{ form_errors(accountForm.colorScheme, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="space-y-2 mt-6">
+        {{ form_label(accountForm.additionalPreferences, null, {'label_attr': {'class': 'block text-sm font-medium text-gray-700 dark:text-gray-300'}}) }}
+        <div class="mt-1 relative rounded-md shadow-sm">
+            {{ form_widget(accountForm.additionalPreferences, {'attr': {
+                'class': 'appearance-none block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white sm:text-sm transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-400'
+            }}) }}
+            {{ form_errors(accountForm.additionalPreferences, {'attr': {'class': 'mt-2 text-sm text-red-600 dark:text-red-400'}}) }}
+        </div>
+    </div>
+    
+    <div class="flex justify-end mt-8">
+        <button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-200">
+            <i class="fas fa-save mr-2"></i> Enregistrer les modifications
+        </button>
+    </div>
+    
+    {{ form_end(accountForm) }}
+</div>
+
+<div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 fade-in">
+    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Informations sur l'utilisation de vos préférences</h3>
+    
+    <div class="prose dark:prose-invert max-w-none">
+        <p class="text-black dark:text-white">Les préférences que vous définissez ici seront utilisées pour personnaliser la génération de vos futurs sites web :</p>
+        
+        <ul class="list-disc pl-5 text-black dark:text-white space-y-2 mt-2">
+            <li><strong>Email de contact</strong> : Sera utilisé dans les formulaires de contact de vos sites générés.</li>
+            <li><strong>Style préféré</strong> : Influence l'apparence visuelle et l'interface utilisateur de vos sites.</li>
+            <li><strong>Type d'activité</strong> : Aide à adapter le contenu et les fonctionnalités à votre secteur d'activité.</li>
+            <li><strong>Palette de couleurs</strong> : Détermine les couleurs principales utilisées dans le design de vos sites.</li>
+            <li><strong>Préférences supplémentaires</strong> : Permet de spécifier d'autres détails importants pour la génération.</li>
+        </ul>
+        
+        <p class="mt-4 text-black dark:text-white">Ces préférences seront automatiquement prises en compte lors de vos prochaines générations de sites, mais n'affecteront pas les sites déjà générés.</p>
+    </div>
+</div>
+{% endblock %}

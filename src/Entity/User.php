@@ -20,6 +20,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(length: 180, unique: true)]
     private ?string $email = null;
+    
+    #[ORM\Column(length: 180, nullable: true)]
+    private ?string $contactEmail = null;
+    
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $preferredStyle = null;
+    
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $businessType = null;
+    
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $colorScheme = null;
+    
+    #[ORM\Column(length: 1000, nullable: true)]
+    private ?string $additionalPreferences = null;
 
     #[ORM\Column]
     private array $roles = [];
@@ -35,10 +50,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Prompt::class, orphanRemoval: true)]
     private Collection $prompts;
+    
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: ModelMaker::class, orphanRemoval: true)]
+    private Collection $modelMakers;
 
     public function __construct()
     {
         $this->prompts = new ArrayCollection();
+        $this->modelMakers = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -112,6 +131,61 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->count = $count;
         return $this;
     }
+    
+    public function getContactEmail(): ?string
+    {
+        return $this->contactEmail;
+    }
+    
+    public function setContactEmail(?string $contactEmail): self
+    {
+        $this->contactEmail = $contactEmail;
+        return $this;
+    }
+    
+    public function getPreferredStyle(): ?string
+    {
+        return $this->preferredStyle;
+    }
+    
+    public function setPreferredStyle(?string $preferredStyle): self
+    {
+        $this->preferredStyle = $preferredStyle;
+        return $this;
+    }
+    
+    public function getBusinessType(): ?string
+    {
+        return $this->businessType;
+    }
+    
+    public function setBusinessType(?string $businessType): self
+    {
+        $this->businessType = $businessType;
+        return $this;
+    }
+    
+    public function getColorScheme(): ?string
+    {
+        return $this->colorScheme;
+    }
+    
+    public function setColorScheme(?string $colorScheme): self
+    {
+        $this->colorScheme = $colorScheme;
+        return $this;
+    }
+    
+    public function getAdditionalPreferences(): ?string
+    {
+        return $this->additionalPreferences;
+    }
+    
+    public function setAdditionalPreferences(?string $additionalPreferences): self
+    {
+        $this->additionalPreferences = $additionalPreferences;
+        return $this;
+    }
 
     /**
      * @return Collection<int, Prompt>
@@ -137,6 +211,36 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
                 $prompt->setUser(null);
             }
         }
+        return $this;
+    }
+    
+    /**
+     * @return Collection<int, ModelMaker>
+     */
+    public function getModelMakers(): Collection
+    {
+        return $this->modelMakers;
+    }
+
+    public function addModelMaker(ModelMaker $modelMaker): static
+    {
+        if (!$this->modelMakers->contains($modelMaker)) {
+            $this->modelMakers->add($modelMaker);
+            $modelMaker->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeModelMaker(ModelMaker $modelMaker): static
+    {
+        if ($this->modelMakers->removeElement($modelMaker)) {
+            // set the owning side to null (unless already changed)
+            if ($modelMaker->getUser() === $this) {
+                $modelMaker->setUser(null);
+            }
+        }
+
         return $this;
     }
 }
