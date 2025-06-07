@@ -2,7 +2,6 @@
 
 namespace App\Service;
 
-use App\Entity\Database;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class AIService
@@ -11,6 +10,7 @@ class AIService
     private string $apiKey;
     private StubProcessor $stubProcessor;
     private $entityManager;
+    private array $frontendData = [];
 
     public function __construct(
         HttpClientInterface $client,
@@ -442,6 +442,8 @@ class AIService
         foreach ($decoded as $filename => $content) {
             if ($filename === 'app.css' || $filename === 'app.js' || str_ends_with($filename, '.html.twig')) {
                 $result[$filename] = $content;
+                // Stocker les données frontend dans la propriété de classe
+                $this->frontendData[$filename] = $content;
             }
         }
 
@@ -456,7 +458,6 @@ class AIService
         // Créer une base de données par défaut pour le site généré si un prompt entity existe
         if ($promptEntity) {
             $this->updateGenerationMessage($promptEntity, 'Création de la base de données...');
-            $this->createDefaultDatabase($promptEntity);
         }
 
         return $result;
@@ -479,13 +480,18 @@ class AIService
         // Nettoyer le code du MainController en supprimant toutes les balises PHP sauf la première
         $mainControllerCode = $this->cleanPhpTags($mainControllerCode);
         $backendFiles['src/Controller/MainController.php'] = $mainControllerCode;
+        
+        // Générer les entités et repositories
+        $entitiesAndRepositories = $this->generateEntitiesAndRepositories($controllerCode);
+        $backendFiles = array_merge($backendFiles, $entitiesAndRepositories);
+        
+        // Générer les formtypes
+        $formTypes = $this->generateFormTypes($controllerCode);
+        $backendFiles = array_merge($backendFiles, $formTypes);
 
         return $backendFiles;
     }
 
-    /**
-     * Crée une base de données par défaut pour un prompt
-     */
     /**
      * Nettoie le code en supprimant toutes les balises PHP sauf la première
      */
@@ -508,50 +514,296 @@ class AIService
         return $code;
     }
     
-    private function createDefaultDatabase(\App\Entity\Prompt $prompt): void
+    /**
+     * Génère les entités et repositories en fonction du contrôleur et du frontend
+     */
+    private function generateEntitiesAndRepositories(string $controllerCode): array
     {
-        // Vérifier si une base de données existe déjà pour ce prompt
-        $databaseRepository = $this->entityManager->getRepository(\App\Entity\Database::class);
-        $existingDatabase = $databaseRepository->findByPrompt($prompt);
+        $files = [];
+        $promptEntity = null;
         
-        if ($existingDatabase) {
-            // Une base de données existe déjà, pas besoin d'en créer une nouvelle
-            return;
+        // Récupérer l'entité Prompt à partir du MessageHandler
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 10);
+        foreach ($backtrace as $trace) {
+            if (isset($trace['args']) && !empty($trace['args'])) {
+                foreach ($trace['args'] as $arg) {
+                    if ($arg instanceof \App\Entity\Prompt) {
+                        $promptEntity = $arg;
+                        break 2;
+                    }
+                }
+            }
         }
         
-        // Créer une nouvelle base de données
-        $database = new \App\Entity\Database();
-        $database->setName('database_' . $prompt->getId());
-        $database->setPrompt($prompt);
+        // Mettre à jour le message de génération pour indiquer la génération des entités
+        if ($promptEntity) {
+            $this->updateGenerationMessage($promptEntity, 'Génération des entités et repositories...');
+        }
         
-        // Ajouter quelques tables par défaut
-        $database->addTable('users', [
-            'id' => 'integer',
-            'username' => 'string',
-            'email' => 'string',
-            'password' => 'string',
-            'created_at' => 'datetime'
+        // Préparer le prompt pour Gemini
+        $entityPrompt = "Tu es un expert en développement Symfony qui va générer des entités et repositories parfaitement adaptés au contrôleur et au frontend suivants :\n";
+        $entityPrompt .= "\nCONTRÔLEUR:\n" . $controllerCode . "\n\n";
+        $entityPrompt .= "FRONTEND:\n" . json_encode($this->frontendData, JSON_PRETTY_PRINT) . "\n\n";
+        $entityPrompt .= "Analyse en détail le contrôleur et les templates Twig fournis et génère les entités et repositories Symfony qui :\n";
+        $entityPrompt .= "1. Correspondent exactement aux noms d'entités utilisés dans le contrôleur\n";
+        $entityPrompt .= "2. Incluent tous les champs nécessaires en analysant :\n";
+        $entityPrompt .= "   - Les méthodes du contrôleur\n";
+        $entityPrompt .= "   - Les formulaires dans les templates Twig\n";
+        $entityPrompt .= "   - Les relations entre entités\n";
+        $entityPrompt .= "3. Définissent les bonnes annotations Doctrine pour :\n";
+        $entityPrompt .= "   - Les types de champs\n";
+        $entityPrompt .= "   - Les relations (OneToMany, ManyToOne, etc.)\n";
+        $entityPrompt .= "   - Les contraintes de validation\n";
+        $entityPrompt .= "4. Implémentent les méthodes repository utiles pour :\n";
+        $entityPrompt .= "   - Les requêtes personnalisées\n";
+        $entityPrompt .= "   - Les filtres et tris\n";
+        $entityPrompt .= "   - La pagination si nécessaire\n";
+        
+        // Ajouter les informations sur les stubs
+        $entityPrompt .= "\nUtilise les structures suivantes pour les entités et repositories :\n";
+        $entityPrompt .= "ENTITY STUB:\n" . file_get_contents(__DIR__ . '/Stubs/entity.stub') . "\n\n";
+        $entityPrompt .= "REPOSITORY STUB:\n" . file_get_contents(__DIR__ . '/Stubs/repository.stub') . "\n\n";
+        
+        $entityPrompt .= "Retourne UNIQUEMENT un objet JSON valide avec les clés étant les chemins des fichiers (ex: 'src/Entity/Product.php') et les valeurs étant le contenu complet des fichiers. Assure-toi que chaque entité a son repository correspondant.\n\n";
+        $entityPrompt .= "IMPORTANT: Ta réponse doit être un JSON valide et bien formaté. Utilise le format suivant:\n";
+        $entityPrompt .= "```json\n{\n  \"src/Entity/NomEntite.php\": \"<?php\\n\\nnamespace App\\\\Entity;\\n...\"\n}\n```\n\n";
+        $entityPrompt .= "Assure-toi que toutes les barres obliques inverses (\\) et les guillemets (\") dans les valeurs sont correctement échappés pour que le JSON soit valide.";
+        
+        // Appeler Gemini pour générer les entités et repositories
+        $response = $this->client->request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
+            'headers' => [
+                'Content-Type' => 'application/json',
+            ],
+            'query' => [
+                'key' => $this->apiKey,
+            ],
+            'json' => [
+                'contents' => [[
+                    'parts' => [[
+                        'text' => $entityPrompt
+                    ]]
+                ]],
+                'generationConfig' => [
+                    'temperature' => 0.7,
+                    'maxOutputTokens' => 8192,
+                    'topP' => 0.8,
+                    'topK' => 40
+                ],
+                'safetySettings' => [
+                    ['category' => 'HARM_CATEGORY_HARASSMENT', 'threshold' => 'BLOCK_NONE'],
+                    ['category' => 'HARM_CATEGORY_HATE_SPEECH', 'threshold' => 'BLOCK_NONE'],
+                    ['category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold' => 'BLOCK_NONE'],
+                    ['category' => 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold' => 'BLOCK_NONE']
+                ]
+            ],
         ]);
         
-        $database->addTable('products', [
-            'id' => 'integer',
-            'name' => 'string',
-            'description' => 'text',
-            'price' => 'float',
-            'image_url' => 'string',
-            'created_at' => 'datetime'
+        $data = $response->toArray(false);
+        $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
+        
+        if (!$text) {
+            throw new \RuntimeException('Réponse vide de Gemini pour les entités et repositories');
+        }
+        
+        // Enregistrer la réponse brute pour le débogage
+        error_log("Réponse brute de Gemini pour les entités et repositories:\n" . $text);
+        
+        // Extraire le JSON de la réponse en recherchant un bloc de code JSON markdown
+        if (preg_match("/```(?:json)?\s*\n(.+?)\n```/s", $text, $matches)) {
+            $jsonText = $matches[1];
+            error_log("JSON extrait via regex de bloc de code: " . substr($jsonText, 0, 500) . "...");
+        } else {
+            // Méthode de secours: chercher le premier { et le dernier }
+            $jsonStartPos = strpos($text, '{');
+            $jsonEndPos = strrpos($text, '}');
+            
+            if ($jsonStartPos === false || $jsonEndPos === false) {
+                error_log("Aucun JSON trouvé dans la réponse de Gemini");
+                throw new \RuntimeException('Aucun JSON trouvé dans la réponse de Gemini pour les entités et repositories');
+            }
+            
+            $jsonText = substr($text, $jsonStartPos, $jsonEndPos - $jsonStartPos + 1);
+            error_log("JSON extrait via méthode de secours: " . substr($jsonText, 0, 500) . "...");
+        }
+        
+        // Essayer de nettoyer le JSON avant décodage
+        $jsonText = preg_replace('/\\\\n/', '\n', $jsonText); // Remplacer les \n littéraux par de vrais sauts de ligne
+        $jsonText = preg_replace('/\\\\/', '\\', $jsonText); // Gérer les backslashes échappés
+        
+        error_log("JSON après nettoyage: " . substr($jsonText, 0, 500) . "...");
+        
+        $decoded = json_decode($jsonText, true);
+        
+        if ($decoded === null) {
+            error_log("Erreur de décodage JSON: " . json_last_error_msg());
+            throw new \RuntimeException('Impossible de décoder le JSON pour les entités et repositories: ' . json_last_error_msg());
+        }
+        
+        // Stocker les fichiers générés
+        foreach ($decoded as $filePath => $fileContent) {
+            // Nettoyer le contenu si nécessaire
+            if (str_starts_with($filePath, 'src/Entity/')) {
+                // Stocker le code de l'entité dans le StubProcessor
+                $entityName = basename($filePath, '.php');
+                $this->stubProcessor->setEntityCode($fileContent, $entityName);
+            } elseif (str_starts_with($filePath, 'src/Repository/')) {
+                // Stocker le code du repository dans le StubProcessor
+                $repositoryName = basename($filePath, '.php');
+                $this->stubProcessor->setRepositoryCode($fileContent, $repositoryName);
+            }
+            
+            // Ajouter le fichier à la liste des fichiers générés
+            $files[$filePath] = $fileContent;
+        }
+        
+        return $files;
+    }
+    
+    /**
+     * Génère les formtypes en fonction du contrôleur, du frontend et des entités
+     */
+    private function generateFormTypes(string $controllerCode): array
+    {
+        $files = [];
+        $promptEntity = null;
+        
+        // Récupérer l'entité Prompt à partir du MessageHandler
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 10);
+        foreach ($backtrace as $trace) {
+            if (isset($trace['args']) && !empty($trace['args'])) {
+                foreach ($trace['args'] as $arg) {
+                    if ($arg instanceof \App\Entity\Prompt) {
+                        $promptEntity = $arg;
+                        break 2;
+                    }
+                }
+            }
+        }
+        
+        // Mettre à jour le message de génération pour indiquer la génération des formtypes
+        if ($promptEntity) {
+            $this->updateGenerationMessage($promptEntity, 'Génération des formtypes...');
+        }
+        
+        // Récupérer les entités générées
+        $entityCode = [];
+        foreach ($this->stubProcessor->getEntityFields() as $entityName => $fields) {
+            $entityCode[$entityName] = $this->stubProcessor->getEntityCode($entityName) ?? '';
+        }
+        
+        // Préparer le prompt pour Gemini
+        $formPrompt = "Tu es un expert en développement Symfony qui va générer des formtypes parfaitement adaptés au contrôleur, au frontend et aux entités suivants :\n";
+        $formPrompt .= "\nCONTRÔLEUR:\n" . $controllerCode . "\n\n";
+        $formPrompt .= "FRONTEND:\n" . json_encode($this->frontendData, JSON_PRETTY_PRINT) . "\n\n";
+        $formPrompt .= "ENTITÉS:\n" . json_encode($entityCode, JSON_PRETTY_PRINT) . "\n\n";
+        $formPrompt .= "Analyse en détail le contrôleur, les templates Twig et les entités fournis et génère les formtypes Symfony qui :\n";
+        $formPrompt .= "1. Correspondent exactement aux noms de formulaires utilisés dans le contrôleur\n";
+        $formPrompt .= "2. Incluent tous les champs nécessaires en analysant :\n";
+        $formPrompt .= "   - Les méthodes du contrôleur\n";
+        $formPrompt .= "   - Les formulaires dans les templates Twig\n";
+        $formPrompt .= "   - Les propriétés des entités\n";
+        $formPrompt .= "3. Utilisent les bons types de champs Symfony pour :\n";
+        $formPrompt .= "   - Les types de données (TextType, NumberType, etc.)\n";
+        $formPrompt .= "   - Les relations (EntityType, CollectionType, etc.)\n";
+        $formPrompt .= "   - Les contraintes de validation\n";
+        $formPrompt .= "4. Configurent correctement les options des champs pour :\n";
+        $formPrompt .= "   - Les labels\n";
+        $formPrompt .= "   - Les placeholders\n";
+        $formPrompt .= "   - Les classes CSS\n";
+        $formPrompt .= "   - Les contraintes de validation\n";
+        
+        // Ajouter les informations sur le stub
+        $formPrompt .= "\nUtilise la structure suivante pour les formtypes :\n";
+        $formPrompt .= "FORM STUB:\n" . file_get_contents(__DIR__ . '/Stubs/form.stub') . "\n\n";
+        
+        $formPrompt .= "Retourne UNIQUEMENT un objet JSON valide avec les clés étant les chemins des fichiers (ex: 'src/Form/ProductType.php') et les valeurs étant le contenu complet des fichiers.\n\n";
+        $formPrompt .= "IMPORTANT: Ta réponse doit être un JSON valide et bien formaté. Utilise le format suivant:\n";
+        $formPrompt .= "```json\n{\n  \"src/Form/NomFormType.php\": \"<?php\\n\\nnamespace App\\\\Form;\\n...\"\n}\n```\n\n";
+        $formPrompt .= "Assure-toi que toutes les barres obliques inverses (\\) et les guillemets (\") dans les valeurs sont correctement échappés pour que le JSON soit valide.";
+        
+        // Appeler Gemini pour générer les formtypes
+        $response = $this->client->request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
+            'headers' => [
+                'Content-Type' => 'application/json',
+            ],
+            'query' => [
+                'key' => $this->apiKey,
+            ],
+            'json' => [
+                'contents' => [[
+                    'parts' => [[
+                        'text' => $formPrompt
+                    ]]
+                ]],
+                'generationConfig' => [
+                    'temperature' => 0.7,
+                    'maxOutputTokens' => 8192,
+                    'topP' => 0.8,
+                    'topK' => 40
+                ],
+                'safetySettings' => [
+                    ['category' => 'HARM_CATEGORY_HARASSMENT', 'threshold' => 'BLOCK_NONE'],
+                    ['category' => 'HARM_CATEGORY_HATE_SPEECH', 'threshold' => 'BLOCK_NONE'],
+                    ['category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold' => 'BLOCK_NONE'],
+                    ['category' => 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold' => 'BLOCK_NONE']
+                ]
+            ],
         ]);
         
-        $database->addTable('orders', [
-            'id' => 'integer',
-            'user_id' => 'integer',
-            'total' => 'float',
-            'status' => 'string',
-            'created_at' => 'datetime'
-        ]);
+        $data = $response->toArray(false);
+        $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
         
-        // Persister la base de données
-        $this->entityManager->persist($database);
-        $this->entityManager->flush();
+        if (!$text) {
+            throw new \RuntimeException('Réponse vide de Gemini pour les formtypes');
+        }
+        
+        // Enregistrer la réponse brute pour le débogage
+        error_log("Réponse brute de Gemini pour les formtypes:\n" . $text);
+        
+        // Extraire le JSON de la réponse en recherchant un bloc de code JSON markdown
+        if (preg_match("/```(?:json)?\s*\n(.+?)\n```/s", $text, $matches)) {
+            $jsonText = $matches[1];
+            error_log("JSON extrait via regex de bloc de code: " . substr($jsonText, 0, 500) . "...");
+        } else {
+            // Méthode de secours: chercher le premier { et le dernier }
+            $jsonStartPos = strpos($text, '{');
+            $jsonEndPos = strrpos($text, '}');
+            
+            if ($jsonStartPos === false || $jsonEndPos === false) {
+                error_log("Aucun JSON trouvé dans la réponse de Gemini");
+                throw new \RuntimeException('Aucun JSON trouvé dans la réponse de Gemini pour les formtypes');
+            }
+            
+            $jsonText = substr($text, $jsonStartPos, $jsonEndPos - $jsonStartPos + 1);
+            error_log("JSON extrait via méthode de secours: " . substr($jsonText, 0, 500) . "...");
+        }
+        
+        // Essayer de nettoyer le JSON avant décodage
+        $jsonText = preg_replace('/\\\\n/', '\n', $jsonText); // Remplacer les \n littéraux par de vrais sauts de ligne
+        $jsonText = preg_replace('/\\\\/', '\\', $jsonText); // Gérer les backslashes échappés
+        
+        error_log("JSON après nettoyage: " . substr($jsonText, 0, 500) . "...");
+        
+        $decoded = json_decode($jsonText, true);
+        
+        if ($decoded === null) {
+            error_log("Erreur de décodage JSON: " . json_last_error_msg());
+            throw new \RuntimeException('Impossible de décoder le JSON pour les formtypes: ' . json_last_error_msg());
+        }
+        
+        // Stocker les fichiers générés
+        foreach ($decoded as $filePath => $fileContent) {
+            // Nettoyer le contenu si nécessaire
+            if (str_starts_with($filePath, 'src/Form/')) {
+                // Stocker le code du formtype dans le StubProcessor
+                $formTypeName = basename($filePath, '.php');
+                $this->stubProcessor->setFormTypeCode($fileContent, $formTypeName);
+            }
+            
+            // Ajouter le fichier à la liste des fichiers générés
+            $files[$filePath] = $fileContent;
+        }
+        
+        return $files;
     }
 }
