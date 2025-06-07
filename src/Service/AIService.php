@@ -91,6 +91,7 @@ class AIService
         $promptText .= "Ajoute beaucoup d'animations pour les boutons, textes etc\n";
         $promptText .= "Le design du site doit être moderne avec un affichage optimisé.\n";
         $promptText .= "Pour les images, assures-toi de récupérer des images sur internet avec des liens uniquement, pas de chemin relatif\n";
+        $promptText .= "Pour les formulaires, assures-toi de les faire uniquement sous forme de Twig, pas HTML.\n";
         $promptText .= "Ajoute souvent des images pour rendre le site attractif\n";
         $promptText.= "Préfère les sites one page avec des liens de navbar qui mène à des ancres de la page\n";
         $promptText.= "Je veux que tu mettes des vrais images, pas de #\n";
@@ -399,102 +400,11 @@ class AIService
             $backendCode = trim($backendCode);
             $backendCode = str_replace(['```php', '```'], '', $backendCode);
             
+            // Remplacer les annotations @Route par des attributs #[Route]
+            $backendCode = preg_replace('/@Route\((.+?)\)/', '#[Route($1)]', $backendCode);
+            
             // Sauvegarder le code du contrôleur
             $this->stubProcessor->setControllerCode($backendCode);
-            
-            // Troisième requête Gemini pour générer les entités, repositories et form types
-            $entitiesPrompt = "Analyse le code du contrôleur Symfony suivant et le frontend associé, puis génère les entités, repositories et form types appropriés.\n\n";
-            $entitiesPrompt .= "CONTRÔLEUR:\n```php\n{$backendCode}\n```\n\n";
-            $entitiesPrompt .= "FRONTEND:\n";
-            
-            foreach ($decoded as $filename => $content) {
-                if (str_ends_with($filename, '.html.twig')) {
-                    $entitiesPrompt .= "\n{$filename}:\n```twig\n{$content}\n```\n";
-                }
-            }
-            
-            $entitiesPrompt .= "\n\nGénère le code pour les entités, repositories et form types en te basant sur le contrôleur et le frontend.\n";
-            
-            // Ajouter les préférences de l'utilisateur au prompt des entités si disponibles
-            if ($user) {
-                $entitiesPrompt .= "\nPRÉFÉRENCES UTILISATEUR:\n";
-                if ($user->getPreferredStyle()) {
-                    $entitiesPrompt .= "- Style visuel préféré: " . $user->getPreferredStyle() . "\n";
-                }
-                if ($user->getBusinessType()) {
-                    $entitiesPrompt .= "- Type d'activité: " . $user->getBusinessType() . "\n";
-                }
-                if ($user->getColorScheme()) {
-                    $entitiesPrompt .= "- Schéma de couleurs: " . $user->getColorScheme() . "\n";
-                }
-                if ($user->getAdditionalPreferences()) {
-                    $entitiesPrompt .= "- Préférences additionnelles: " . $user->getAdditionalPreferences() . "\n";
-                }
-                if ($user->getContactEmail()) {
-                    $entitiesPrompt .= "- Email de contact pour les formulaires: " . $user->getContactEmail() . "\n";
-                }
-                $entitiesPrompt .= "\nVeuillez prendre en compte ces préférences dans la génération des entités et formulaires.\n";
-            }
-            $entitiesPrompt .= "Retourne le résultat au format JSON suivant:\n";
-            $entitiesPrompt .= "{\n";
-            $entitiesPrompt .= "  \"entities\": {\n";
-            $entitiesPrompt .= "    \"NomEntite1\": \"code PHP complet de l'entité\",\n";
-            $entitiesPrompt .= "    \"NomEntite2\": \"code PHP complet de l'entité\"\n";
-            $entitiesPrompt .= "  },\n";
-            $entitiesPrompt .= "  \"repositories\": {\n";
-            $entitiesPrompt .= "    \"NomEntite1Repository\": \"code PHP complet du repository\",\n";
-            $entitiesPrompt .= "    \"NomEntite2Repository\": \"code PHP complet du repository\"\n";
-            $entitiesPrompt .= "  },\n";
-            $entitiesPrompt .= "  \"formTypes\": {\n";
-            $entitiesPrompt .= "    \"NomEntite1Type\": \"code PHP complet du form type\",\n";
-            $entitiesPrompt .= "    \"NomEntite2Type\": \"code PHP complet du form type\"\n";
-            $entitiesPrompt .= "  }\n";
-            $entitiesPrompt .= "}\n";
-            
-            $entitiesResponse = $this->client->request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
-                'headers' => ['Content-Type' => 'application/json'],
-                'query' => ['key' => $this->apiKey],
-                'json' => [
-                    'contents' => [['parts' => [['text' => $entitiesPrompt]]]],
-                    'generationConfig' => ['temperature' => 0.3, 'maxOutputTokens' => 8192]
-                ],
-            ]);
-            
-            // Mettre à jour le message de génération pour indiquer le traitement des entités
-            if ($promptEntity) {
-                $this->updateGenerationMessage($promptEntity, 'Traitement des entités et formulaires...');
-            }
-            
-            $entitiesData = $entitiesResponse->toArray(false);
-            $entitiesText = $entitiesData['candidates'][0]['content']['parts'][0]['text'] ?? null;
-            
-            if ($entitiesText) {
-                // Nettoyer et formater le JSON
-                $entitiesText = trim($entitiesText);
-                $entitiesText = str_replace(['```json', '```'], '', $entitiesText);
-                $entitiesJson = json_decode($entitiesText, true);
-                
-                if ($entitiesJson && isset($entitiesJson['entities'])) {
-                    // Sauvegarder les entités générées
-                    foreach ($entitiesJson['entities'] as $entityName => $entityCode) {
-                        $this->stubProcessor->setEntityCode($entityCode, $entityName);
-                    }
-                    
-                    // Sauvegarder les repositories générés
-                    if (isset($entitiesJson['repositories'])) {
-                        foreach ($entitiesJson['repositories'] as $repoName => $repoCode) {
-                            $this->stubProcessor->setRepositoryCode($repoCode, $repoName);
-                        }
-                    }
-                    
-                    // Sauvegarder les form types générés
-                    if (isset($entitiesJson['formTypes'])) {
-                        foreach ($entitiesJson['formTypes'] as $formName => $formCode) {
-                            $this->stubProcessor->setFormTypeCode($formCode, $formName);
-                        }
-                    }
-                }
-            }
         }
 
         // Filtrer les clés pour ne garder que les fichiers frontend
@@ -555,74 +465,49 @@ class AIService
     private function generateBackendFiles(): array
     {
         $backendFiles = [];
-        
+
         // Récupérer le code du contrôleur généré
         $controllerCode = $this->stubProcessor->getControllerCode();
         if (!$controllerCode) {
             return $backendFiles;
         }
-        
-        // Extraire les entités du contrôleur pour s'assurer qu'on a toutes les entités nécessaires
-        $entitiesFromController = $this->extractEntitiesFromController($controllerCode);
-        
+
         // Générer MainController.php (obligatoire)
         $mainControllerReplacements = $this->stubProcessor->generateEntityReplacements('Main');
-        $backendFiles['src/Controller/MainController.php'] = $this->stubProcessor->processStub('controller', $mainControllerReplacements);
-        
-        // Générer les fichiers pour chaque entité détectée
-        foreach ($entitiesFromController as $entityName) {
-            if (empty($entityName)) continue;
-            
-            $replacements = $this->stubProcessor->generateEntityReplacements($entityName);
-            
-            // Générer les fichiers pour cette entité en utilisant les codes générés par Gemini
-            // ou en utilisant les stubs si aucun code n'a été généré
-            $backendFiles["src/Entity/{$entityName}.php"] = $this->stubProcessor->processStub('entity', $replacements);
-            $backendFiles["src/Repository/{$entityName}Repository.php"] = $this->stubProcessor->processStub('repository', $replacements);
-            $backendFiles["src/Form/{$entityName}Type.php"] = $this->stubProcessor->processStub('form', $replacements);
-        }
-        
+        $mainControllerCode = $this->stubProcessor->processStub('controller', $mainControllerReplacements);
+
+        // Nettoyer le code du MainController en supprimant toutes les balises PHP sauf la première
+        $mainControllerCode = $this->cleanPhpTags($mainControllerCode);
+        $backendFiles['src/Controller/MainController.php'] = $mainControllerCode;
+
         return $backendFiles;
     }
-    
-    private function extractEntitiesFromController(string $controllerCode): array
-    {
-        $entities = [];
-        
-        // Extraire les entités des imports
-        if (preg_match_all('/use App\\\\Entity\\\\(\w+);/', $controllerCode, $matches)) {
-            $entities = array_merge($entities, $matches[1]);
-        }
-        
-        // Extraire les entités des repositories injectés
-        if (preg_match_all('/(\w+)Repository/', $controllerCode, $matches)) {
-            foreach ($matches[1] as $repoName) {
-                if ($repoName !== 'Entity') {
-                    $entities[] = $repoName;
-                }
-            }
-        }
-        
-        // Extraire les entités des variables new Entity()
-        if (preg_match_all('/new (\w+)\(\)/', $controllerCode, $matches)) {
-            $entities = array_merge($entities, $matches[1]);
-        }
-        
-        // Extraire les entités des form types
-        if (preg_match_all('/(\w+)Type::class/', $controllerCode, $matches)) {
-            foreach ($matches[1] as $formName) {
-                if ($formName !== 'Form') {
-                    $entities[] = $formName;
-                }
-            }
-        }
-        
-        return array_unique($entities);
-    }
-    
+
     /**
      * Crée une base de données par défaut pour un prompt
      */
+    /**
+     * Nettoie le code en supprimant toutes les balises PHP sauf la première
+     */
+    private function cleanPhpTags(string $code): string
+    {
+        // S'assurer que le code commence par <?php
+        if (!str_starts_with($code, '<?php')) {
+            // Supprimer toutes les balises PHP
+            $code = preg_replace('/<\?php\s*/', '', $code);
+            // Ajouter la balise PHP au début
+            $code = "<?php\n" . $code;
+        } else {
+            // Supprimer toutes les balises PHP sauf la première
+            $code = preg_replace('/(?<!^)<\?php\s*/', '', $code);
+        }
+        
+        // Forcer le nom de la classe à MainController
+        $code = preg_replace('/class\s+([A-Za-z0-9_]+)\s+extends\s+AbstractController/', 'class MainController extends AbstractController', $code);
+        
+        return $code;
+    }
+    
     private function createDefaultDatabase(\App\Entity\Prompt $prompt): void
     {
         // Vérifier si une base de données existe déjà pour ce prompt

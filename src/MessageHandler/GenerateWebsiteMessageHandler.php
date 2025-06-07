@@ -7,7 +7,6 @@ use App\Entity\Prompt;
 use App\Service\AIService;
 use App\Repository\PromptRepository;
 use App\Message\GenerateWebsiteMessage;
-use App\Service\SymfonyProjectGenerator;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -53,11 +52,6 @@ class GenerateWebsiteMessageHandler
             throw new \LogicException('L\'utilisateur connecté n\'est pas une instance de App\Entity\User');
         }
 
-        // Générer la structure Symfony de base
-        $projectDir = sys_get_temp_dir() . '/webforge_' . uniqid();
-        $generator = new \App\Service\SymfonyProjectGenerator($projectDir);
-        $symfonyStructure = $generator->generate();
-
         do {
             try {
                 // Génération des fichiers frontend et backend
@@ -72,11 +66,6 @@ class GenerateWebsiteMessageHandler
                 if (isset($files['__generation_message__'])) {
                     $generationMessage = $files['__generation_message__'];
                     unset($files['__generation_message__']);
-                }
-
-                // Fusionner la structure Symfony avec les fichiers générés
-                if ($symfonyStructure['success']) {
-                    $files = array_merge($symfonyStructure['structure'], $files);
                 }
 
                 $prompt->setGeneratedFiles($files);

@@ -2360,7 +2360,29 @@
                     return;
                 }
                 
-                // Récupérer le contenu HTML complet
+                // Nettoyer les éléments d'édition visuelle avant de sauvegarder
+                const editableElements = iframeDocument.querySelectorAll('.visual-edit-highlight');
+                editableElements.forEach(el => {
+                    el.classList.remove('visual-edit-highlight');
+                    el.classList.remove('dragging');
+                    el.classList.remove('drop-before');
+                    el.classList.remove('drop-after');
+                    el.removeAttribute('draggable');
+                });
+                
+                // Supprimer le panneau d'édition s'il existe
+                const editPanel = iframeDocument.querySelector('.visual-edit-panel');
+                if (editPanel) {
+                    editPanel.remove();
+                }
+                
+                // Supprimer les styles d'édition visuelle
+                const visualStyles = iframeDocument.getElementById('visual-edit-styles');
+                if (visualStyles) {
+                    visualStyles.remove();
+                }
+                
+                // Récupérer le contenu HTML complet après nettoyage
                 const htmlContent = iframeDocument.documentElement.outerHTML;
                 
                 // Trouver le fichier HTML actif
