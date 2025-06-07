@@ -121,8 +121,8 @@ class AIService
         }
 
         if ($existingFiles) {
-            $promptText .= "Voici le code existant que tu dois conserver et modifier uniquement selon la demande :\n";
-            $promptText .= json_encode($existingFiles, JSON_PRETTY_PRINT) . "\n\nModifie uniquement ce qui est demandé dans le prompt suivant, en gardant le reste du code intact. Explique d'abord ce que tu vas modifier, puis fournis le JSON avec le code modifié : ";
+            $promptText .= "Voici le code existant que tu dois ABSOLUMENT conserver et modifier uniquement selon la demande :\n";
+            $promptText .= json_encode($existingFiles, JSON_PRETTY_PRINT) . "\n\nIMPORTANT: Tu dois ABSOLUMENT conserver TOUS les fichiers existants. Ne supprime JAMAIS un fichier existant. Modifie uniquement ce qui est explicitement demandé dans le prompt suivant, en gardant le reste du code intact. Si tu dois créer un nouveau fichier, ajoute-le sans supprimer les autres. Explique d'abord ce que tu vas modifier, puis fournis le JSON avec le code modifié : ";
         } else {
             $promptText .= "Chaque valeur dans le JSON doit être une string contenant le code. Ne rajoute pas de texte autour du JSON. Voici la demande : ";
         }
@@ -407,8 +407,10 @@ class AIService
             $this->stubProcessor->setControllerCode($backendCode);
         }
 
-        // Filtrer les clés pour ne garder que les fichiers frontend
-        $result = [];
+        // Initialiser le résultat avec les fichiers existants si disponibles
+        $result = $existingFiles ? $existingFiles : [];
+        
+        // Ajouter ou mettre à jour les fichiers frontend générés par l'IA
         foreach ($decoded as $filename => $content) {
             if ($filename === 'app.css' || $filename === 'app.js' || str_ends_with($filename, '.html.twig')) {
                 $result[$filename] = $content;
@@ -426,19 +428,31 @@ class AIService
         }
 
         // Générer les fichiers backend
-        $backendFiles = $this->generateBackendFiles();
+        $backendFiles = $this->generateBackendFiles($existingFiles);
         
         // Mettre à jour le message de génération pour indiquer la finalisation
         if ($promptEntity) {
             $this->updateGenerationMessage($promptEntity, 'Finalisation de la génération...');
         }
         
-        // Ajouter tous les fichiers backend générés au résultat
+        // Ajouter ou mettre à jour les fichiers backend générés
+        // Si nous avons des fichiers existants, nous ne remplaçons que les fichiers backend qui ont été modifiés
+        // pour s'adapter aux changements du frontend
         foreach ($backendFiles as $path => $content) {
-            $result[$path] = $content;
+            // Si le fichier backend existe déjà et que nous avons des fichiers existants,
+            // nous ne le remplaçons que s'il a été modifié pour s'adapter aux changements du frontend
+            if ($existingFiles && isset($existingFiles[$path])) {
+                // Vérifier si le fichier a été modifié pour s'adapter aux changements du frontend
+                // Pour l'instant, nous remplaçons toujours les fichiers backend pour s'assurer qu'ils sont compatibles
+                // avec les modifications du frontend
+                $result[$path] = $content;
+            } else {
+                // Si le fichier n'existe pas encore, nous l'ajoutons
+                $result[$path] = $content;
+            }
         }
 
-        // Ajouter les fichiers frontend
+        // Ajouter ou mettre à jour les fichiers frontend
         foreach ($decoded as $filename => $content) {
             if ($filename === 'app.css' || $filename === 'app.js' || str_ends_with($filename, '.html.twig')) {
                 $result[$filename] = $content;
@@ -463,7 +477,11 @@ class AIService
         return $result;
     }
 
-    private function generateBackendFiles(): array
+    /**
+     * Génère les fichiers backend (contrôleur, entités, repositories, formtypes)
+     * @param array|null $existingFiles Les fichiers existants à préserver
+     */
+    private function generateBackendFiles(?array $existingFiles = null): array
     {
         $backendFiles = [];
 
@@ -482,11 +500,11 @@ class AIService
         $backendFiles['src/Controller/MainController.php'] = $mainControllerCode;
         
         // Générer les entités et repositories
-        $entitiesAndRepositories = $this->generateEntitiesAndRepositories($controllerCode);
+        $entitiesAndRepositories = $this->generateEntitiesAndRepositories($controllerCode, $existingFiles);
         $backendFiles = array_merge($backendFiles, $entitiesAndRepositories);
         
         // Générer les formtypes
-        $formTypes = $this->generateFormTypes($controllerCode);
+        $formTypes = $this->generateFormTypes($controllerCode, $existingFiles);
         $backendFiles = array_merge($backendFiles, $formTypes);
 
         return $backendFiles;
@@ -516,8 +534,9 @@ class AIService
     
     /**
      * Génère les entités et repositories en fonction du contrôleur et du frontend
+     * @param array|null $existingFiles Les fichiers existants à préserver
      */
-    private function generateEntitiesAndRepositories(string $controllerCode): array
+    private function generateEntitiesAndRepositories(string $controllerCode, ?array $existingFiles = null): array
     {
         $files = [];
         $promptEntity = null;
@@ -568,6 +587,7 @@ class AIService
         $entityPrompt .= "IMPORTANT: Ta réponse doit être un JSON valide et bien formaté. Utilise le format suivant:\n";
         $entityPrompt .= "```json\n{\n  \"src/Entity/NomEntite.php\": \"<?php\\n\\nnamespace App\\\\Entity;\\n...\"\n}\n```\n\n";
         $entityPrompt .= "Assure-toi que toutes les barres obliques inverses (\\) et les guillemets (\") dans les valeurs sont correctement échappés pour que le JSON soit valide.";
+        $entityPrompt .= "\n\nIMPORTANT: Si des entités ou repositories existants sont fournis, tu dois ABSOLUMENT les conserver et les modifier uniquement si nécessaire pour s'adapter aux changements du frontend ou du contrôleur. Ne supprime JAMAIS un fichier existant.";
         
         // Appeler Gemini pour générer les entités et repositories
         $response = $this->client->request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
@@ -653,7 +673,15 @@ class AIService
             }
             
             // Ajouter le fichier à la liste des fichiers générés
-            $files[$filePath] = $fileContent;
+            // Si nous avons des fichiers existants, nous ne remplaçons que les fichiers qui ont été modifiés
+            if ($existingFiles && isset($existingFiles[$filePath])) {
+                // Pour l'instant, nous remplaçons toujours les entités et repositories pour s'assurer qu'ils sont compatibles
+                // avec les modifications du frontend et du contrôleur
+                $files[$filePath] = $fileContent;
+            } else {
+                // Si le fichier n'existe pas encore, nous l'ajoutons
+                $files[$filePath] = $fileContent;
+            }
         }
         
         return $files;
@@ -661,8 +689,9 @@ class AIService
     
     /**
      * Génère les formtypes en fonction du contrôleur, du frontend et des entités
+     * @param array|null $existingFiles Les fichiers existants à préserver
      */
-    private function generateFormTypes(string $controllerCode): array
+    private function generateFormTypes(string $controllerCode, ?array $existingFiles = null): array
     {
         $files = [];
         $promptEntity = null;
@@ -716,6 +745,7 @@ class AIService
         $formPrompt .= "\nUtilise la structure suivante pour les formtypes :\n";
         $formPrompt .= "FORM STUB:\n" . file_get_contents(__DIR__ . '/Stubs/form.stub') . "\n\n";
         
+        $formPrompt .= "IMPORTANT: Si des FormTypes existants sont fournis, tu dois ABSOLUMENT les conserver et les modifier uniquement si nécessaire pour s'adapter aux changements des entités ou du contrôleur. Ne supprime JAMAIS un fichier existant.\n\n";
         $formPrompt .= "Retourne UNIQUEMENT un objet JSON valide avec les clés étant les chemins des fichiers (ex: 'src/Form/ProductType.php') et les valeurs étant le contenu complet des fichiers.\n\n";
         $formPrompt .= "IMPORTANT: Ta réponse doit être un JSON valide et bien formaté. Utilise le format suivant:\n";
         $formPrompt .= "```json\n{\n  \"src/Form/NomFormType.php\": \"<?php\\n\\nnamespace App\\\\Form;\\n...\"\n}\n```\n\n";
@@ -801,7 +831,16 @@ class AIService
             }
             
             // Ajouter le fichier à la liste des fichiers générés
-            $files[$filePath] = $fileContent;
+            // Si le fichier existe déjà et que nous avons des fichiers existants,
+            // nous vérifions s'il a été modifié
+            if ($existingFiles && isset($existingFiles[$filePath])) {
+                // Pour l'instant, nous remplaçons toujours les formtypes pour s'assurer qu'ils sont compatibles
+                // avec les modifications des entités et du contrôleur
+                $files[$filePath] = $fileContent;
+            } else {
+                // Si le fichier n'existe pas encore, nous l'ajoutons
+                $files[$filePath] = $fileContent;
+            }
         }
         
         return $files;

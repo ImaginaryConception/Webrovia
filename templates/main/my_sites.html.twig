@@ -2385,8 +2385,17 @@
                 // Récupérer le contenu HTML complet après nettoyage
                 const htmlContent = iframeDocument.documentElement.outerHTML;
                 
-                // Trouver le fichier HTML actif
-                const htmlPath = 'index.html.twig'; // Chemin par défaut pour le fichier HTML principal
+                // Récupérer le chemin du fichier HTML actif à partir de l'URL de l'iframe
+                let htmlPath = 'index.html.twig'; // Chemin par défaut
+                try {
+                    const iframeSrc = new URL(iframe.src);
+                    const pathParam = iframeSrc.searchParams.get('path');
+                    if (pathParam) {
+                        htmlPath = pathParam;
+                    }
+                } catch (e) {
+                    console.error('Erreur lors de la récupération du chemin du fichier:', e);
+                }
                 
                 try {
                     // Désactiver le bouton pendant la sauvegarde

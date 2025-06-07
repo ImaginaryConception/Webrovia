@@ -2,3 +2,7 @@ TODO :
 
 - Système de commande Symfony CLI intéractif en bouton pour chaque site.
 - Utilisation API O2Switch pour le paiement du nom de domaine.
+
+config/packages/mailer.yaml : il faut ajouter message_bus: false
+templates/base.html.twig : il faut ajouter asset('app.js') et asset('styles/styles.css') du dossier assets
+.env : il faut ajouter MAILER_DSN=smtp://support@imaginaryconception.com:Edogame00_@moustache.o2switch.net:465 et DATABASE_URL="mysql://root:@127.0.0.1:3306/webroviaprojectdatabase?serverVersion=5.7&charset=utf8mb4" et mettre le APP_ENV en prod.
