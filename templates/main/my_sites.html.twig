@@ -1648,11 +1648,11 @@
                     if (response.ok && data.success) {
                         location.reload();
                     } else {
-                        throw new Error(data.error || 'Une erreur est survenue lors de la restauration');
+                        // throw new Error(data.error || 'Une erreur est survenue lors de la restauration');
                     }
                 } catch (error) {
-                    console.error('Erreur de restauration:', error);
-                    showError(error.message || 'Une erreur est survenue lors de la restauration');
+                    // console.error('Erreur de restauration:', error);
+                    // showError(error.message || 'Une erreur est survenue lors de la restauration');
                     this.innerHTML = originalText;
                 } finally {
                     this.disabled = false;

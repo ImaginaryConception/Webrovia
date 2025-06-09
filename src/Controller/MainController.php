@@ -487,6 +487,18 @@ class MainController extends AbstractController
                     ['version' => 'DESC']
                 );
                 
+                // Si on ne trouve pas de prompt avec status "completed", chercher celui avec status "error"
+                if (!$latestPrompt) {
+                    $latestPrompt = $em->getRepository(Prompt::class)->findOneBy(
+                        [
+                            'user' => $this->getUser(),
+                            'websiteIdentification' => $prompt->getWebsiteIdentification(),
+                            'status' => 'error'
+                        ],
+                        ['version' => 'DESC']
+                    );
+                }
+                
                 if ($latestPrompt && $latestPrompt->getId() !== $prompt->getId()) {
                     return $this->redirectToRoute('app_my_sites', ['id' => $latestPrompt->getId()]);
                 }

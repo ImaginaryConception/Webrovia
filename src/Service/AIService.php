@@ -11,16 +11,32 @@ class AIService
     private StubProcessor $stubProcessor;
     private $entityManager;
     private array $frontendData = [];
+    private $logger;
 
     public function __construct(
         HttpClientInterface $client,
         StubProcessor $stubProcessor,
-        \Doctrine\ORM\EntityManagerInterface $entityManager
+        \Doctrine\ORM\EntityManagerInterface $entityManager,
+        \Psr\Log\LoggerInterface $logger = null
     ) {
         $this->client = $client;
         $this->stubProcessor = $stubProcessor;
         $this->entityManager = $entityManager;
-        $this->apiKey = $_ENV['GEMINI_API_KEY'] ?? throw new \RuntimeException('GEMINI_API_KEY non définie');
+        $this->logger = $logger;
+        
+        // Vérification plus robuste de la clé API
+        if (empty($_ENV['GEMINI_API_KEY'])) {
+            $this->logError('GEMINI_API_KEY non définie dans les variables d\'environnement');
+            throw new \RuntimeException('GEMINI_API_KEY non définie dans les variables d\'environnement');
+        }
+        
+        $this->apiKey = $_ENV['GEMINI_API_KEY'];
+        
+        // Vérifier que la clé API a un format valide (généralement commence par "AI" pour Gemini)
+        if (!preg_match('/^[A-Za-z0-9_-]{30,}$/', $this->apiKey)) {
+            $this->logError('Format de GEMINI_API_KEY invalide');
+            throw new \RuntimeException('Format de GEMINI_API_KEY invalide');
+        }
     }
 
     /**
@@ -31,6 +47,19 @@ class AIService
         $prompt->setGenerationMessage($message);
         $this->entityManager->persist($prompt);
         $this->entityManager->flush();
+    }
+    
+    /**
+     * Journalise une erreur
+     */
+    private function logError(string $message, array $context = []): void
+    {
+        if ($this->logger) {
+            $this->logger->error('[AIService] ' . $message, $context);
+        }
+        
+        // Journaliser également dans le fichier de log PHP standard
+        error_log('[AIService] ' . $message . (empty($context) ? '' : ' - Context: ' . json_encode($context)));
     }
 
     public function generateWebsiteFromPrompt(string $prompt, ?array $existingFiles = null): array
@@ -93,8 +122,8 @@ class AIService
         $promptText .= "Pour les images, assures-toi de récupérer des images sur internet avec des liens uniquement, pas de chemin relatif\n";
         $promptText .= "Pour les formulaires, assures-toi de les faire uniquement sous forme de Twig, pas HTML.\n";
         $promptText .= "Ajoute souvent des images pour rendre le site attractif\n";
+        $promptText .= "Les liens des images, tu les récupères sur Google Images, je veux que tu mettes des vrais images, pas de #\n";
         $promptText.= "Préfère les sites one page avec des liens de navbar qui mène à des ancres de la page\n";
-        $promptText.= "Je veux que tu mettes des vrais images, pas de #\n";
         $promptText.= "Il faut que ce soit ULTRA MODERNE VISUELLEMENT avec du contenu ULTRA COMPLET, une mise en page ULTRA PROFESSIONNELLE !\n";
         $promptText.= "Il faut que ce soit ultra animé, avec un effet de glissement quand on va dans une encre.\n";
         $promptText .= "IMPORTANT : NE JAMAIS générer le fichier base.html.twig\n\n";
@@ -129,44 +158,151 @@ class AIService
 
         $promptText .= $prompt . " IMPORTANT : Il faut que ce soit ULTRA MODERNE VISUELLEMENT avec du contenu ULTRA COMPLET, une mise en page ULTRA PROFESSIONNELLE !";
 
-        $response = $this->client->request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
-            'headers' => [
-                'Content-Type' => 'application/json',
-            ],
-            'query' => [
-                'key' => $this->apiKey,
-            ],
-            'json' => [
-                'contents' => [[
-                    'parts' => [[
-                        'text' => $promptText
-                    ]]
-                ]],
-                'generationConfig' => [
-                    'temperature' => 1.0,
-                    'maxOutputTokens' => 8192,
-                    'topP' => 0.8,
-                    'topK' => 40
+        try {
+            // Mettre à jour le message de génération pour indiquer l'envoi de la requête
+            if ($promptEntity) {
+                $this->updateGenerationMessage($promptEntity, 'Envoi de la requête à l\'API Gemini...');
+            }
+            
+            // Définir un timeout plus long pour les requêtes complexes
+            $response = $this->client->request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
+                'headers' => [
+                    'Content-Type' => 'application/json',
                 ],
-                'safetySettings' => [
-                    ['category' => 'HARM_CATEGORY_HARASSMENT', 'threshold' => 'BLOCK_NONE'],
-                    ['category' => 'HARM_CATEGORY_HATE_SPEECH', 'threshold' => 'BLOCK_NONE'],
-                    ['category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold' => 'BLOCK_NONE'],
-                    ['category' => 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold' => 'BLOCK_NONE']
-                ]
-            ],
-        ]);
-
-        // Mettre à jour le message de génération pour indiquer que la réponse a été reçue
-        if ($promptEntity) {
-            $this->updateGenerationMessage($promptEntity, 'Traitement de la réponse de l\'IA...');
+                'query' => [
+                    'key' => $this->apiKey,
+                ],
+                'json' => [
+                    'contents' => [[
+                        'parts' => [[
+                            'text' => $promptText
+                        ]]
+                    ]],
+                    'generationConfig' => [
+                        'temperature' => 1.0,
+                        'maxOutputTokens' => 8192,
+                        'topP' => 0.8,
+                        'topK' => 40
+                    ],
+                    'safetySettings' => [
+                        ['category' => 'HARM_CATEGORY_HARASSMENT', 'threshold' => 'BLOCK_NONE'],
+                        ['category' => 'HARM_CATEGORY_HATE_SPEECH', 'threshold' => 'BLOCK_NONE'],
+                        ['category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold' => 'BLOCK_NONE'],
+                        ['category' => 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold' => 'BLOCK_NONE']
+                    ]
+                ],
+                'timeout' => 60, // Timeout de 60 secondes
+                'max_duration' => 120, // Durée maximale de 120 secondes
+            ]);
+            
+            // Mettre à jour le message de génération pour indiquer que la réponse a été reçue
+            if ($promptEntity) {
+                $this->updateGenerationMessage($promptEntity, 'Réponse reçue de l\'API Gemini, traitement en cours...');
+            }
+        } catch (\Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface $e) {
+            // Erreur de connexion ou timeout
+            $errorMsg = 'Erreur de connexion à l\'API Gemini: ' . $e->getMessage();
+            $this->logError($errorMsg, ['exception' => get_class($e), 'code' => $e->getCode()]);
+            
+            if ($promptEntity) {
+                $this->updateGenerationMessage($promptEntity, 'Erreur de connexion à l\'API Gemini. Veuillez réessayer.');
+            }
+            
+            throw new \RuntimeException($errorMsg);
+        } catch (\Exception $e) {
+            // Autres erreurs
+            $errorMsg = 'Erreur lors de l\'appel à l\'API Gemini: ' . $e->getMessage();
+            $this->logError($errorMsg, ['exception' => get_class($e), 'code' => $e->getCode()]);
+            
+            if ($promptEntity) {
+                $this->updateGenerationMessage($promptEntity, 'Erreur lors de l\'appel à l\'API Gemini. Veuillez réessayer.');
+            }
+            
+            throw new \RuntimeException($errorMsg);
         }
 
-        $data = $response->toArray(false);
-        $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
+        // Le message de génération est maintenant mis à jour dans le bloc try-catch ci-dessus
 
-        if (!$text) {
-            throw new \RuntimeException('Réponse vide de Gemini');
+        try {
+            $data = $response->toArray(false);
+            
+            // Journaliser la réponse brute pour le débogage (en mode développement uniquement)
+            if ($_ENV['APP_ENV'] === 'dev') {
+                $this->logError('Réponse brute de Gemini', ['response' => json_encode($data)]);
+            }
+            
+            // Vérifier si la réponse contient une erreur
+            if (isset($data['error'])) {
+                $errorMessage = $data['error']['message'] ?? 'Erreur inconnue de l\'API Gemini';
+                $errorCode = $data['error']['code'] ?? 'Inconnu';
+                $errorDetails = $data['error']['details'] ?? [];
+                
+                $this->logError("Erreur Gemini", [
+                    'code' => $errorCode,
+                    'message' => $errorMessage,
+                    'details' => $errorDetails
+                ]);
+                
+                if ($promptEntity) {
+                    $this->updateGenerationMessage($promptEntity, "Erreur de l'API Gemini: {$errorMessage}");
+                }
+                
+                throw new \RuntimeException("Erreur Gemini (code: {$errorCode}): {$errorMessage}");
+            }
+            
+            // Vérifier si la structure de la réponse est correcte
+            if (!isset($data['candidates']) || empty($data['candidates'])) {
+                $errorMsg = 'Réponse de Gemini sans candidats';
+                $this->logError($errorMsg, ['response' => json_encode($data)]);
+                
+                if ($promptEntity) {
+                    $this->updateGenerationMessage($promptEntity, "Erreur: Réponse de l'API incomplète. Veuillez réessayer.");
+                }
+                
+                throw new \RuntimeException($errorMsg);
+            }
+            
+            if (!isset($data['candidates'][0]['content']) || !isset($data['candidates'][0]['content']['parts'])) {
+                $errorMsg = 'Structure de réponse Gemini invalide';
+                $this->logError($errorMsg, ['response' => json_encode($data)]);
+                
+                if ($promptEntity) {
+                    $this->updateGenerationMessage($promptEntity, "Erreur: Format de réponse invalide. Veuillez réessayer.");
+                }
+                
+                throw new \RuntimeException($errorMsg);
+            }
+            
+            $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+            if (!$text) {
+                $errorMsg = 'Réponse vide de Gemini';
+                $this->logError($errorMsg, ['response' => json_encode($data)]);
+                
+                if ($promptEntity) {
+                    $this->updateGenerationMessage($promptEntity, "Erreur: Réponse vide de l'API. Veuillez réessayer.");
+                }
+                
+                throw new \RuntimeException($errorMsg);
+            }
+        } catch (\Symfony\Contracts\HttpClient\Exception\ExceptionInterface $e) {
+            $errorMsg = 'Erreur de communication avec l\'API Gemini: ' . $e->getMessage();
+            $this->logError($errorMsg, ['exception' => get_class($e), 'code' => $e->getCode()]);
+            
+            if ($promptEntity) {
+                $this->updateGenerationMessage($promptEntity, "Erreur de communication avec l'API. Veuillez réessayer.");
+            }
+            
+            throw new \RuntimeException($errorMsg);
+        } catch (\Exception $e) {
+            $errorMsg = 'Erreur lors du traitement de la réponse: ' . $e->getMessage();
+            $this->logError($errorMsg, ['exception' => get_class($e), 'code' => $e->getCode()]);
+            
+            if ($promptEntity) {
+                $this->updateGenerationMessage($promptEntity, "Erreur lors du traitement de la réponse. Veuillez réessayer.");
+            }
+            
+            throw new \RuntimeException($errorMsg);
         }
 
         // Extraction du message de génération et du JSON
