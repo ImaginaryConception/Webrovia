@@ -294,14 +294,18 @@ class CpanelService
         try {
             // Vérifier si la requête est une requête de modification (INSERT, UPDATE, DELETE, etc.)
             $isModificationQuery = preg_match('/^\s*(INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE)/i', $query);
+            error_log("Type de requête: " . ($isModificationQuery ? "modification" : "lecture"));
+            error_log("Requête SQL à exécuter: $query");
+            
+            // Vérifier si le nom de la base de données contient déjà le préfixe
+            $hasPrefix = strpos($dbName, $this->apiUsername . '_') === 0;
+            error_log("Le nom de la base de données '$dbName' contient-il déjà le préfixe? " . ($hasPrefix ? "Oui" : "Non"));
             
             // Ajouter le préfixe de l'utilisateur cPanel si nécessaire
-            $fullDbName = $dbName;
-            if (strpos($dbName, $this->apiUsername . '_') !== 0) {
-                $fullDbName = $this->apiUsername . '_' . $dbName;
-            }
+            $fullDbName = $this->getFullDatabaseName($dbName);
             
-            error_log("Nom de base de données original: '$dbName', avec préfixe: '$fullDbName'");
+            // Log pour le débogage
+            error_log("Nom de base de données original: '$dbName', nom complet utilisé: '$fullDbName'");
             
             // Nous n'appliquons plus de nettoyage au nom de la base de données pour éviter les problèmes
             // Le nom de la base de données doit être utilisé tel quel
@@ -359,6 +363,7 @@ class CpanelService
                     }
                     
                     error_log("Tentative de connexion avec l'utilisateur: " . $user . " et le mot de passe fourni");
+                    error_log("Mot de passe fourni: " . ($dbPassword ? 'Oui (non affiché pour des raisons de sécurité)' : 'Non'));
                     
                     // Essayer différents hôtes pour la connexion
                     $hostsToTry = [
@@ -373,7 +378,7 @@ class CpanelService
                     
                     foreach ($hostsToTry as $tryHost) {
                         try {
-                            error_log("Tentative de connexion à l'hôte: " . $tryHost . " avec l'utilisateur: " . $user);
+                            error_log("Tentative de connexion à l'hôte: " . $tryHost . " avec l'utilisateur: " . $user . " et la base de données: " . $fullDbName);
                             $mysqli = new \mysqli($tryHost, $user, $dbPassword, $fullDbName);
                             if (!$mysqli->connect_error) {
                                 // Connexion réussie
@@ -381,10 +386,12 @@ class CpanelService
                                 break; // Sortir de la boucle si la connexion réussit
                             } else {
                                 $connectionErrors[] = "Échec avec l'hôte $tryHost et l'utilisateur $user: " . $mysqli->connect_error;
+                                error_log("Échec de connexion: " . $mysqli->connect_error);
                                 $mysqli = null; // Réinitialiser pour les tentatives suivantes
                             }
                         } catch (\Exception $e) {
                             $connectionErrors[] = "Exception avec l'hôte $tryHost et l'utilisateur $user: " . $e->getMessage();
+                            error_log("Exception lors de la connexion: " . $e->getMessage());
                         }
                     }
                 }
@@ -594,8 +601,21 @@ class CpanelService
                                             // Si la sélection échoue, essayer de créer la base de données
                                             error_log("Tentative de création de la base de données: " . $fullDbName);
                                             $createDbQuery = "CREATE DATABASE IF NOT EXISTS `" . $tempMysqli->real_escape_string($fullDbName) . "`";
+                                            error_log("Exécution de la requête: $createDbQuery");
+                                            
+                                            // Vérifier les privilèges de l'utilisateur actuel
+                                            $showGrantsResult = $tempMysqli->query("SHOW GRANTS FOR CURRENT_USER()");
+                                            if ($showGrantsResult) {
+                                                $grants = [];
+                                                while ($row = $showGrantsResult->fetch_row()) {
+                                                    $grants[] = $row[0];
+                                                }
+                                                $showGrantsResult->free();
+                                                error_log("Privilèges de l'utilisateur actuel: " . implode("; ", $grants));
+                                            }
                                             
                                             try {
+                                                error_log("Tentative d'exécution de la requête de création de base de données");
                                                 if ($tempMysqli->query($createDbQuery)) {
                                                     error_log("Base de données créée avec succès: " . $fullDbName);
                                                     if ($tempMysqli->select_db($fullDbName)) {
@@ -615,25 +635,29 @@ class CpanelService
                                                     if (strpos($errorMsg, 'access denied') !== false || strpos($errorMsg, 'permission') !== false) {
                                                         error_log("Tentative de création de la base de données via l'API cPanel");
                                                         try {
-                                                            // Extraire le nom de la base de données sans le préfixe de l'utilisateur cPanel
-                                                            $dbNameWithoutPrefix = $fullDbName;
-                                                            if (strpos($fullDbName, $this->apiUsername . '_') === 0) {
-                                                                $dbNameWithoutPrefix = substr($fullDbName, strlen($this->apiUsername) + 1);
-                                                            }
+                                                            error_log("Tentative de création de la base de données via l'API cPanel. Nom complet: '$fullDbName'");
                                                             
                                                             // Créer la base de données via l'API cPanel
+                                                            // Le message d'erreur "Le nom ne commence pas par le préfixe requis" suggère que l'API attend le nom complet avec le préfixe.
+                                                            error_log("Envoi à l'API cPanel pour la création de la base de données avec le nom: '$fullDbName'");
                                                             $response = $this->makeApiRequest('Mysql/create_database', [
-                                                                'name' => $dbNameWithoutPrefix
+                                                                'name' => $fullDbName
                                                             ]);
+                                                            
+                                                            error_log("Réponse de l'API cPanel pour la création de la base de données: " . json_encode($response));
                                                             
                                                             // Si la base de données est créée avec succès, accorder tous les privilèges à l'utilisateur
                                                             if (isset($response['status']) && $response['status']) {
+                                                                error_log("Base de données créée avec succès via l'API cPanel: '$fullDbName'");
                                                                 error_log("Tentative d'attribution des privilèges à l'utilisateur sur la base de données");
                                                                 try {
                                                                     // Récupérer l'utilisateur MySQL associé au compte cPanel
                                                                     $mysqlUsers = $this->makeApiRequest('Mysql/list_users');
                                                                     
+                                                                    error_log("Réponse de l'API cPanel pour la liste des utilisateurs MySQL: " . json_encode($mysqlUsers));
+                                                                    
                                                                     if (isset($mysqlUsers['data']) && !empty($mysqlUsers['data'])) {
+                                                                        error_log("Utilisateurs MySQL trouvés: " . count($mysqlUsers['data']));
                                                                         // Utiliser le premier utilisateur MySQL disponible ou celui qui correspond au nom d'utilisateur cPanel
                                                                         $mysqlUser = null;
                                                                         foreach ($mysqlUsers['data'] as $user) {
@@ -650,14 +674,17 @@ class CpanelService
                                                                         
                                                                         if ($mysqlUser) {
                                                                             // Accorder tous les privilèges à l'utilisateur sur la base de données
-                                                                            $privilegesResponse = $this->makeApiRequest('Mysql/set_privileges_on_database', [
-                                                                                'user' => $mysqlUser,
-                                                                                'database' => $dbNameWithoutPrefix,
-                                                                                'privileges' => 'ALL PRIVILEGES'
-                                                                            ]);
-                                                                            
-                                                                            if (isset($privilegesResponse['status']) && $privilegesResponse['status']) {
-                                                                                error_log("Privilèges accordés avec succès à l'utilisateur {$mysqlUser} sur la base de données {$dbNameWithoutPrefix}");
+                                                                        error_log("Tentative d'attribution des privilèges à l'utilisateur {$mysqlUser} sur la base de données {$fullDbName}");
+                                                                        $privilegesResponse = $this->makeApiRequest('Mysql/set_privileges_on_database', [
+                                                                            'user' => $mysqlUser,
+                                                                            'database' => $fullDbName,
+                                                                            'privileges' => 'ALL PRIVILEGES'
+                                                                        ]);
+                                                                        
+                                                                        error_log("Réponse de l'API cPanel pour l'attribution des privilèges: " . json_encode($privilegesResponse));
+                                                                        
+                                                                        if (isset($privilegesResponse['status']) && $privilegesResponse['status']) {
+                                                                            error_log("Privilèges accordés avec succès à l'utilisateur {$mysqlUser} sur la base de données {$fullDbName}");
                                                                             } else {
                                                                                 error_log("Échec de l'attribution des privilèges: " . json_encode($privilegesResponse));
                                                                             }
@@ -680,12 +707,12 @@ class CpanelService
                                                                                 // Accorder tous les privilèges au nouvel utilisateur sur la base de données
                                                                                 $privilegesResponse = $this->makeApiRequest('Mysql/set_privileges_on_database', [
                                                                                     'user' => $newMysqlUser,
-                                                                                    'database' => $dbNameWithoutPrefix,
+                                                                                    'database' => $fullDbName,
                                                                                     'privileges' => 'ALL PRIVILEGES'
                                                                                 ]);
                                                                                 
                                                                                 if (isset($privilegesResponse['status']) && $privilegesResponse['status']) {
-                                                                                    error_log("Privilèges accordés avec succès au nouvel utilisateur {$newMysqlUser} sur la base de données {$dbNameWithoutPrefix}");
+                                                                                    error_log("Privilèges accordés avec succès au nouvel utilisateur {$newMysqlUser} sur la base de données {$fullDbName}");
                                                                                     
                                                                                     // Stocker les informations de connexion pour une utilisation ultérieure
                                                                                     $this->createdDbCredentials = [
@@ -752,12 +779,31 @@ class CpanelService
                                                                 error_log("Base de données créée avec succès via l'API cPanel");
                                                                 
                                                                 // Réessayer de sélectionner la base de données
+                                                                error_log("Tentative de sélection de la base de données créée via API: '$fullDbName'");
                                                                 if ($tempMysqli->select_db($fullDbName)) {
                                                                     error_log("Sélection de la base de données créée via API réussie");
                                                                     $mysqli = $tempMysqli;
                                                                     break 3; // Sortir des trois boucles si la connexion réussit
                                                                 } else {
                                                                     error_log("Échec de la sélection de la base de données créée via API: " . $tempMysqli->error);
+                                                                    
+                                                                    // Vérifier si la base de données existe dans la liste des bases de données disponibles
+                                                                    $showDbsResult = $tempMysqli->query("SHOW DATABASES");
+                                                                    $availableDbs = [];
+                                                                    if ($showDbsResult) {
+                                                                        while ($row = $showDbsResult->fetch_row()) {
+                                                                            $availableDbs[] = $row[0];
+                                                                        }
+                                                                        $showDbsResult->free();
+                                                                        error_log("Bases de données disponibles après création: " . implode(", ", $availableDbs));
+                                                                        
+                                                                        if (in_array($fullDbName, $availableDbs)) {
+                                                                            error_log("La base de données '$fullDbName' existe mais ne peut pas être sélectionnée. Possible problème de privilèges.");
+                                                                        } else {
+                                                                            error_log("La base de données '$fullDbName' n'existe pas dans la liste des bases de données disponibles.");
+                                                                        }
+                                                                    }
+                                                                    
                                                                     $tempMysqli->close();
                                                                 }
                                                             } else {
@@ -798,7 +844,9 @@ class CpanelService
                 error_log("Connexion à la base de données réussie. Vérification de la sélection de la base de données: '$fullDbName'");
                 
                 // Vérifier que la base de données est bien sélectionnée
+                error_log("Vérification de la sélection de la base de données: '$fullDbName'");
                 if (!$mysqli->select_db($fullDbName)) {
+                    error_log("Échec de la sélection de la base de données: " . $mysqli->error);
                     // Essayer de lister les bases de données disponibles pour le débogage
                     $showDbsResult = $mysqli->query("SHOW DATABASES");
                     $availableDbs = [];
@@ -958,14 +1006,20 @@ class CpanelService
                             
                             // Essayer de créer la base de données via l'API cPanel
                             try {
-                                // Extraire le nom de la base de données sans le préfixe
-                                $cpanelUsername = $this->apiUsername;
-                                $dbNameWithoutPrefix = $fullDbName;
-                                if (strpos($fullDbName, $cpanelUsername . '_') === 0) {
-                                    $dbNameWithoutPrefix = substr($fullDbName, strlen($cpanelUsername) + 1);
-                                }
-                                
-                                error_log("Tentative de création via l'API cPanel: $dbNameWithoutPrefix");
+                    // Extraire le nom de la base de données sans le préfixe
+                    $cpanelUsername = $this->apiUsername;
+                    $dbNameWithoutPrefix = $fullDbName;
+                    if (strpos($fullDbName, $cpanelUsername . '_') === 0) {
+                        $dbNameWithoutPrefix = substr($fullDbName, strlen($cpanelUsername) + 1);
+                        error_log("Nom de base de données sans préfixe extrait: $dbNameWithoutPrefix");
+                    } else {
+                        error_log("ATTENTION: Le nom de base de données '$fullDbName' ne commence pas par le préfixe '$cpanelUsername'");
+                        error_log("Utilisation du nom de base de données original: $dbName");
+                        // Forcer l'utilisation du nom original pour la création
+                        $dbNameWithoutPrefix = $dbName;
+                    }
+                    
+                    error_log("Tentative de création via l'API cPanel: $dbNameWithoutPrefix");
                                 $apiResponse = $this->makeApiRequest('Mysql/create_database', [
                                     'name' => $dbNameWithoutPrefix
                                 ]);
@@ -1069,7 +1123,7 @@ class CpanelService
                                 }
                             } else {
                                 error_log("La base de données '$fullDbName' n'existe pas dans la liste des bases de données.");
-                                
+
                                 // Tenter de créer la base de données via l'API cPanel
                                 try {
                                     // Extraire le nom de la base de données sans le préfixe
@@ -1101,7 +1155,46 @@ class CpanelService
                                 }
                             }
                             
-                            throw new \Exception('Erreur lors de la sélection de la base de données: ' . $mysqli->error);
+                            // Vérifier si l'erreur est "Unknown database" et tenter de créer la base de données
+                            if (strpos($mysqli->error, 'Unknown database') !== false) {
+                                error_log("Erreur 'Unknown database' détectée. Tentative de création de la base de données.");
+                                
+                                // Extraire le nom de la base de données sans le préfixe
+                                $cpanelUsername = $this->apiUsername;
+                                $dbNameWithoutPrefix = $fullDbName;
+                                if (strpos($fullDbName, $cpanelUsername . '_') === 0) {
+                                    $dbNameWithoutPrefix = substr($fullDbName, strlen($cpanelUsername) + 1);
+                                }
+                                
+                                // Tenter de créer la base de données via l'API cPanel
+                                try {
+                                    error_log("Tentative de création via l'API cPanel: $dbNameWithoutPrefix");
+                                    $apiResponse = $this->makeApiRequest('Mysql/create_database', [
+                                        'name' => $dbNameWithoutPrefix
+                                    ]);
+                                    
+                                    if ($apiResponse['status']) {
+                                        error_log("Base de données créée avec succès via l'API cPanel");
+                                        // Réessayer la sélection après création via API
+                                        if ($mysqli->select_db($fullDbName)) {
+                                            error_log("Sélection de la base de données créée via API réussie");
+                                            // Continuer l'exécution normale
+                                        } else {
+                                            error_log("Échec de la sélection après création via API: " . $mysqli->error);
+                                            throw new \Exception('Erreur lors de la sélection de la base de données: ' . $mysqli->error);
+                                        }
+                                    } else {
+                                        $errorMsg = $apiResponse['errors'][0] ?? 'Erreur inconnue';
+                                        error_log("Échec de la création via l'API cPanel: $errorMsg");
+                                        throw new \Exception('Erreur lors de la sélection de la base de données: ' . $mysqli->error . '. Tentative de création échouée: ' . $errorMsg);
+                                    }
+                                } catch (\Exception $e) {
+                                    error_log("Exception lors de la création via l'API cPanel: " . $e->getMessage());
+                                    throw new \Exception('Erreur lors de la sélection de la base de données: ' . $mysqli->error . '. ' . $e->getMessage());
+                                }
+                            } else {
+                                throw new \Exception('Erreur lors de la sélection de la base de données: ' . $mysqli->error);
+                            }
                         } else {
                             error_log("Sélection réussie avec la requête USE et le nom échappé.");
                         }
@@ -1114,7 +1207,7 @@ class CpanelService
                 $queryResult = $mysqli->query($query);
                 
                 if ($queryResult === false) {
-                    throw new \Exception('Erreur lors de l\'exécution de la requête SQL: ' . $mysqli->error);
+                    throw new \Exception('aErreur lors de l\'exécution de la requête SQL: ' . $mysqli->error);
                 }
                 
                 // Préparer la réponse
@@ -1148,8 +1241,47 @@ class CpanelService
                 throw $e; // Pour l'instant, on propage l'erreur
             }
         } catch (\Exception $e) {
-            error_log('Erreur lors de l\'exécution de la requête SQL: ' . $e->getMessage());
-            throw new \Exception('Erreur lors de l\'exécution de la requête SQL: ' . $e->getMessage());
+            error_log('bErreur lors de l\'exécution de la requête SQL: ' . $e->getMessage());
+            
+            // Vérifier si l'erreur est "Unknown database" et tenter de créer la base de données
+            if (strpos($e->getMessage(), 'Unknown database') !== false) {
+                error_log("Erreur 'Unknown database' détectée dans le catch externe. Tentative de création de la base de données.");
+                
+                try {
+                    // Extraire le nom de la base de données sans le préfixe
+                    $cpanelUsername = $this->apiUsername;
+                    $dbNameWithoutPrefix = $fullDbName;
+                    if (strpos($fullDbName, $cpanelUsername . '_') === 0) {
+                        $dbNameWithoutPrefix = substr($fullDbName, strlen($cpanelUsername) + 1);
+                        error_log("Nom de base de données sans préfixe extrait: $dbNameWithoutPrefix");
+                    } else {
+                        error_log("ATTENTION: Le nom de base de données '$fullDbName' ne commence pas par le préfixe '$cpanelUsername'");
+                        error_log("Utilisation du nom de base de données original: $dbName");
+                        // Forcer l'utilisation du nom original pour la création
+                        $dbNameWithoutPrefix = $dbName;
+                    }
+                    
+                    error_log("Tentative de création via l'API cPanel: $dbNameWithoutPrefix");
+                    $apiResponse = $this->makeApiRequest('Mysql/create_database', [
+                        'name' => $dbNameWithoutPrefix
+                    ]);
+                    
+                    if ($apiResponse['status']) {
+                        error_log("Base de données créée avec succès via l'API cPanel");
+                        // Réessayer l'exécution de la requête après création de la base de données
+                        return $this->executeQuery($dbName, $query, $dbPassword);
+                    } else {
+                        $errorMsg = $apiResponse['errors'][0] ?? 'Erreur inconnue';
+                        error_log("Échec de la création via l'API cPanel: $errorMsg");
+                        throw new \Exception('cErreur lors de l\'exécution de la requête SQL: ' . $e->getMessage() . '. Tentative de création de la base de données échouée: ' . $errorMsg);
+                    }
+                } catch (\Exception $createException) {
+                    error_log("Exception lors de la création via l'API cPanel: " . $createException->getMessage());
+                    throw new \Exception('cErreur lors de l\'exécution de la requête SQL: ' . $e->getMessage() . '. ' . $createException->getMessage());
+                }
+            }
+            
+            throw new \Exception('cErreur lors de l\'exécution de la requête SQL: ' . $e->getMessage());
         }
     }
 
@@ -1258,7 +1390,7 @@ class CpanelService
             if (json_last_error() !== JSON_ERROR_NONE) {
                 throw new \Exception('Erreur lors du décodage de la réponse JSON: ' . json_last_error_msg());
             }
-            
+
             // Log de la réponse (en mode développement uniquement)
             if ($_ENV['APP_ENV'] === 'dev') {
                 $responseLog = [
@@ -1286,10 +1418,21 @@ class CpanelService
      */
     public function getFullDatabaseName(string $dbName): string
     {
-        // Ajouter le préfixe cPanel si nécessaire
-        if (strpos($dbName, $this->apiUsername . '_') !== 0) {
-            return $this->apiUsername . '_' . $dbName;
+        // Vérifier si le nom commence déjà par le préfixe cPanel
+        if (strpos($dbName, $this->apiUsername . '_') === 0) {
+            error_log("Le nom de la base de données '$dbName' contient déjà le préfixe '$this->apiUsername'");
+            return $dbName;
         }
-        return $dbName;
+        
+        // Vérifier si le nom contient déjà le préfixe mais sous une forme non reconnue
+        // Par exemple, si le préfixe est en majuscules ou avec des caractères différents
+        if (stripos($dbName, $this->apiUsername . '_') === 0) {
+            error_log("Le nom de la base de données '$dbName' contient le préfixe '$this->apiUsername' sous une forme non reconnue. Correction du préfixe.");
+            $dbNameWithoutPrefix = substr($dbName, strlen($this->apiUsername) + 1);
+            return $this->apiUsername . '_' . $dbNameWithoutPrefix;
+        }
+        
+        error_log("Ajout du préfixe '$this->apiUsername' au nom de la base de données '$dbName'");
+        return $this->apiUsername . '_' . $dbName;
     }
 }

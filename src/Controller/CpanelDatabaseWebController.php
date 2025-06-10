@@ -98,6 +98,7 @@ class CpanelDatabaseWebController extends AbstractController
         $firstWords = substr($content, 0, 30); // Prendre les 30 premiers caractères
         $siteName = preg_replace('/[^a-z0-9]/i', '_', strtolower($firstWords));
         $siteName = substr($siteName, 0, 10); // Limiter la longueur
+        error_log("CpanelDatabaseWebController: Nom de site généré dans la méthode new: '$siteName'");
         
         // Utiliser le préfixe haan7883_ pour les bases de données et utilisateurs
         $dbPrefix = 'haan7883_';
@@ -136,6 +137,10 @@ class CpanelDatabaseWebController extends AbstractController
         $dbName = 'haan7883_db_' . $promptId . '_' . $randomId; // Nom avec préfixe requis
         $username = 'haan7883_u' . $promptId . '_' . substr($randomId, 0, 3); // Nom avec préfixe requis
         $password = $this->generateRandomPassword();
+
+        error_log("CpanelDatabaseWebController: Tentative de création de la base de données: '$dbName'");
+        error_log("CpanelDatabaseWebController: Tentative de création de l'utilisateur: '$username'");
+        error_log("CpanelDatabaseWebController: Mot de passe généré: '$password'");
         
         try {
             // Créer la base de données via l'API cPanel
@@ -199,6 +204,8 @@ class CpanelDatabaseWebController extends AbstractController
         if ($request->isMethod('POST')) {
             $query = $request->request->get('query', '');
             $dbPassword = $request->request->get('db_password', null);
+            
+            error_log("CpanelDatabaseWebController: Nom de la base de données reçu de la requête: '$dbName'");
             
             // Si un mot de passe est fourni, le stocker en session pour les utilisations ultérieures
             if (!empty($dbPassword)) {
