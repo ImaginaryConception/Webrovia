@@ -286,15 +286,52 @@ class MainController extends AbstractController
 
     #[Route('/admin/prompts', name: 'app_admin_prompts')]
     #[IsGranted('ROLE_ADMIN')]
-    public function adminPrompts(EntityManagerInterface $em): Response
+    public function adminPrompts(EntityManagerInterface $em, Request $request, \App\Service\CpanelService $cpanelService): Response
     {
         $prompts = $em->getRepository(Prompt::class)->findAllOrderedByDate();
         $clones = $em->getRepository(WebsiteClone::class)->findAll();
-
-        return $this->render('main/admin_prompts.html.twig', [
-            'prompts' => $prompts,
-            'clones' => $clones
-        ]);
+        
+        try {
+            // Récupérer les bases de données depuis cPanel
+            $allDatabases = $cpanelService->listDatabases();
+            
+            // Liste des bases de données à cacher par défaut
+            $defaultHiddenDatabases = [
+                'haan7883_imaginaryconception',
+                'haan7883_lhannz'
+            ];
+            
+            // Récupérer les bases de données cachées depuis la session
+            $sessionHiddenDatabases = $request->getSession()->get('hidden_databases', []);
+            $hiddenDatabases = array_merge($defaultHiddenDatabases, $sessionHiddenDatabases);
+            
+            // Séparer les bases de données visibles et cachées
+            $visibleDatabases = [];
+            $hiddenDbList = [];
+            
+            foreach ($allDatabases as $database) {
+                if (in_array($database['database'], $hiddenDatabases)) {
+                    $hiddenDbList[] = $database;
+                } else {
+                    $visibleDatabases[] = $database;
+                }
+            }
+            
+            return $this->render('main/admin_prompts.html.twig', [
+                'prompts' => $prompts,
+                'clones' => $clones,
+                'visibleDatabases' => $visibleDatabases,
+                'hiddenDatabases' => $hiddenDbList,
+                'hiddenDatabaseNames' => $hiddenDatabases
+            ]);
+        } catch (\Exception $e) {
+            // En cas d'erreur, continuer sans les bases de données
+            return $this->render('main/admin_prompts.html.twig', [
+                'prompts' => $prompts,
+                'clones' => $clones,
+                'error' => 'Erreur lors de la récupération des bases de données: ' . $e->getMessage()
+            ]);
+        }
     }
 
     #[Route('/create-stripe-session', name: 'pay')]

@@ -1,0 +1,60 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Base de données créée{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('css/database.css') }}">
+{% endblock %}
+
+{% block body %}
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl text-black dark:text-white">Base de données créée avec succès</h1>
+            <a href="{{ path('app_cpanel_database_index') }}" class="db-btn db-btn-secondary">
+                <i class="fas fa-arrow-left mr-2"></i> Retour à la liste
+            </a>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="mb-4">
+                <h2 class="text-xl font-semibold mb-2">Informations de connexion</h2>
+                <p class="text-gray-600 mb-4">Conservez ces informations en lieu sûr. Vous en aurez besoin pour vous connecter à votre base de données.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="border rounded p-4">
+                        <h3 class="font-semibold mb-2">Base de données</h3>
+                        <p class="mb-1"><span class="font-medium">Nom:</span> {{ dbName }}</p>
+                    </div>
+                    
+                    <div class="border rounded p-4">
+                        <h3 class="font-semibold mb-2">Utilisateur</h3>
+                        <p class="mb-1"><span class="font-medium">Nom d'utilisateur:</span> {{ username }}</p>
+                        <p class="mb-1"><span class="font-medium">Mot de passe:</span> {{ password }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6">
+                <h3 class="font-semibold mb-2">Que faire maintenant ?</h3>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li>Vous pouvez accéder à votre base de données via <a href="{{ path('app_cpanel_database_query', {'dbName': dbName}) }}" class="text-blue-600 hover:underline">l'interface SQL</a></li>
+                    <li>Vous pouvez également utiliser ces informations pour configurer votre application</li>
+                </ul>
+                <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mt-4">
+                    <p class="font-semibold"><i class="fas fa-info-circle mr-2"></i> Information</p>
+                    <p>Le mot de passe de cette base de données a été automatiquement sauvegardé en session. Vous n'aurez pas besoin de le saisir à nouveau lors de l'exécution de requêtes SQL.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex justify-between">
+            <a href="{{ path('app_cpanel_database_index') }}" class="db-btn db-btn-secondary">
+                <i class="fas fa-list mr-2"></i> Liste des bases de données
+            </a>
+            <a href="{{ path('app_cpanel_database_query', {'dbName': dbName}) }}" class="db-btn db-btn-primary">
+                <i class="fas fa-terminal mr-2"></i> Exécuter des requêtes SQL
+            </a>
+        </div>
+    </div>
+{% endblock %}

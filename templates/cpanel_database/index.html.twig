@@ -1,0 +1,172 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Gestion des bases de données MySQL{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<link rel="stylesheet" href="{{ asset('css/database.css') }}">
+<style>
+    .cpanel-badge {
+        background-color: #FF6C2C;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    .db-card {
+        transition: all 0.3s ease;
+    }
+    .db-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block page_title %}Gestion des bases de données MySQL{% endblock %}
+{% block page_subtitle %}Créez et gérez les bases de données MySQL sur votre hébergement{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="db-card mb-4">
+        <div class="db-card-header">
+            <h2>Bases de données MySQL</h2>
+        </div>
+        <div class="db-card-body">
+            <div class="alert alert-info mb-4">
+                <p><i class="fas fa-info-circle"></i> Cette interface vous permet de gérer vos bases de données MySQL.</p>
+            </div>
+            
+            {% for label, messages in app.flashes %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ label }} mb-4">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endfor %}
+            
+            <div class="mb-6">
+                <div class="db-card">
+                    <div class="db-card-header">
+                        <h3>Bases de données MySQL</h3>
+                        {# <span class="cpanel-badge">cPanel</span> #}
+                    </div>
+                    <div class="db-card-body">
+                        {% if cpanelDatabases is empty %}
+                            <p class="text-gray-500">Aucune base de données trouvée sur l'hébergement.</p>
+                        {% else %}
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-left">Nom</th>
+                                            <th class="text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for db in cpanelDatabases %}
+                                            <tr>
+                                                <td>{{ db.database }}</td>
+                                                <td class="text-right">
+                                                    <a href="{{ path('app_cpanel_database_query', {'dbName': db.database}) }}" class="db-btn db-btn-sm db-btn-primary db-btn-icon">
+                                                        <i class="fas fa-terminal"></i> SQL
+                                                    </a>
+                                                    <form action="{{ path('app_cpanel_database_delete', {'dbName': db.database}) }}" method="post" class="inline" id="delete-form-{{ db.database|replace({'.': '-'}) }}">
+                                                        <button type="button" class="db-btn db-btn-sm db-btn-danger db-btn-icon" onclick="openDeleteModal('{{ db.database }}')">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6">
+                <h3 class="text-xl font-semibold mb-4">Créer une base de données pour un site</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% set sites = app.user.prompts %}
+                    {% if sites is empty %}
+                        <p class="text-gray-500">Vous n'avez pas encore de sites web.</p>
+                    {% else %}
+                        {% for site in sites %}
+                            {% if site.status == 'completed' %}
+                                <div class="db-card">
+                                    <div class="db-card-header">
+                                        <h4>Site #{{ site.id }}</h4>
+                                    </div>
+                                    <div class="db-card-body">
+                                        <p class="mb-2 text-sm">{{ site.content|length > 100 ? site.content|slice(0, 100) ~ '...' : site.content }}</p>
+                                        <p class="text-sm text-gray-500 mb-4">Créé le {{ site.createdAt|date('d/m/Y') }}</p>
+                                        <a href="{{ path('app_cpanel_database_new', {'promptId': site.id}) }}" class="db-btn db-btn-primary db-btn-icon">
+                                            <i class="fas fa-plus"></i> Créer une base de données
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation de suppression -->
+<div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full">
+        <h3 class="text-xl font-semibold mb-4">Confirmation de suppression</h3>
+        <p id="deleteModalText" class="mb-6">Êtes-vous sûr de vouloir supprimer cette base de données ? Cette action est irréversible.</p>
+        <div class="flex justify-end space-x-3">
+            <button type="button" class="db-btn db-btn-secondary" onclick="closeDeleteModal()">Annuler</button>
+            <button type="button" class="db-btn db-btn-danger" id="confirmDeleteBtn">Supprimer</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+    let currentDatabaseName = '';
+    
+    function openDeleteModal(databaseName) {
+        currentDatabaseName = databaseName;
+        document.getElementById('deleteModalText').textContent = `Êtes-vous sûr de vouloir supprimer la base de données ${databaseName} ? Cette action est irréversible.`;
+        document.getElementById('deleteModal').classList.remove('hidden');
+    }
+    
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.add('hidden');
+    }
+    
+    // S'assurer que le DOM est complètement chargé avant d'attacher les événements
+    document.addEventListener('DOMContentLoaded', function() {
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', function() {
+                // Soumettre le formulaire correspondant à la base de données actuelle
+                if (currentDatabaseName) {
+                    const formId = `delete-form-${currentDatabaseName.replace(/\./g, '-')}`;
+                    const form = document.getElementById(formId);
+                    if (form) {
+                        form.submit();
+                    } else {
+                        console.error(`Formulaire avec ID ${formId} non trouvé`);
+                    }
+                } else {
+                    console.error('Nom de base de données non défini');
+                }
+            });
+        } else {
+            console.error('Bouton de confirmation non trouvé');
+        }
+    });
+</script>
+{% endblock %}

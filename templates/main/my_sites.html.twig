@@ -166,7 +166,7 @@
                                         <button class="download-btn bg-green-600 hover:bg-green-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center" data-prompt-id="{{ prompt.id }}">
                                             <i class="fas fa-download mr-1.5"></i>Télécharger
                                         </button>
-                                        <a href="{{ path('app_database_index') }}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center">
+                                        <a href="{{ path('app_cpanel_database_index', {'promptId': prompt.id}) }}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center">
                                             <i class="fas fa-database mr-1.5"></i>Base de données
                                         </a>
                                         <button class="delete-site-btn bg-red-600 hover:bg-red-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center" data-prompt-id="{{ prompt.id }}">
@@ -628,7 +628,7 @@
                                         <button class="download-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
                                             Télécharger le site
                                         </button>
-                                        <a href="{{ path('app_database_index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                                        <a href="{{ path('app_cpanel_database_index', {'promptId': prompt.id}) }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">
                                             <i class="fas fa-database mr-2"></i>Bases de données
                                         </a>
                                         <button class="delete-site-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">

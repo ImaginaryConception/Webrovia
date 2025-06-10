@@ -5,7 +5,6 @@ namespace App\Entity;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use App\Entity\Database;
 use App\Repository\PromptRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -67,8 +66,6 @@ class Prompt
     #[ORM\OneToMany(mappedBy: 'originalPrompt', targetEntity: self::class)]
     private Collection $modifications;
 
-    #[ORM\OneToMany(mappedBy: 'prompt', targetEntity: Database::class, orphanRemoval: true)]
-    private Collection $databases;
 
     /**
      * @return Collection<int, self>
@@ -102,7 +99,6 @@ class Prompt
 
     public function __construct()
     {
-        $this->databases = new ArrayCollection();
         $this->createdAt = new DateTimeImmutable();
         $this->modifications = new ArrayCollection();
     }
@@ -299,36 +295,6 @@ class Prompt
     public function setGenerationMessage(?string $generationMessage): static
     {
         $this->generationMessage = $generationMessage;
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Database>
-     */
-    public function getDatabases(): Collection
-    {
-        return $this->databases;
-    }
-
-    public function addDatabase(Database $database): static
-    {
-        if (!$this->databases->contains($database)) {
-            $this->databases->add($database);
-            $database->setPrompt($this);
-        }
-
-        return $this;
-    }
-
-    public function removeDatabase(Database $database): static
-    {
-        if ($this->databases->removeElement($database)) {
-            // set the owning side to null (unless already changed)
-            if ($database->getPrompt() === $this) {
-                $database->setPrompt(null);
-            }
-        }
-
         return $this;
     }
 

@@ -11,6 +11,7 @@
         "doctrine/doctrine-bundle": "^2.14",
         "doctrine/doctrine-migrations-bundle": "^3.4",
         "doctrine/orm": "^3.3",
+        "guzzlehttp/guzzle": "^7.9",
         "league/flysystem": "^3.29",
         "league/flysystem-sftp-v3": "^3.29",
         "nicolab/php-ftp-client": "^1.4",

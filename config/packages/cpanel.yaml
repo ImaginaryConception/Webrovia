@@ -1,0 +1,7 @@
+parameters:
+    cpanel_api_url: '%env(CPANEL_API_URL)%'
+
+services:
+    App\Service\CpanelService:
+        arguments:
+            $params: '@parameter_bag'

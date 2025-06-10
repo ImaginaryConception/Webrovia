@@ -1,0 +1,78 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Créer une base de données MySQL{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<link rel="stylesheet" href="{{ asset('css/database.css') }}">
+<style>
+    .cpanel-badge {
+        background-color: #FF6C2C;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block page_title %}Créer une base de données MySQL{% endblock %}
+{% block page_subtitle %}Créez une nouvelle base de données MySQL sur votre hébergement{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="db-card mb-4">
+        <div class="db-card-header">
+            <h2>Créer une base de données MySQL</h2>
+            <div class="flex space-x-2">
+                <a href="{{ path('app_cpanel_database_index') }}" class="db-btn db-btn-secondary db-btn-icon">
+                    <i class="fas fa-arrow-left"></i> Retour aux bases de données
+                </a>
+            </div>
+        </div>
+        <div class="db-card-body">
+            <div class="alert alert-info mb-4">
+                <p><i class="fas fa-info-circle"></i> Créez une nouvelle base de données MySQL sur votre hébergement. Un utilisateur avec les privilèges nécessaires sera automatiquement créé.</p>
+            </div>
+            
+            {% for label, messages in app.flashes %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ label }} mb-4">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endfor %}
+            
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-4">Informations sur le site</h3>
+                <div class="db-card">
+                    <div class="db-card-header">
+                        <h4>Site #{{ prompt.id }}</h4>
+                    </div>
+                    <div class="db-card-body">
+                        <p class="mb-4">{{ prompt.content|length > 200 ? prompt.content|slice(0, 200) ~ '...' : prompt.content }}</p>
+                        <p class="text-sm text-gray-500">Créé le {{ prompt.createdAt|date('d/m/Y') }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-4">Créer une base de données</h3>
+                <div class="alert alert-info mb-4">
+                    <p><i class="fas fa-info-circle"></i> Les noms de base de données et d'utilisateur seront générés automatiquement en fonction de votre site. Un mot de passe sécurisé sera également créé.</p>
+                    <p class="mt-2">Toutes les informations de connexion vous seront fournies après la création.</p>
+                </div>
+                
+                <form action="{{ path('app_cpanel_database_create', {'promptId': prompt.id}) }}" method="post">
+                    <div class="flex justify-end">
+                        <button type="submit" class="db-btn db-btn-primary db-btn-icon">
+                            <i class="fas fa-plus"></i> Créer la base de données
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

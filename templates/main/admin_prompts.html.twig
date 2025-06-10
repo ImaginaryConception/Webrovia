@@ -67,6 +67,101 @@
             </div>
         </div>
 
+        <!-- Section des Bases de données -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Administration des Bases de données</h2>
+            
+            {% if error is defined %}
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    <p>{{ error }}</p>
+                </div>
+            {% endif %}
+            
+            <!-- Bases de données visibles -->
+            <div class="mb-8">
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Bases de données visibles</h3>
+                
+                {% if visibleDatabases is defined and visibleDatabases is not empty %}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nom</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                {% for db in visibleDatabases %}
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">{{ db.database }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                            <form action="{{ path('app_cpanel_database_toggle_hidden') }}" method="post" class="inline">
+                                                <input type="hidden" name="database" value="{{ db.database }}">
+                                                <input type="hidden" name="action" value="hide">
+                                                <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs">
+                                                    <i class="fas fa-eye-slash"></i> Cacher
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-gray-500 dark:text-gray-400">Aucune base de données visible.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Bases de données cachées -->
+            <div class="mb-8">
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Bases de données cachées</h3>
+                
+                {% if hiddenDatabases is defined and hiddenDatabases is not empty %}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nom</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                {% for db in hiddenDatabases %}
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">{{ db.database }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                            <form action="{{ path('app_cpanel_database_toggle_hidden') }}" method="post" class="inline">
+                                                <input type="hidden" name="database" value="{{ db.database }}">
+                                                <input type="hidden" name="action" value="show">
+                                                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs">
+                                                    <i class="fas fa-eye"></i> Afficher
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-gray-500 dark:text-gray-400">Aucune base de données cachée.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Ajouter une base de données à cacher -->
+            <div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Cacher une base de données</h3>
+                <form action="{{ path('app_cpanel_database_toggle_hidden') }}" method="post" class="flex items-center">
+                    <input type="text" name="database" placeholder="Nom de la base de données" class="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-l px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-grow">
+                    <input type="hidden" name="action" value="hide">
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r">
+                        <i class="fas fa-eye-slash"></i> Cacher
+                    </button>
+                </form>
+            </div>
+        </div>
+        
         <!-- Section des Clones -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Administration des Clones</h2>
