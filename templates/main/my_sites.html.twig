@@ -22,7 +22,7 @@
         }
         .delete-confirmation-modal {
             display: none;
-            position: fixed;
+            position: fixed !important;
             top: 0;
             left: 0;
             width: 100%;
@@ -60,7 +60,11 @@
         <div class="text-center mb-12">
             <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">Mes Sites Web</h1>
             <p class="text-lg text-gray-600 dark:text-gray-300">Gérez vos sites web générés par Webrovia</p>
-            <a href="{{ path('app_home') }}" class="inline-block mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Générer un nouveau site</a>
+            <div class="flex justify-center space-x-4 mt-4">
+                <a href="{{ path('app_home') }}" class="inline-block bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">
+                    <i class="fas fa-plus-circle mr-2"></i>Générer un nouveau site
+                </a>
+            </div>
         </div>
 
         {% set domain_name_widget = form_widget(domain_form.domainName) %}
@@ -158,16 +162,17 @@
                                     </div>
                                 {% else %}
                                     {% if prompt.status != 'error' %}
-                                    <div class="flex space-x-4">
-                                        <button class="download-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
-                                            Télécharger le site
+                                    <div class="flex space-x-3">
+                                        <button class="download-btn bg-green-600 hover:bg-green-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center" data-prompt-id="{{ prompt.id }}">
+                                            <i class="fas fa-download mr-1.5"></i>Télécharger
                                         </button>
-                                        <a href="{{ path('app_database_index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">
-                                            <i class="fas fa-database mr-2"></i>Bases de données
+                                        <a href="{{ path('app_database_index') }}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center">
+                                            <i class="fas fa-database mr-1.5"></i>Base de données
                                         </a>
-                                        <button class="delete-site-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
-                                            <i class="fas fa-trash-alt mr-2"></i>Supprimer le site
+                                        <button class="delete-site-btn bg-red-600 hover:bg-red-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center" data-prompt-id="{{ prompt.id }}">
+                                            <i class="fas fa-trash-alt mr-1.5"></i>Supprimer
                                         </button>
+                                    </div>
 
                                         <!-- Modal de confirmation de suppression -->
                                         <div id="deleteConfirmationModal-{{ prompt.id }}" class="delete-confirmation-modal">
@@ -182,29 +187,37 @@
                                         </div>
                                     </div>
                                     {% endif %}
-                                    <div class="flex flex-col space-y-2">
+                                    <div class="flex flex-col space-y-4 mt-4">
                                         {% if prompt.deployed %}
-                                            <div class="flex space-x-4">
-                                                <div class="text-green-600 dark:text-green-400 font-semibold py-2 px-4">
-                                                    Site publié sur {{ prompt.domainName }}
+                                            <div class="flex items-center space-x-4 bg-green-50 dark:bg-green-900/30 p-3 rounded-md">
+                                                <div class="text-green-600 dark:text-green-400 font-semibold">
+                                                    <i class="fas fa-check-circle mr-2"></i>Site publié sur {{ prompt.domainName }}
                                                 </div>
                                                 <form action="{{ path('app_deploy_site', {'promptId': prompt.id}) }}" method="post" class="inline">
-                                                    <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded transition duration-200">
-                                                        Redéployer le site
+                                                    <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center">
+                                                        <i class="fas fa-sync-alt mr-1.5"></i>Redéployer
                                                     </button>
                                                 </form>
                                             </div>
                                         {% else %}
                                             {% if prompt.status != 'error' %}
-                                            {{ form_start(domain_form, {'action': path('payDomain', {'type': 'site', 'id': prompt.id}), 'attr': {'class': 'space-y-2'}}) }}
-                                                <div class="flex space-x-2">
-                                                    {{ domain_name_widget|raw }}
-                                                    {{ extension_widget|raw }}
+                                            <div class="mt-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                                                <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Déployer votre site</h4>
+                                                {{ form_start(domain_form, {'action': path('payDomain', {'type': 'site', 'id': prompt.id}), 'attr': {'class': 'space-y-3'}}) }}
+                                                    <div class="flex space-x-2">
+                                                        {{ domain_name_widget|raw }}
+                                                        {{ extension_widget|raw }}
+                                                    </div>
+                                                    <div id="domain-availability-message-{{ prompt.id }}" class="mt-2 hidden"></div>
+                                                    <div class="flex space-x-2 mt-2">
+                                                        <button type="button" id="check-domain-{{ prompt.id }}" class="bg-gray-600 hover:bg-gray-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center">
+                                                            <i class="fas fa-search mr-1.5"></i>Vérifier la disponibilité
+                                                        </button>
+                                                        <button type="submit" id="publish-button-{{ prompt.id }}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center" disabled>
+                                                            <i class="fas fa-globe mr-1.5"></i>Publier le site
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <button type="submit" id="publish-button-{{ prompt.id }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">
-                                                    Publier le site
-                                                    </button>
                                                 {% endif %}
                                         {% endif %}
                                                     <script>
@@ -212,19 +225,117 @@
                                                             const domainInput = document.querySelector('#{{ domain_form.domainName.vars.id }}');
                                                             const extensionSelect = document.querySelector('#{{ domain_form.extension.vars.id }}');
                                                             const publishButton = document.querySelector('#publish-button-{{ prompt.id }}');
+                                                            const checkDomainButton = document.querySelector('#check-domain-{{ prompt.id }}');
+                                                            const availabilityMessage = document.querySelector('#domain-availability-message-{{ prompt.id }}');
+                                                            let domainChecked = false;
 
                                                             function updateButtonText() {
                                                                 const domain = domainInput.value;
                                                                 const extension = extensionSelect.value;
                                                                 if (domain) {
                                                                     publishButton.textContent = `Publier sur ${domain}${extension}`;
+                                                                    checkDomainButton.textContent = `Vérifier ${domain}${extension}`;
                                                                 } else {
                                                                     publishButton.textContent = 'Publier le site';
+                                                                    checkDomainButton.textContent = 'Vérifier la disponibilité';
                                                                 }
+                                                                // Réinitialiser l'état de vérification du domaine
+                                                                domainChecked = false;
+                                                                publishButton.disabled = true;
+                                                                availabilityMessage.classList.add('hidden');
                                                             }
 
                                                             domainInput.addEventListener('input', updateButtonText);
                                                             extensionSelect.addEventListener('change', updateButtonText);
+                                                            
+                                                            checkDomainButton.addEventListener('click', function() {
+                                                                const domain = domainInput.value;
+                                                                const extension = extensionSelect.value;
+                                                                
+                                                                if (!domain) {
+                                                                    availabilityMessage.textContent = 'Veuillez entrer un nom de domaine';
+                                                                    availabilityMessage.classList.remove('hidden');
+                                                                    availabilityMessage.classList.add('text-red-600');
+                                                                    return;
+                                                                }
+                                                                
+                                                                // Désactiver le bouton pendant la vérification
+                                                                checkDomainButton.disabled = true;
+                                                                checkDomainButton.textContent = 'Vérification en cours...';
+                                                                availabilityMessage.textContent = 'Vérification de la disponibilité...';
+                                                                availabilityMessage.classList.remove('hidden', 'text-red-600', 'text-green-600');
+                                                                availabilityMessage.classList.add('text-gray-600');
+                                                                
+                                                                fetch('/check-domain-availability', {
+                                                                    method: 'POST',
+                                                                    headers: {
+                                                                        'Content-Type': 'application/json',
+                                                                        'X-Requested-With': 'XMLHttpRequest'
+                                                                    },
+                                                                    body: JSON.stringify({
+                                                                        domainName: domain,
+                                                                        extension: extension
+                                                                    })
+                                                                })
+                                                                .then(response => response.json())
+                                                                .then(data => {
+                                                                    checkDomainButton.disabled = false;
+                                                                    checkDomainButton.textContent = `Vérifier ${domain}${extension}`;
+                                                                    
+                                                                    // Logs détaillés pour le débogage
+                                                                    console.log('Réponse API complète:', data);
+                                                                    console.log('Prix reçu (data.price):', data.price);
+                                                                    console.log('Type de data.price:', typeof data.price);
+                                                                    
+                                                                    if (data.error) {
+                                                                        availabilityMessage.textContent = `Erreur: ${data.error}`;
+                                                                        availabilityMessage.classList.add('text-red-600');
+                                                                        availabilityMessage.classList.remove('text-green-600');
+                                                                        publishButton.disabled = true;
+                                                                    } else if (data.avail) {
+                                                                        // Construction du message avec prix
+                                                                        let message = `Le domaine ${data.domain} est disponible`;
+                                                                        
+                                                                        // Vérification explicite du prix
+                                                                        if (data.price && data.price !== null && data.price !== undefined && data.price !== '') {
+                                                                            message += ` pour ${data.price}$/an`;
+                                                                            console.log('Prix ajouté au message:', data.price);
+                                                                        } else {
+                                                                            console.log('Prix non disponible ou invalide dans la réponse');
+                                                                        }
+                                                                        
+                                                                        message += '!';
+                                                                        console.log('Message final:', message);
+                                                                        
+                                                                        availabilityMessage.textContent = message;
+                                                                        availabilityMessage.classList.add('text-green-600');
+                                                                        availabilityMessage.classList.remove('text-red-600');
+                                                                        publishButton.disabled = false;
+                                                                        domainChecked = true;
+                                                                        
+                                                                        // Mise à jour du champ caché pour le prix du domaine si présent
+                                                                        const domainPriceInput = document.querySelector('.domain-price-input');
+                                                                        if (domainPriceInput && data.price) {
+                                                                            domainPriceInput.value = data.price;
+                                                                            console.log('Champ prix mis à jour avec:', data.price);
+                                                                        }
+                                                                    } else {
+                                                                        availabilityMessage.textContent = `Le domaine ${data.domain} n'est pas disponible. Veuillez en choisir un autre.`;
+                                                                        availabilityMessage.classList.add('text-red-600');
+                                                                        availabilityMessage.classList.remove('text-green-600');
+                                                                        publishButton.disabled = true;
+                                                                    }
+                                                                    
+                                                                    availabilityMessage.classList.remove('hidden');
+                                                                })
+                                                                .catch(error => {
+                                                                    checkDomainButton.disabled = false;
+                                                                    checkDomainButton.textContent = `Vérifier ${domain}${extension}`;
+                                                                    availabilityMessage.textContent = 'Erreur lors de la vérification du domaine. Veuillez réessayer.';
+                                                                    availabilityMessage.classList.add('text-red-600');
+                                                                    publishButton.disabled = true;
+                                                                });
+                                                            });
                                                         });
                                                     </script>
                                                 </div>

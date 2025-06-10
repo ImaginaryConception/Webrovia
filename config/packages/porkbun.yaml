@@ -1,0 +1,8 @@
+parameters:
+    porkbun_api_key: '%env(PORKBUN_API_KEY)%'
+    porkbun_secret_key: '%env(PORKBUN_SECRET_KEY)%'
+
+services:
+    App\Service\PorkbunService:
+        arguments:
+            $params: '@parameter_bag'

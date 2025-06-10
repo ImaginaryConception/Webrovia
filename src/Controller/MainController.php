@@ -13,6 +13,7 @@ use Stripe\StripeClient;
 use App\Service\FtpService;
 use App\Entity\WebsiteClone;
 use Stripe\Checkout\Session;
+use App\Service\PorkbunService;
 use App\Message\GenerateWebsiteMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\PromptRestorationService;
@@ -22,12 +23,14 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+use Psr\Log\LoggerInterface;
 
 class MainController extends AbstractController
 {
@@ -314,7 +317,7 @@ class MainController extends AbstractController
     }
 
     #[Route('/payment/success', name: 'app_payment_success')]
-    public function paymentSuccess(Request $request, EntityManagerInterface $em, FtpService $ftpService): Response
+    public function paymentSuccess(Request $request, EntityManagerInterface $em, FtpService $ftpService, PorkbunService $porkbunService): Response
     {
         $type = $request->query->get('type');
         $id = $request->query->get('id');
@@ -329,6 +332,37 @@ class MainController extends AbstractController
             }
 
             $fullDomain = $domainName . $extension;
+            
+            // Vérifier la disponibilité du domaine
+            try {
+                $availabilityResult = $porkbunService->checkDomainAvailability($fullDomain);
+                if (!($availabilityResult['avail'] ?? false)) {
+                    $this->addFlash('error', 'Le domaine ' . $fullDomain . ' n\'est pas disponible. Veuillez en choisir un autre.');
+                    return $this->redirectToRoute('app_my_sites', ['id' => $id]);
+                }
+                
+                // Enregistrer le domaine via Porkbun
+                $registerResult = $porkbunService->registerDomain($fullDomain);
+                if (!($registerResult['success'] ?? false)) {
+                    $this->addFlash('error', 'Erreur lors de l\'enregistrement du domaine: ' . ($registerResult['message'] ?? 'Erreur inconnue'));
+                    return $this->redirectToRoute('app_my_sites', ['id' => $id]);
+                }
+                
+                // Ajouter un enregistrement DNS pour rediriger vers l'IP du serveur
+                $dnsResult = $porkbunService->addDnsRecord($fullDomain, 'A', '@', '109.234.162.89');
+                if (!($dnsResult['success'] ?? false)) {
+                    $this->addFlash('warning', 'Le domaine a été enregistré mais la configuration DNS a échoué: ' . ($dnsResult['message'] ?? 'Erreur inconnue'));
+                }
+                
+                // Récupérer un certificat SSL pour le domaine
+                $sslResult = $porkbunService->retrieveSslCertificate($fullDomain);
+                if (!($sslResult['success'] ?? false)) {
+                    $this->addFlash('warning', 'Le domaine a été enregistré mais la génération du certificat SSL a échoué: ' . ($sslResult['message'] ?? 'Erreur inconnue'));
+                }
+            } catch (\Exception $e) {
+                $this->addFlash('warning', 'Une erreur est survenue lors de la configuration du domaine: ' . $e->getMessage());
+            }
+            
             $prompt->setDomainName($fullDomain);
             $prompt->setDeployed(true);
             $em->flush();
@@ -353,8 +387,29 @@ class MainController extends AbstractController
         ]);
     }
 
+    #[Route('/test/', name: 'pasyDomain')]
+    public function testPorkbun(PorkbunService $porkbunService): JsonResponse
+    {
+        try {
+            $domain = 'webrovia.com';
+            $result = $porkbunService->checkDomainAvailability($domain);
+
+            return new JsonResponse([
+                'success' => true,
+                'domain' => $domain,
+                'available' => $result['available'] ?? false,
+                'price' => $result['price'] ?? 'N/A'
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
     #[Route('/create-stripe-session-domain/{type}/{id}', name: 'payDomain')]
-    public function domainCheckout(string $type, int $id, Request $request, UrlGeneratorInterface $urlGenerator): RedirectResponse
+    public function domainCheckout(string $type, int $id, Request $request, UrlGeneratorInterface $urlGenerator, LoggerInterface $logger): RedirectResponse
     {
         $stripe = new StripeClient($_ENV['STRIPE_SECRET_KEY']);
 
@@ -366,13 +421,44 @@ class MainController extends AbstractController
         $formData = $request->request->all()['domain'];
         $domainName = $formData['domainName'];
         $extension = $formData['extension'];
-
-        $checkoutSession = $stripe->checkout->sessions->create([
-            'line_items' => [[
+        $price = $formData['price'] ?? null;
+        
+        $logger->info('Données du formulaire de domaine', [
+            'domainName' => $domainName,
+            'extension' => $extension,
+            'price' => $price
+        ]);
+        
+        // Créer une session de paiement avec le prix dynamique si disponible
+        $lineItems = [];
+        
+        if ($price && is_numeric($price)) {
+            // Convertir le prix en centimes pour Stripe (Stripe utilise les centimes)
+            $priceInCents = (int)($price * 100);
+            $logger->info('Prix en centimes pour Stripe', ['priceInCents' => $priceInCents]);
+            
+            $lineItems[] = [
+                'price_data' => [
+                    'currency' => 'usd',
+                    'product_data' => [
+                        'name' => "Domaine {$domainName}{$extension}",
+                    ],
+                    'unit_amount' => $priceInCents,
+                ],
+                'quantity' => 1,
+            ];
+        } else {
+            // Fallback sur le prix fixe si le prix dynamique n'est pas disponible
+            $logger->warning('Prix du domaine non disponible, utilisation du prix fixe', ['price' => $price]);
+            $lineItems[] = [
                 'price' => 'price_1RQFAkBtUGEFOuHvakQdWcqY',
                 'quantity' => 1,
-            ]],
-            'mode' => 'subscription',
+            ];
+        }
+        
+        $checkoutSession = $stripe->checkout->sessions->create([
+            'line_items' => $lineItems,
+            'mode' => 'payment', // Changé de 'subscription' à 'payment' pour un paiement unique
             'payment_method_types' => ['card'],
             'success_url' => $urlGenerator->generate('app_payment_success', [
                 'type' => $type,
@@ -385,7 +471,8 @@ class MainController extends AbstractController
                 'type' => $type,
                 'id' => $id,
                 'domainName' => $domainName,
-                'extension' => $extension
+                'extension' => $extension,
+                'price' => $price
             ]
         ]);
 

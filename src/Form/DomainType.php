@@ -46,6 +46,14 @@ class DomainType extends AbstractType
                     'class' => 'px-4 py-2 border rounded-r-lg bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600',
                 ],
             ])
+            ->add('price', TextType::class, [
+                'label' => false,
+                'required' => false,
+                'mapped' => true,
+                'attr' => [
+                    'class' => 'domain-price-input hidden',
+                ],
+            ])
         ;
     }
 
