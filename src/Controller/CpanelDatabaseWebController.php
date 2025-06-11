@@ -251,7 +251,8 @@ class CpanelDatabaseWebController extends AbstractController
             'error' => $error,
             'success' => $success,
             'query' => $request->request->get('query', ''),
-            'tables' => $tables
+            'tables' => $tables,
+            'selectedTable' => $request->request->get('selectedTable', $request->query->get('selectedTable'))
         ]);
     }
 

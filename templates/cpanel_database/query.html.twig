@@ -89,19 +89,19 @@
                 
                 {% if result is defined %}
                     <div class="mt-6">
-                        <h3 class="text-xl font-semibold mb-4">Résultats</h3>
                         
                         {% if result.error is defined %}
-                            <div class="alert alert-danger">
+                            <div class="alert alert-danger mb-3">
                                 <p><i class="fas fa-exclamation-triangle"></i> Erreur : {{ result.error }}</p>
                             </div>
                         {% elseif result.message is defined %}
-                            <div class="alert alert-success">
+                            <div class="alert alert-success mb-3">
                                 <p><i class="fas fa-check-circle"></i> {{ result.message }}</p>
                             </div>
                         {% elseif result.data is defined and result.data is not empty %}
-                            <div class="result-table">
-                                <table>
+                            <h3 class="text-xl font-semibold mb-4">Résultats</h3>
+                            <div class="result-table mb-3 db-table-container">
+                                <table class="db-table">
                                     <thead>
                                         <tr>
                                             {% for column in result.data[0]|keys %}
@@ -122,11 +122,11 @@
                             </div>
                         {% else %}
                             {% if success is defined and success is not empty %}
-                                <div class="alert alert-success">
+                                <div class="alert alert-success mb-3">
                                     <p><i class="fas fa-check-circle"></i> {{ success }}</p>
                                 </div>
                             {% else %}
-                                <div class="alert alert-info mb-3">
+                                <div class="alert hidden alert-info mb-3">
                                     <p><i class="fas fa-info-circle"></i> La requête a été exécutée avec succès, mais n'a retourné aucun résultat.</p>
                                 </div>
                             {% endif %}
@@ -213,6 +213,7 @@
                                 </button>
                             </div>
                             <input type="hidden" name="db_password" value="{{ app.session.get('db_password_' ~ dbName) }}">
+                            <input type="hidden" name="query" id="table_data_query">
                         </form>
                     </div>
                     
@@ -237,16 +238,6 @@
                                                 {% for value in row %}
                                                     <td>{{ value }}</td>
                                                 {% endfor %}
-                                                <td class="db-table-actions">
-                                                    <div class="flex space-x-2">
-                                                        <button class="db-btn db-btn-sm db-btn-secondary">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button class="db-btn db-btn-sm db-btn-danger">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>
@@ -303,8 +294,8 @@
                                         <button onclick="selectTableForManagement('{{ table }}');" class="db-btn db-btn-sm db-btn-secondary db-btn-icon">
                                             <i class="fas fa-database"></i> Gérer
                                         </button>
-                                        <form action="{{ path('app_cpanel_database_drop_table', {'dbName': dbName, 'tableName': table}) }}" method="post" class="inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette table ? Cette action est irréversible.')">
-                                            <button type="submit" class="db-btn db-btn-sm db-btn-danger db-btn-icon">
+                                        <form action="{{ path('app_cpanel_database_drop_table', {'dbName': dbName, 'tableName': table}) }}" method="post" class="inline delete-table-form">
+                                            <button type="submit" class="db-btn db-btn-sm db-btn-danger db-btn-icon" data-table-name="{{ table }}">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </form>
@@ -314,6 +305,19 @@
                         {% endfor %}
                     </div>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="deleteConfirmationModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Confirmer la suppression</h2>
+            <p>Êtes-vous sûr de vouloir supprimer la table <strong id="tableNameToDelete"></strong> ? Cette action est irréversible.</p>
+            <div class="modal-actions">
+                <button id="cancelDelete" class="db-btn db-btn-secondary">Annuler</button>
+                <button id="confirmDelete" class="db-btn db-btn-danger">Supprimer</button>
             </div>
         </div>
     </div>
@@ -332,172 +336,163 @@
             tab.addEventListener('click', () => {
                 const tabId = tab.getAttribute('data-tab');
                 
-                // Désactiver tous les onglets et contenus
-                tabs.forEach(t => t.classList.remove('active'));
-                tabContents.forEach(content => content.classList.remove('active'));
-                
-                // Activer l'onglet et le contenu sélectionnés
+                tabs.forEach(item => item.classList.remove('active'));
                 tab.classList.add('active');
-                document.getElementById('tab-' + tabId).classList.add('active');
                 
-                // Stocker l'onglet actif dans le localStorage
-                localStorage.setItem('activeTab', tabId);
+                tabContents.forEach(content => {
+                    if (content.id === `tab-${tabId}`) {
+                        content.classList.add('active');
+                    } else {
+                        content.classList.remove('active');
+                    }
+                });
             });
         });
-        
-        // Restaurer l'onglet actif depuis le localStorage
-        const activeTab = localStorage.getItem('activeTab');
-        if (activeTab) {
-            const tabToActivate = document.querySelector(`.tab[data-tab="${activeTab}"]`);
-            if (tabToActivate) {
-                tabToActivate.click();
-            }
-        }
-        
-        // Fonction pour changer d'onglet depuis l'extérieur
+
+        // Function to switch tabs programmatically
         window.switchToTab = function(tabId) {
-            const tabToActivate = document.querySelector(`.tab[data-tab="${tabId}"]`);
-            if (tabToActivate) {
-                tabToActivate.click();
-            }
+            tabs.forEach(tab => {
+                if (tab.getAttribute('data-tab') === tabId) {
+                    tab.click();
+                }
+            });
         };
-        
-        // Gestion des champs dynamiques pour la création de table
+
+        // Handle table selection for management tab
+        window.selectTableForManagement = function(tableName) {
+            document.getElementById('table-select').value = tableName;
+            switchToTab('manage-data');
+            document.getElementById('select-table-form').submit();
+        };
+
+        // Dynamic field addition for table creation
         const fieldsContainer = document.getElementById('fields-container');
         const addFieldBtn = document.querySelector('.btn-add-field');
-        
-        if (addFieldBtn && fieldsContainer) {
-            let fieldCount = 1;
-            
-            addFieldBtn.addEventListener('click', () => {
-                const fieldRow = document.createElement('div');
-                fieldRow.className = 'field-row';
-                
-                fieldRow.innerHTML = `
-                    <input type="text" name="field_name[]" class="db-input mb-3 db-field-name" placeholder="Nom du champ" required>
-                    <select name="field_type[]" class="db-select">
-                        <option value="VARCHAR(255)">Texte court (VARCHAR)</option>
-                        <option value="TEXT">Texte long (TEXT)</option>
-                        <option value="INT">Nombre entier (INT)</option>
-                        <option value="DECIMAL(10,2)">Nombre décimal (DECIMAL)</option>
-                        <option value="DATE">Date</option>
-                        <option value="DATETIME">Date et heure</option>
-                        <option value="BOOLEAN">Booléen</option>
-                    </select>
-                    <div class="db-checkbox-container mb-3 mt-3">
-                        <input type="checkbox" name="field_null[${fieldCount}]" id="field_null_${fieldCount}" class="db-checkbox">
-                        <label for="field_null_${fieldCount}" class="db-checkbox-label">Peut être vide</label>
-                    </div>
-                    <div class="db-field-actions">
-                        <button type="button" class="db-btn mt-3 mb-3 db-btn-danger db-btn-small db-btn-icon remove-field">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `;
-                
-                fieldsContainer.appendChild(fieldRow);
-                
-                // Activer le bouton de suppression pour tous les champs
-                const removeButtons = document.querySelectorAll('.remove-field');
-                removeButtons.forEach(btn => {
-                    btn.disabled = removeButtons.length <= 1;
-                    btn.addEventListener('click', function() {
-                        this.closest('.field-row').remove();
-                        
-                        // Mettre à jour l'état des boutons de suppression
-                        const remainingButtons = document.querySelectorAll('.remove-field');
-                        remainingButtons.forEach(btn => {
-                            btn.disabled = remainingButtons.length <= 1;
-                        });
-                    });
-                });
-                
-                fieldCount++;
-            });
-            
-            // Initialiser le premier bouton de suppression
-            const initialRemoveButton = document.querySelector('.remove-field');
-            if (initialRemoveButton) {
-                initialRemoveButton.addEventListener('click', function() {
-                    this.closest('.field-row').remove();
-                });
+        let fieldCount = 1; // Start from 1 as one field is already present
+
+        addFieldBtn.addEventListener('click', () => {
+            const newFieldRow = document.createElement('div');
+            newFieldRow.classList.add('field-row');
+            newFieldRow.innerHTML = `
+                <input type="text" name="field_name[]" class="db-input mb-3 db-field-name" placeholder="Nom du champ" required>
+                <select name="field_type[]" class="db-select">
+                    <option value="VARCHAR(255)">Texte court (VARCHAR)</option>
+                    <option value="TEXT">Texte long (TEXT)</option>
+                    <option value="INT">Nombre entier (INT)</option>
+                    <option value="DECIMAL(10,2)">Nombre décimal (DECIMAL)</option>
+                    <option value="DATE">Date</option>
+                    <option value="DATETIME">Date et heure</option>
+                    <option value="BOOLEAN">Booléen</option>
+                </select>
+                <div class="checkbox-container mb-3 mt-3">
+                    <input type="checkbox" name="field_null[${fieldCount}]" id="field_null_${fieldCount}">
+                    <label for="field_null_${fieldCount}">Peut être vide</label>
+                </div>
+                <div class="field-actions">
+                    <button type="button" class="db-btn db-btn-sm db-btn-danger remove-field">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            fieldsContainer.appendChild(newFieldRow);
+            fieldCount++;
+            updateRemoveButtons();
+        });
+
+        fieldsContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-field') || e.target.closest('.remove-field')) {
+                const row = e.target.closest('.field-row');
+                if (row) {
+                    row.remove();
+                    updateRemoveButtons();
+                }
+            }
+        });
+
+        function updateRemoveButtons() {
+            const removeButtons = document.querySelectorAll('.remove-field');
+            if (removeButtons.length === 1) {
+                removeButtons[0].setAttribute('disabled', 'true');
+            } else {
+                removeButtons.forEach(button => button.removeAttribute('disabled'));
             }
         }
-        
-        // Validation du formulaire de création de table
+
+        updateRemoveButtons(); // Initial call to disable if only one field
+
+        // Generate CREATE TABLE query dynamically
         const createTableForm = document.getElementById('create-table-form');
         if (createTableForm) {
             createTableForm.addEventListener('submit', function(e) {
-                const tableNameInput = document.getElementById('table_name');
-                const fieldNameInputs = document.querySelectorAll('input[name="field_name[]"]');
-                
-                if (!tableNameInput.value.trim()) {
-                    e.preventDefault();
-                    alert('Veuillez saisir un nom de table.');
-                    return;
-                }
-                
-                let hasEmptyField = false;
-                fieldNameInputs.forEach(input => {
-                    if (!input.value.trim()) {
-                        hasEmptyField = true;
-                    }
-                });
-                
-                if (hasEmptyField) {
-                    e.preventDefault();
-                    alert('Tous les champs doivent avoir un nom.');
-                    return;
-                }
-                
-                // Générer la requête SQL CREATE TABLE
-                const tableName = tableNameInput.value.trim();
+                // e.preventDefault(); // Prevent default submission for now
+
+                const tableName = document.getElementById('table_name').value;
                 const addIdField = document.getElementById('add_id_field').checked;
-                
-                let query = `CREATE TABLE \`${tableName}\` (\n`;
-                
-                // Ajouter le champ ID auto-incrémenté si demandé
-                if (addIdField) {
-                    query += '    `id` INT AUTO_INCREMENT PRIMARY KEY,\n';
-                }
-                
-                // Ajouter les champs définis par l'utilisateur
-                const fieldRows = document.querySelectorAll('.field-row');
+                const fieldNames = document.querySelectorAll('input[name="field_name[]"]');
+                const fieldTypes = document.querySelectorAll('select[name="field_type[]"]');
+                const fieldNulls = document.querySelectorAll('[name^="field_null["]');
+
+                let query = `CREATE TABLE ${tableName} (`;
                 let fields = [];
-                
-                fieldRows.forEach((row, index) => {
-                    const fieldName = row.querySelector('input[name="field_name[]"]').value.trim();
-                    const fieldType = row.querySelector('select[name="field_type[]"]').value;
-                    const canBeNull = row.querySelector(`input[id^="field_null_"]`).checked;
-                    
-                    if (fieldName) {
-                        let fieldDef = `    \`${fieldName}\` ${fieldType}`;
-                        fieldDef += canBeNull ? '' : ' NOT NULL';
-                        fields.push(fieldDef);
-                    }
+
+                if (addIdField) {
+                    fields.push('`id` INT AUTO_INCREMENT PRIMARY KEY');
+                }
+
+                fieldNames.forEach((nameInput, index) => {
+                    const name = nameInput.value;
+                    const type = fieldTypes[index].value;
+                    const isNull = fieldNulls[index].checked ? 'NULL' : 'NOT NULL';
+                    fields.push(`\`${name}\` ${type} ${isNull}`);
                 });
-                
-                query += fields.join(',\n');
-                query += '\n);';
-                
-                // Mettre la requête dans le champ caché
+
+                query += fields.join(', ');
+                query += `);`;
+
                 document.getElementById('create_table_query').value = query;
+                // console.log(query); // For debugging
+                // This form will now submit with the hidden query field populated
             });
         }
-        
-        // Gestion de la sélection de table pour la gestion des données
-        window.selectTableForManagement = function(tableName) {
-            const tableSelect = document.getElementById('table-select');
-            if (tableSelect) {
-                tableSelect.value = tableName;
-                switchToTab('manage-data');
-                
-                // Soumettre le formulaire après un court délai pour permettre le changement d'onglet
-                setTimeout(() => {
-                    document.getElementById('select-table-form').submit();
-                }, 100);
+
+        // Modal Logic for Delete Table
+        const deleteModal = document.getElementById('deleteConfirmationModal');
+        const closeButton = document.querySelector('.close-button');
+        const cancelDeleteButton = document.getElementById('cancelDelete');
+        const confirmDeleteButton = document.getElementById('confirmDelete');
+        const tableNameToDeleteSpan = document.getElementById('tableNameToDelete');
+        let formToSubmit = null;
+
+        document.querySelectorAll('.delete-table-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault(); // Prevent default form submission
+                formToSubmit = this; // Store the form to be submitted later
+                const tableName = this.querySelector('[data-table-name]').getAttribute('data-table-name');
+                tableNameToDeleteSpan.textContent = tableName;
+                deleteModal.style.display = 'flex'; // Show the modal
+            });
+        });
+
+        closeButton.addEventListener('click', () => {
+            deleteModal.style.display = 'none';
+        });
+
+        cancelDeleteButton.addEventListener('click', () => {
+            deleteModal.style.display = 'none';
+        });
+
+        confirmDeleteButton.addEventListener('click', () => {
+            if (formToSubmit) {
+                formToSubmit.submit(); // Submit the stored form
             }
-        };
+            deleteModal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === deleteModal) {
+                deleteModal.style.display = 'none';
+            }
+        });
     });
 </script>
 {% endblock %}
