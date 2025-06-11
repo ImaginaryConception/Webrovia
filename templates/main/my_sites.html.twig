@@ -1716,7 +1716,7 @@
                     const result = await response.json();
 
                     if (result.success) {
-                        window.location.href = "{{ path('app_list_sites') }}";
+                        window.location.href = "{{ path('app_my_sites') }}";
                     } else {
                         throw new Error(result.error || 'Une erreur est survenue lors du déploiement');
                     }
@@ -1798,7 +1798,7 @@
                     const result = await response.json();
 
                     if (result.success) {
-                        window.location.href = "{{ path('app_list_sites') }}";
+                        window.location.href = "{{ path('app_my_sites') }}";
                     } else {
                         throw new Error(result.error || 'Une erreur est survenue lors du redéploiement');
                     }
@@ -1871,7 +1871,7 @@
                             if (messageContainer) {
                                 messageContainer.remove();
                             }
-                            window.location.href = "{{ path('app_list_sites') }}";
+                            window.location.href = "{{ path('app_my_sites') }}";
                         } else if (data.data && data.data.id) {
                             // Démarrer le polling immédiatement pour obtenir les mises à jour en temps réel
                             pollPromptStatus(data.data.id);
@@ -1886,7 +1886,7 @@
                                 if (messageContainer) {
                                     messageContainer.remove();
                                 }
-                                window.location.href = "{{ path('app_list_sites') }}";
+                                window.location.href = "{{ path('app_my_sites') }}";
                             }
                         } else {
                             // Supprimer le conteneur de message de génération
@@ -1906,7 +1906,7 @@
                     
                     showError('Erreur: ' + error.message);
                     if (error.data && error.data.id) {
-                        window.location.href = "{{ path('app_list_sites') }}";
+                        window.location.href = "{{ path('app_my_sites') }}";
                     }
                 } finally {
                     this.disabled = false;
