@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: false }" :class="{ 'dark': darkMode }">
+<html lang="fr" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: false }" :class="{ 'dark': darkMode }" x-init="$store.lang.init()">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -44,6 +44,25 @@
                 }
             </style>
             <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        <script>
+            document.addEventListener('alpine:init', () => {
+                Alpine.store('lang', {
+                    current: 'fr',
+                    init() {
+                        this.current = localStorage.getItem('lang') || 'fr';
+                        document.documentElement.lang = this.current;
+                        document.dispatchEvent(new CustomEvent('lang-changed', { detail: { lang: this.current } }));
+                    },
+                    toggle() {
+                        this.current = this.current === 'fr' ? 'en' : 'fr';
+                        localStorage.setItem('lang', this.current);
+                        document.documentElement.lang = this.current;
+                        document.dispatchEvent(new CustomEvent('lang-changed', { detail: { lang: this.current } }));
+                        window.location.reload();
+                    }
+                });
+            });
+        </script>
         {% endblock %}
 
         {% block javascripts %}
@@ -182,6 +201,9 @@
                                 <div class="flex flex-shrink-0 items-center">
                                     <a href="{{ path('app_home') }}"><span class="font-bold text-2xl bg-gradient-to-r from-indigo-500 to-pink-500 to-accent bg-clip-text text-transparent">Webyvia</span></a>
                                     <a href="https://www.imaginaryconception.com/" target="_blank"><span class="text-1xl bg-gradient-to-r from-indigo-500 to-pink-500 to-accent bg-clip-text text-transparent ms-3">by Imaginary Conception</span></a>
+                                    <button @click="$store.lang.toggle()" class="ml-4 px-3 py-1 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200">
+                                        <span x-text="$store.lang.current === 'fr' ? 'EN' : 'FR'"></span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
