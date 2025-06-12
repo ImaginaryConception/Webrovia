@@ -33,7 +33,7 @@
         </div>
         <div class="db-card-body">
             <div class="alert alert-info mb-4">
-                <p><i class="fas fa-info-circle"></i> Créez une nouvelle base de données MySQL sur votre hébergement. Un utilisateur avec les privilèges nécessaires sera automatiquement créé.</p>
+                <p class="dark:text-white text-black"><i class="fas fa-info-circle"></i> Créez une nouvelle base de données MySQL sur votre hébergement. Un utilisateur avec les privilèges nécessaires sera automatiquement créé.</p>
             </div>
             
             {% for label, messages in app.flashes %}
@@ -45,23 +45,23 @@
             {% endfor %}
             
             <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-4">Informations sur le site</h3>
+                <h3 class="text-xl font-semibold mb-4 dark:text-white text-black">Informations sur le site</h3>
                 <div class="db-card">
                     <div class="db-card-header">
                         <h4>Site #{{ prompt.id }}</h4>
                     </div>
                     <div class="db-card-body">
-                        <p class="mb-4">{{ prompt.content|length > 200 ? prompt.content|slice(0, 200) ~ '...' : prompt.content }}</p>
+                        <p class="mb-4 dark:text-white text-black">{{ prompt.content|length > 200 ? prompt.content|slice(0, 200) ~ '...' : prompt.content }}</p>
                         <p class="text-sm text-gray-500">Créé le {{ prompt.createdAt|date('d/m/Y') }}</p>
                     </div>
                 </div>
             </div>
             
             <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-4">Créer une base de données</h3>
+                <h3 class="text-xl font-semibold mb-4 dark:text-white text-black">Créer une base de données</h3>
                 <div class="alert alert-info mb-4">
-                    <p><i class="fas fa-info-circle"></i> Les noms de base de données et d'utilisateur seront générés automatiquement en fonction de votre site. Un mot de passe sécurisé sera également créé.</p>
-                    <p class="mt-2">Toutes les informations de connexion vous seront fournies après la création.</p>
+                    <p class="dark:text-white text-black"><i class="fas fa-info-circle"></i> Les noms de base de données et d'utilisateur seront générés automatiquement en fonction de votre site. Un mot de passe sécurisé sera également créé.</p>
+                    <p class="mt-2 dark:text-white text-black">Toutes les informations de connexion vous seront fournies après la création.</p>
                 </div>
                 
                 <form action="{{ path('app_cpanel_database_create', {'promptId': prompt.id}) }}" method="post">

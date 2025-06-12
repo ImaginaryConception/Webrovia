@@ -53,16 +53,10 @@
                     </div>
                 {% endif %}
                 <div class="max-w-3xl mx-auto mb-8 grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="inline-block">
-                        <a href="{{ path('app_list_sites') }}" class="flex items-center justify-center p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 group">
-                            <i class="fas fa-globe text-2xl text-primary dark:group-hover:text-white group-hover:text-black mr-3 transition-colors duration-200"></i>
-                            <span class="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors duration-200">Mes sites générés</span>
-                        </a>
-                    </div>
-                    <div class="inline-block">
-                        <a href="{{ path('app_my_clones') }}" class="flex items-center justify-center p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 group">
-                            <i class="fas fa-copy text-2xl text-accent dark:group-hover:text-white group-hover:text-black mr-3 transition-colors duration-200"></i>
-                            <span class="font-semibold text-gray-900 dark:text-white group-hover:text-accent transition-colors duration-200">Mes clones générés</span>
+                    <div class="inline-block mt-5">
+                        <a href="{{ path('app_list_sites') }}" class="flex-1 bg-gradient-to-r from-indigo-500 to-pink-500 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center justify-center group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-lg flex items-center justify-center p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 group">
+                            <i class="fas fa-globe text-2xl mr-3"></i>
+                            <span>Mes sites générés</span>
                         </a>
                     </div>
             {% endif %}
@@ -96,10 +90,6 @@
                                     </svg>
                                 </span>
                             </button>
-                            <a href="{{ path('app_clone') }}" class="ml-4 px-6 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 flex items-center">
-                                <i class="fas fa-copy mr-2"></i>
-                                Cloner un site
-                            </a>
                         </div>
                     </div>
                 {{ form_end(form) }}

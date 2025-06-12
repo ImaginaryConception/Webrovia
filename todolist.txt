@@ -1,3 +1,12 @@
 TODO :
 
-- Gestion base de données cPanel
+Principal :
+- Synchronisation de la base de données correspondante à un site généré.
+
+Secondaires :
+- Clones
+- Model Maker
+- Mode Focus
+- Interface d'ajout d'enregistrements en base de données
+- Traduction anglais/français du site
+- Modifier code en direct

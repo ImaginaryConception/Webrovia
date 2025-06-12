@@ -1,0 +1,2671 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: false }" :class="{ 'dark': darkMode }">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Mes Sites Web Générés - Webrovia</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
+        {% block stylesheets %}
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.css">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                .CodeMirror {
+                    height: 100%;
+                    font-family: 'Fira Code', monospace;
+                    border: 1px solid #ddd;
+                    border-radius: 0.25rem;
+                    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+                }
+                .dark .CodeMirror {
+                    border: 1px solid #444;
+                }
+                .file-btn.active {
+                    background-color: rgba(59, 130, 246, 0.1);
+                    border-left: 2px solid #3b82f6;
+                }
+                .dark .file-btn.active {
+                    background-color: rgba(59, 130, 246, 0.2);
+                }
+                .CodeMirror-gutters {
+                    background-color: #1F2937 !important;
+                    border-right: 1px solid #444 !important;
+                }
+                .CodeMirror-linenumber {
+                    color: #6B7280 !important;
+                }
+                .CodeMirror-scroll {
+                    background-color: #1F2937 !important;
+                }
+                .CodeMirror-cursor {
+                    border-left: 1px solid #F9FAFB !important;
+                }
+                .delete-confirmation-modal {
+                    display: none;
+                    position: fixed !important;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: rgba(0, 0, 0, 0.5);
+                    z-index: 1000;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .delete-confirmation-modal.show {
+                    display: flex;
+                }
+            </style>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <script>
+                tailwind.config = {
+                    darkMode: 'class',
+                    theme: {
+                        extend: {
+                            colors: {
+                                primary: '#3B82F6',
+                                secondary: '#10B981',
+                                accent: '#8B5CF6'
+                            }
+                        }
+                    }
+                }
+            </script>
+            <style type="text/tailwindcss">
+                @layer utilities {
+                    .content-auto {
+                        content-visibility: auto;
+                    }
+                    .sidebar-icon {
+                        @apply relative flex items-center justify-center h-12 w-12 mt-2 mb-2 mx-auto shadow-lg bg-gray-800 dark:bg-gray-800 text-primary hover:bg-primary hover:text-white rounded-3xl hover:rounded-xl transition-all duration-300 ease-linear cursor-pointer;
+                    }
+                    .fade-in {
+                        opacity: 0;
+                        transform: translateY(20px);
+                        animation: fadeIn 0.6s ease-out forwards;
+                    }
+                    @keyframes fadeIn {
+                        to {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
+                    }
+                }
+            </style>
+            <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Gestionnaire pour les boutons de suppression
+                    document.querySelectorAll('.delete-site-btn').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const promptId = this.dataset.promptId;
+                            const modal = document.querySelector(`#deleteConfirmationModal-${promptId}`);
+                            modal.classList.add('show');
+                        });
+                    });
+
+                    // Gestionnaire pour les boutons d'annulation
+                    document.querySelectorAll('.cancel-delete-confirmation').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const modal = this.closest('.delete-confirmation-modal');
+                            modal.classList.remove('show');
+                        });
+                    });
+
+                    // Gestionnaire pour les boutons de confirmation
+                    document.querySelectorAll('.confirm-delete-site').forEach(button => {
+                        button.addEventListener('click', async function() {
+                            const promptId = this.dataset.promptId;
+                            try {
+                                const response = await fetch(`/delete-site/${promptId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    }
+                                });
+
+                                const data = await response.json();
+                                if (data.success) {
+                                    // Recharger la page après la suppression
+                                    window.location.reload();
+                                } else {
+                                    alert(data.error || 'Une erreur est survenue lors de la suppression');
+                                }
+                            } catch (error) {
+                                alert('Une erreur est survenue lors de la suppression');
+                            } finally {
+                                const modal = this.closest('.delete-confirmation-modal');
+                                modal.classList.remove('show');
+                            }
+                        });
+                    });
+                });
+            </script>
+            <style>
+                .tab-btn {
+                    padding: 0.5rem 1rem;
+                    border-radius: 0.375rem;
+                    transition: all 0.2s;
+                }
+                
+                .tab-btn.active {
+                    background-color: #4F46E5;
+                    color: white;
+                }
+                
+                .fullscreen {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100vw;
+                    height: 100vh;
+                    z-index: 9999;
+                    background: white;
+                    padding: 2rem;
+                }
+
+                .dark .fullscreen {
+                    background: #1F2937;
+                }
+                .file-explorer {
+                    background-color: #F9FAFB;
+                    border-right: 1px solid #E5E7EB;
+                }
+                .dark .file-explorer {
+                    background-color: #1F2937;
+                    border-right: 1px solid #374151;
+                }
+                .file-explorer-header {
+                    border-bottom: 1px solid #E5E7EB;
+                }
+                .dark .file-explorer-header {
+                    border-bottom: 1px solid #374151;
+                }
+                .file-explorer-item {
+                    border-bottom: 1px solid #E5E7EB;
+                }
+                .dark .file-explorer-item {
+                    border-bottom: 1px solid #374151;
+                }
+            </style>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/markdown/markdown.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldcode.min.js"></script>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Gestionnaire pour les boutons de fichiers
+                    document.querySelectorAll('.file-btn').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const promptId = this.dataset.promptId;
+                            const filePath = this.dataset.filePath;
+                            const previewFrame = document.querySelector(`.preview-frame[data-prompt-id="${promptId}"]`);
+
+                            // Retirer la classe active de tous les boutons
+                            document.querySelectorAll('.file-btn').forEach(btn => btn.classList.remove('active'));
+                            // Ajouter la classe active au bouton cliqué
+                            this.classList.add('active');
+
+                            // Faire la requête AJAX pour obtenir le contenu du template
+                            fetch(`/preview-template/${promptId}?file=${encodeURIComponent(filePath)}`, {
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'application/json'
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (!data.success) {
+                                    throw new Error(data.error || 'Erreur lors du chargement du template');
+                                }
+                                // Mettre à jour l'iframe avec le nouveau contenu
+                                const iframe = previewFrame;
+                                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                                iframeDoc.open();
+                                iframeDoc.write(data.content);
+                                iframeDoc.close();
+                            })
+                            .catch(error => {
+                                const errorAlert = document.getElementById('error-alert');
+                                const errorMessage = document.getElementById('error-message');
+                                errorMessage.textContent = error.message;
+                                errorAlert.classList.remove('hidden');
+                                setTimeout(() => {
+                                    errorAlert.classList.add('hidden');
+                                }, 5000); // Cache l'erreur après 5 secondes
+                            });
+                        });
+                    });
+
+                    // Gestionnaire pour fermer l'alerte d'erreur
+                    document.getElementById('close-error')?.addEventListener('click', function() {
+                        document.getElementById('error-alert').classList.add('hidden');
+                    });
+                });
+            </script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/brace-fold.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/xml-fold.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/markdown-fold.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/comment-fold.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+            <script src="/js/file-explorer.js"></script>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                // --- Variables Globales et Utilitaires ---
+                const editors = {}; // Stocke les instances de CodeMirror par promptId
+                const currentFiles = {}; // Stocke le contenu des fichiers par promptId
+                const ERROR_DISPLAY_DURATION = 5000; // Durée d'affichage des erreurs en ms
+
+                /**
+                 * Affiche un message d'erreur.
+                 * @param {string} message Le message d'erreur à afficher.
+                 */
+                function showError(message) {
+                    const errorAlert = document.getElementById('error-alert');
+                    const errorMessage = document.getElementById('error-message');
+
+                    if (errorAlert && errorMessage) {
+                        errorMessage.textContent = message;
+                        errorAlert.classList.remove('hidden');
+
+                        setTimeout(() => {
+                            errorAlert.classList.add('hidden');
+                        }, ERROR_DISPLAY_DURATION);
+                    } else {
+                        console.error("Élément d'erreur introuvable. Message:", message);
+                    }
+                }
+
+                // Ferme l'alerte d'erreur.  Utilisation de optional chaining (?.) pour éviter les erreurs si l'élément n'existe pas.
+                document.getElementById('close-error')?.addEventListener('click', () => {
+                    document.getElementById('error-alert')?.classList.add('hidden');
+                });
+
+                // --- Gestionnaire de fichiers (Chargement dans l'éditeur) ---
+                document.querySelectorAll('.file-btn').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const promptId = this.dataset.promptId;
+                        const filePath = this.dataset.filePath;
+
+                        try {
+                            const response = await fetch(`/api/file-content/${promptId}?path=${encodeURIComponent(filePath)}`, {
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                }
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`); // Amélioration du message d'erreur
+                            }
+
+                            const data = await response.json();
+
+                            if (data.success) {
+                                const content = data.content;
+                                let mode;
+
+                                if (filePath.endsWith('.twig')) {
+                                    mode = 'twig';
+                                    updatePreview(promptId, content);
+                                } else if (filePath.endsWith('.css')) {
+                                    mode = 'css';
+                                } else if (filePath.endsWith('.js')) {
+                                    mode = 'javascript';
+                                } else {
+                                    mode = 'xml'; // Default to XML
+                                }
+
+                                setEditorContent(promptId, content, mode);
+                                setActiveTab(promptId, mode);
+
+
+                            } else {
+                                throw new Error(data.message || 'Erreur lors du chargement du fichier.');
+                            }
+                        } catch (error) {
+                            console.error('Erreur lors du chargement du fichier:', error);
+                            showError(`Erreur lors du chargement du fichier: ${error.message}`); // Affichage de l'erreur à l'utilisateur
+                        }
+                    });
+                });
+
+                /**
+                 * Définit le contenu de l'éditeur et son mode.
+                 * @param {string} promptId L'identifiant du prompt.
+                 * @param {string} content Le contenu à afficher dans l'éditeur.
+                 * @param {string} mode Le mode de l'éditeur (twig, css, javascript, xml).
+                 */
+                function setEditorContent(promptId, content, mode) {
+                    if (editors[promptId]) {
+                        editors[promptId].setOption('mode', mode);
+                        editors[promptId].setValue(content);
+                    } else {
+                        console.warn(`Éditeur non trouvé pour le promptId: ${promptId}`);
+                        //Optionnel: Afficher une erreur a l'utilisateur si l'éditeur n'existe pas.
+                    }
+                }
+
+                /**
+                 * Active l'onglet correspondant au mode de l'éditeur.
+                 * @param {string} promptId L'identifiant du prompt.
+                 * @param {string} mode Le mode de l'éditeur (twig, css, javascript, xml).
+                 */
+                function setActiveTab(promptId, mode) {
+                    const tabsContainer = document.querySelector(`.tabs[data-prompt-id="${promptId}"]`); //Sélection du container des tabs avec le promptId
+
+                    if(tabsContainer){
+                        tabsContainer.querySelectorAll('.tab-btn').forEach(tab => {
+                            tab.classList.remove('active');
+                            if (tab.dataset.file === mode) {
+                                tab.classList.add('active');
+                            }
+                        });
+                    }
+                    else{
+                        console.warn(`Container d'onglets non trouvé pour le promptId: ${promptId}`);
+                        //Optionnel: Afficher une erreur a l'utilisateur si le container n'existe pas.
+                    }
+                }
+
+                // --- Polling du statut ---
+                async function pollPromptStatus(promptId) {
+                    try {
+                        const response = await fetch(`/prompt/${promptId}`);
+
+                        if (!response.ok) {
+                            throw new Error(`Erreur HTTP: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+                        
+                        // Afficher le message de génération s'il est disponible
+                        if (data.generationMessage) {
+                            // Utiliser uniquement le conteneur existant sous le formulaire
+                            const messageElement = document.getElementById('generation-message');
+                            if (messageElement) {
+                                messageElement.textContent = data.generationMessage;
+                            }
+                        }
+
+                        if (data.status === 'completed') {
+                            // Au lieu de recharger la page, mettre à jour l'interface dynamiquement
+                            const messageContainer = document.getElementById('generation-message-container');
+                            if (messageContainer) {
+                                messageContainer.style.display = 'none';
+                            }
+                            
+                            // Mettre à jour le statut du site dans la liste
+                            updateSiteStatus(promptId, 'completed');
+                            
+                            // Arrêter le polling
+                            return;
+                        } else if (data.status === 'error') {
+                            // Masquer le conteneur de message de génération
+                            const messageContainer = document.getElementById('generation-message-container');
+                            if (messageContainer) {
+                                messageContainer.style.display = 'none';
+                            }
+                            
+                            // Mettre à jour le statut du site et afficher l'erreur
+                            updateSiteStatus(promptId, 'error');
+                            showError(data.error || 'Une erreur est survenue lors de la génération');
+                            
+                            // Arrêter le polling
+                            return;
+                        } else {
+                            // Continuer le polling
+                            setTimeout(() => pollPromptStatus(promptId), 2000);
+                        }
+                    } catch (error) {
+                        console.error('Erreur lors du polling:', error);
+                        
+                        // Masquer le conteneur de message de génération en cas d'erreur
+                        const messageContainer = document.getElementById('generation-message-container');
+                        if (messageContainer) {
+                            messageContainer.style.display = 'none';
+                        }
+                        
+                        // Afficher l'erreur
+                        showError(error.message || 'Erreur lors du suivi du statut');
+                    }
+                }
+                
+                // Fonction pour mettre à jour le statut d'un site dans l'interface
+                function updateSiteStatus(promptId, status) {
+                    // Trouver l'élément du site correspondant au promptId
+                    const siteElement = document.querySelector(`[data-prompt-id="${promptId}"]`);
+                    if (!siteElement) return;
+                    
+                    // Mettre à jour l'indicateur de statut si présent
+                    const statusIndicator = siteElement.querySelector('.status-indicator');
+                    if (statusIndicator) {
+                        // Supprimer les classes de statut existantes
+                        statusIndicator.classList.remove('pending', 'completed', 'error');
+                        
+                        // Ajouter la classe correspondant au nouveau statut
+                        statusIndicator.classList.add(status);
+                        
+                        // Mettre à jour le texte du statut
+                        if (status === 'completed') {
+                            statusIndicator.textContent = 'Terminé';
+                        } else if (status === 'error') {
+                            statusIndicator.textContent = 'Erreur';
+                        }
+                    }
+                    
+                    // Activer les boutons d'action si le statut est 'completed'
+                    if (status === 'completed') {
+                        const actionButtons = siteElement.querySelectorAll('.action-button');
+                        actionButtons.forEach(button => {
+                            button.disabled = false;
+                            button.classList.remove('disabled');
+                        });
+                        
+                        // Afficher une notification de succès
+                        showNotification('Site généré avec succès!', 'success');
+                    }
+                }
+                
+                // Fonction pour afficher une notification
+                function showNotification(message, type = 'info') {
+                    // Créer un élément de notification
+                    const notification = document.createElement('div');
+                    notification.className = `notification ${type}`;
+                    notification.textContent = message;
+                    notification.style.position = 'fixed';
+                    notification.style.top = '20px';
+                    notification.style.right = '20px';
+                    notification.style.padding = '10px 15px';
+                    notification.style.borderRadius = '4px';
+                    notification.style.zIndex = '1000';
+                    notification.style.maxWidth = '300px';
+                    notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+                    
+                    // Définir les couleurs en fonction du type
+                    if (type === 'success') {
+                        notification.style.backgroundColor = '#4CAF50';
+                        notification.style.color = 'white';
+                    } else if (type === 'error') {
+                        notification.style.backgroundColor = '#F44336';
+                        notification.style.color = 'white';
+                    } else {
+                        notification.style.backgroundColor = '#2196F3';
+                        notification.style.color = 'white';
+                    }
+                    
+                    // Ajouter la notification au DOM
+                    document.body.appendChild(notification);
+                    
+                    // Supprimer la notification après quelques secondes
+                    setTimeout(() => {
+                        notification.style.opacity = '0';
+                        notification.style.transition = 'opacity 0.5s';
+                        setTimeout(() => notification.remove(), 500);
+                    }, 5000);
+                }
+
+                // --- Validation du nom de domaine et gestion des boutons de déploiement ---
+                function isValidDomain(domain) {
+                    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]$/;
+                    return domainRegex.test(domain);
+                }
+
+                function updateDeployButton(inputElement, extensionSelect) {
+                    const deployBtn = inputElement.closest('.flex-col').querySelector('.deploy-btn');
+                    const domain = inputElement.value.trim();
+                    const domainPreview = deployBtn.querySelector('.domain-preview');
+                    const fullDomain = domain + extensionSelect.value;
+                    domainPreview.textContent = fullDomain;
+                    const isValid = isValidDomain(domain);  //Variable pour stocker la validité du domaine
+                    deployBtn.disabled = !isValid;
+                    deployBtn.classList.toggle('opacity-50', !isValid);
+                    deployBtn.classList.toggle('cursor-not-allowed', !isValid);
+                }
+
+                document.querySelectorAll('.custom-domain-input').forEach(input => {
+                    const extensionSelect = input.nextElementSibling;
+                    const deployBtn = input.closest('.flex-col').querySelector('.deploy-btn');
+
+                    const updateButtonState = () => updateDeployButton(input, extensionSelect); // Fonction pour éviter la duplication de code
+
+                    input.addEventListener('input', updateButtonState);
+                    extensionSelect.addEventListener('change', updateButtonState);
+
+                    deployBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const domainName = input.value.trim();
+                        const domainExtension = extensionSelect.value;
+                        const baseUrl = this.dataset.deployUrl.replace('/temp', '');
+                        const url = `${baseUrl}?domain_name=${encodeURIComponent(domainName)}&domain_extension=${encodeURIComponent(domainExtension)}`;
+                        window.location.href = url;
+                    });
+
+                    updateButtonState(); // Initialiser l'état du bouton
+                });
+
+
+                // --- Gestion des modals ---
+                let isCreatingFile = false;
+                let currentDeletingFile = null;
+
+                function showModal(modalId) {
+                    const modal = document.querySelector(modalId);
+                    if (modal) modal.classList.remove('hidden');
+                }
+
+                function hideModal(modalId) {
+                    const modal = document.querySelector(modalId);
+                    if (modal) modal.classList.add('hidden');
+                }
+
+                // --- Gestion de la suppression des fichiers Twig ---
+                document.querySelectorAll('.delete-file-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const promptId = this.dataset.promptId;
+                        const filePath = this.dataset.filePath;
+                        const deleteModal = document.querySelector(`#deleteFileModal-${promptId}`);
+                        
+                        // Stocker les informations du fichier à supprimer
+                        currentDeletingFile = { promptId, filePath };
+                        
+                        // Afficher le modal de confirmation
+                        showModal(`#deleteFileModal-${promptId}`);
+                    });
+                });
+
+                // Gestion des boutons du modal de suppression
+                document.querySelectorAll('.cancel-delete-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const modal = this.closest('[id^="deleteFileModal-"]');
+                        hideModal(`#${modal.id}`);
+                        currentDeletingFile = null;
+                    });
+                });
+
+                document.querySelectorAll('.confirm-delete-btn').forEach(button => {
+                    button.addEventListener('click', async function() {
+                        if (!currentDeletingFile) return;
+                        
+                        try {
+                            const response = await fetch(`/modify/${currentDeletingFile.promptId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: new URLSearchParams({
+                                    'content': `Supprimer le fichier ${currentDeletingFile.filePath}`
+                                })
+                            });
+
+                            const data = await response.json();
+                            if (data.success) {
+                                location.reload();
+                            } else {
+                                alert('Erreur lors de la suppression du fichier : ' + (data.error || 'Erreur inconnue'));
+                                hideModal(`#deleteFileModal-${currentDeletingFile.promptId}`);
+                            }
+                        } catch (error) {
+                            console.error('Erreur lors de la suppression du fichier :', error);
+                            alert('Erreur lors de la suppression du fichier');
+                            hideModal(`#deleteFileModal-${currentDeletingFile.promptId}`);
+                        }
+                    });
+                });
+
+                // --- Gestion de la création de nouveaux fichiers Twig ---
+                document.querySelectorAll('.add-file-btn, .add-twig-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const promptId = this.dataset.promptId;
+                        showModal(`#newFileModal-${promptId}`);
+                    });
+                });
+
+                document.querySelectorAll('.cancel-file-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        if (isCreatingFile) return; // Empêcher la fermeture pendant la création
+                        const promptId = this.dataset.promptId;
+                        hideModal(`#newFileModal-${promptId}`);
+                    });
+                });
+
+                document.querySelectorAll('.create-file-btn').forEach(button => {
+                    button.addEventListener('click', async function() {
+                        const promptId = this.dataset.promptId;
+                        const modal = document.querySelector(`#newFileModal-${promptId}`);
+                        const input = document.querySelector(`#fileName-${promptId}`);
+                        // const contentInput = document.querySelector(`#fileContent-${promptId}`);
+                        const fileName = input.value.trim();
+                        // const fileContent = contentInput.value.trim();
+                        const btnText = this.querySelector('.create-btn-text');
+                        const btnSpinner = this.querySelector('.create-btn-spinner');
+                        const cancelBtn = modal.querySelector('.cancel-file-btn');
+
+                        if (!fileName) {
+                            alert('Veuillez entrer un nom de fichier');
+                            return;
+                        }
+
+                        // if (!fileContent) {
+                        //     alert('Veuillez décrire le contenu souhaité pour votre page');
+                        //     return;
+                        // }
+
+                        const fullFileName = `${fileName}.html.twig`;
+
+                        // Désactiver les boutons et afficher le spinner
+                        isCreatingFile = true;
+                        this.disabled = true;
+                        cancelBtn.disabled = true;
+                        cancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                        btnText.textContent = 'Création en cours...';
+                        btnSpinner.classList.remove('hidden');
+
+                        try {
+                            const response = await fetch(`/modify/${promptId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: new URLSearchParams({
+                                    'content': `Créer un nouveau fichier ${fullFileName} qui hérite de base.html.twig`
+                                })
+                            });
+
+                            const data = await response.json();
+                            if (data.success) {
+                                location.reload();
+                            } else {
+                                // Réactiver les boutons en cas d'erreur
+                                isCreatingFile = false;
+                                this.disabled = false;
+                                cancelBtn.disabled = false;
+                                cancelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                                btnText.textContent = 'Créer';
+                                btnSpinner.classList.add('hidden');
+                                alert('Erreur lors de la création du fichier : ' + (data.error || 'Erreur inconnue'));
+                            }
+                        } catch (error) {
+                            // Réactiver les boutons en cas d'erreur
+                            isCreatingFile = false;
+                            this.disabled = false;
+                            cancelBtn.disabled = false;
+                            cancelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                            btnText.textContent = 'Créer';
+                            btnSpinner.classList.add('hidden');
+                            console.error('Erreur lors de la création du fichier :', error);
+                            alert('Erreur lors de la création du fichier');
+                        }
+                    });
+                });
+
+                // Gestion de la fermeture des modals en cliquant en dehors
+                document.querySelectorAll('[data-modal-type]').forEach(modal => {
+                    modal.addEventListener('click', function(e) {
+                        if (e.target === this) {
+                            const modalType = this.dataset.modalType;
+                            if (modalType === 'creation' && isCreatingFile) return; // Empêcher la fermeture pendant la création
+                            if (modalType === 'deletion') {
+                                currentDeletingFile = null;
+                            }
+                            this.classList.add('hidden');
+                        }
+                    });
+                });
+
+                // --- Initialisation des éditeurs CodeMirror ---
+                document.querySelectorAll('.editor-container').forEach(container => {
+                    const promptId = container.dataset.promptId;
+                    const editor = CodeMirror(container, {
+                        mode: 'xml',
+                        theme: 'monokai',
+                        lineNumbers: true,
+                        autoCloseTags: true,
+                        autoCloseBrackets: true,
+                        matchBrackets: true,
+                        indentUnit: 4,
+                        lineWrapping: true,
+                        readOnly: false
+                    });
+
+                    editors[promptId] = editor; // Stockage de l'instance de CodeMirror
+
+                    editor.on('change', () => handleEditorChange(promptId)); // Simplification de l'appel de fonction
+                });
+
+
+                // --- Gestion des changements dans l'éditeur avec mise à jour en temps réel ---
+                function handleEditorChange(promptId) {
+                    const editor = editors[promptId];
+                    if (!editor) {
+                        console.warn(`Éditeur non trouvé pour le promptId: ${promptId}`);
+                        return;
+                    }
+
+                    const fileType = editor.getOption('mode');
+                    const content = editor.getValue();
+
+                    let fileName;
+                    switch (fileType) {
+                        case 'xml':
+                            fileName = 'index.html.twig';
+                            break;
+                        case 'css':
+                            fileName = 'styles.css';
+                            break;
+                        case 'javascript':
+                            fileName = 'script.js';
+                            break;
+                        default:
+                            fileName = 'index.html.twig';
+                            break;
+                    }
+
+                    if (!currentFiles[promptId]) {
+                        currentFiles[promptId] = {};
+                    }
+
+                    currentFiles[promptId][fileName] = content;
+
+                    if (fileType === 'xml') {
+                        updatePreview(promptId, content);
+                    } else {
+                        updatePreview(promptId, currentFiles[promptId]['index.html.twig'] || '');
+                    }
+                }
+
+                // --- Chargement initial du contenu des fichiers et de l'aperçu ---
+                Object.keys(editors).forEach(promptId => {
+                    fetch(`/prompt/${promptId}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`Erreur HTTP: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (!data.files) {
+                                throw new Error('Aucun fichier disponible');
+                            }
+                            currentFiles[promptId] = data.files;
+                            
+                            // Vérifier si index.html.twig existe, sinon utiliser index.html
+                            const defaultFile = data.files['index.html.twig'] ? 'index.html.twig' : 'index.html';
+                            const htmlContent = data.files[defaultFile] || '';
+                            
+                            setEditorContent(promptId, htmlContent, 'xml');
+                            updatePreview(promptId, defaultFile);
+                        })
+                        .catch(error => {
+                            console.error(`Erreur lors du chargement initial du prompt ${promptId}:`, error);
+                            showError(`Erreur lors du chargement initial: ${error.message}`);
+                            location.reload();
+                        });
+                });
+
+                // --- Gestion des onglets ---
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const promptId = this.dataset.promptId;
+                        const fileType = this.dataset.file;
+
+                        const tabsContainer = this.closest('.tabs');
+                        tabsContainer.querySelectorAll('.tab-btn').forEach(tab => tab.classList.remove('active'));
+                        this.classList.add('active');
+
+                        let fileName;
+                        let mode;
+                        switch (fileType) {
+                            case 'html':
+                                fileName = 'index.html.twig';
+                                mode = 'xml';
+                                break;
+                            case 'css':
+                                fileName = 'styles.css';
+                                mode = 'css';
+                                break;
+                            case 'javascript':
+                                fileName = 'script.js';
+                                mode = 'javascript';
+                                break;
+                            default:
+                                fileName = 'index.html.twig';
+                                mode = 'xml';
+                                break;
+                        }
+
+                        setEditorContent(promptId, currentFiles[promptId][fileName] || '', mode);
+
+                        // Mettre à jour l'aperçu uniquement si c'est un fichier .html.twig
+                        if (fileName.endsWith('.html.twig')) {
+                            updatePreview(promptId, fileName);
+                        } else if (currentFiles[promptId]['index.html.twig']) {
+                            // Sinon, garder l'aperçu du fichier index.html.twig
+                            updatePreview(promptId, 'index.html.twig');
+                        }
+                    });
+                });
+
+                // --- Mise à jour de l'aperçu en temps réel avec gestion des dépendances ---
+                function updatePreview(promptId, filePath) {
+                    const iframe = document.querySelector(`.preview-frame[data-prompt-id="${promptId}"]`);
+                    if (!iframe) {
+                        console.warn(`Iframe de prévisualisation non trouvé pour le promptId: ${promptId}`);
+                        return;
+                    }
+
+                    // Déterminer le contenu à afficher
+                    let htmlContent;
+                    if (filePath) {
+                        // Si un fichier est spécifié, utiliser son contenu
+                        htmlContent = currentFiles[promptId][filePath] || '';
+                        // Si le fichier modifié est un CSS ou JS, mettre à jour le HTML principal
+                        if (filePath.endsWith('.css') || filePath.endsWith('.js')) {
+                            htmlContent = currentFiles[promptId]['index.html.twig'] || '';
+                        }
+                    } else {
+                        // Par défaut, utiliser index.html.twig
+                        htmlContent = currentFiles[promptId]['index.html.twig'] || '';
+                    }
+
+                    // Créer et afficher le blob
+                    const blob = new Blob([htmlContent], { type: 'text/html' });
+                    const blobUrl = URL.createObjectURL(blob);
+                    // iframe.src = blobUrl;
+                    // iframe.onload = () => URL.revokeObjectURL(blobUrl);
+                }
+
+                // --- Téléchargement ---
+                document.querySelectorAll('.download-btn').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const promptId = this.dataset.promptId;
+                        const files = currentFiles[promptId];
+
+                        try {
+                            const zip = new JSZip();
+                            for (const [filename, content] of Object.entries(files)) {
+                                zip.file(filename, content);
+                            }
+
+                            const blob = await zip.generateAsync({
+                                type: 'blob'
+                            });
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `site-${promptId}.zip`;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+                        } catch (error) {
+                            console.error("Erreur lors de la création ou du téléchargement du fichier ZIP:", error);
+                            showError("Erreur lors du téléchargement du fichier ZIP.");
+                        }
+                    });
+                });
+
+                // --- Déploiement ---
+                document.querySelectorAll('.deploy-btn').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const promptId = this.dataset.promptId;
+                        const customDomain = document.querySelector(`.custom-domain-input[data-prompt-id="${promptId}"]`).value.trim();
+                        const domainExtension = document.querySelector('.domain-extension').value;
+
+                        try {
+                            this.disabled = true;
+                            const originalText = this.innerHTML;
+                            this.innerHTML = '<span class="inline-flex items-center"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Déploiement en cours...</span>';
+
+                            const response = await fetch(`/deploy/${promptId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: JSON.stringify({
+                                    domain_name: customDomain,
+                                    domain_extension: domainExtension
+                                })
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`Erreur HTTP: ${response.status}`);
+                            }
+
+                            const result = await response.json();
+
+                            if (result.success) {
+                                window.location.href = "{{ path('app_my_sites') }}";
+                            } else {
+                                throw new Error(result.error || 'Une erreur est survenue lors du déploiement');
+                            }
+                        } catch (error) {
+                            console.error('Erreur de déploiement:', error);
+                            showError(error.message || 'Une erreur est survenue lors du déploiement');
+                            this.innerHTML = originalText;
+                            this.disabled = false;
+                        }
+                    });
+                });
+
+                // --- Restauration de version ---
+                document.querySelectorAll('.restore-version-btn').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const versionId = this.dataset.versionId;
+                        const originalText = this.innerHTML;
+
+                        try {
+                            this.disabled = true;
+                            this.innerHTML = `
+                                <span class="inline-flex items-center">
+                                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-700 dark:text-blue-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Restauration en cours...
+                                </span>
+                            `;
+
+                            const response = await fetch(`/restore/${versionId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                }
+                            });
+
+                            const data = await response.json();
+                            if (response.ok && data.success) {
+                                location.reload();
+                            } else {
+                                // throw new Error(data.error || 'Une erreur est survenue lors de la restauration');
+                            }
+                        } catch (error) {
+                            // console.error('Erreur de restauration:', error);
+                            // showError(error.message || 'Une erreur est survenue lors de la restauration');
+                            this.innerHTML = originalText;
+                        } finally {
+                            this.disabled = false;
+                            location.reload();
+                        }
+                    });
+                });
+
+                // --- Redéploiement ---
+                document.querySelectorAll('.redeploy-btn').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const promptId = this.dataset.promptId;
+                        const deployUrl = this.dataset.deployUrl;
+
+                        try {
+                            this.disabled = true;
+                            const originalText = this.innerHTML;
+                            this.innerHTML = '<span class="inline-flex items-center"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Redéploiement en cours...</span>';
+
+                            const response = await fetch(deployUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                }
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`Erreur HTTP: ${response.status}`);
+                            }
+
+                            const result = await response.json();
+
+                            if (result.success) {
+                                window.location.href = "{{ path('app_my_sites') }}";
+                            } else {
+                                throw new Error(result.error || 'Une erreur est survenue lors du redéploiement');
+                            }
+                        } catch (error) {
+                            console.error('Erreur de redéploiement:', error);
+                            showError(error.message || 'Une erreur est survenue lors du redéploiement');
+                            this.innerHTML = originalText;
+                            this.disabled = false;
+                        }
+                    });
+                });
+
+                // --- Modification ---
+                document.querySelectorAll('.modify-btn').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const promptId = this.dataset.promptId;
+                        const textarea = document.querySelector(`.modification-prompt[data-prompt-id="${promptId}"]`);
+                        const content = textarea.value.trim();
+
+                        this.disabled = true;
+                        this.innerHTML = `
+                            <span class="inline-flex items-center">
+                                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Modification en cours...
+                            </span>
+                        `;
+                        
+                        // Créer un élément pour afficher le message de génération juste après le formulaire de modification
+                        const generationMessageContainer = document.createElement('div');
+                        generationMessageContainer.id = 'generation-message-container';
+                        generationMessageContainer.className = 'mt-4 mb-4 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 text-center';
+                        generationMessageContainer.innerHTML = '<p id="generation-message" class="text-gray-700 dark:text-gray-300 text-lg font-medium">Modification en cours...</p>';
+                        
+                        // Insérer le message après le textarea de modification
+                        textarea.parentNode.insertBefore(generationMessageContainer, textarea.nextSibling);
+
+                        if (!content) {
+                            showError('Veuillez décrire les modifications souhaitées');
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch(`/modify/${promptId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: `content=${encodeURIComponent(content)}`
+                            });
+
+                            const data = await response.json();
+                            if (response.ok && data.success) {
+                                // Mettre à jour le message initial si disponible
+                                if (data.data && data.data.message) {
+                                    const messageElement = document.getElementById('generation-message');
+                                    if (messageElement) {
+                                        messageElement.textContent = data.data.message;
+                                    }
+                                }
+                                
+                                if (data.data && data.data.status === 'completed') {
+                                    window.location.reload();
+                                } else if (data.data && data.data.status === 'error') {
+                                    // Supprimer le conteneur de message de génération
+                                    const messageContainer = document.getElementById('generation-message-container');
+                                    if (messageContainer) {
+                                        messageContainer.remove();
+                                    }
+                                    window.location.href = "{{ path('app_my_sites') }}";
+                                } else if (data.data && data.data.id) {
+                                    // Démarrer le polling immédiatement pour obtenir les mises à jour en temps réel
+                                    pollPromptStatus(data.data.id);
+                                }
+                            } else {
+                                if (data.data && data.data.id) {
+                                    if (data.data.status === 'completed') {
+                                        window.location.reload();
+                                    } else if (data.data.status === 'error') {
+                                        // Supprimer le conteneur de message de génération
+                                        const messageContainer = document.getElementById('generation-message-container');
+                                        if (messageContainer) {
+                                            messageContainer.remove();
+                                        }
+                                        window.location.href = "{{ path('app_my_sites') }}";
+                                    }
+                                } else {
+                                    // Supprimer le conteneur de message de génération
+                                    const messageContainer = document.getElementById('generation-message-container');
+                                    if (messageContainer) {
+                                        messageContainer.remove();
+                                    }
+                                    throw new Error(data.error || 'Une erreur est survenue');
+                                }
+                            }
+                        } catch (error) {
+                            // Supprimer le conteneur de message de génération
+                            const messageContainer = document.getElementById('generation-message-container');
+                            if (messageContainer) {
+                                messageContainer.remove();
+                            }
+                            
+                            showError('Erreur: ' + error.message);
+                            if (error.data && error.data.id) {
+                                window.location.href = "{{ path('app_my_sites') }}";
+                            }
+                        } finally {
+                            this.disabled = false;
+                            this.innerHTML = 'Appliquer les modifications';
+                        }
+                    });
+                });
+
+                // --- Gestion du plein écran pour l'éditeur ---
+                document.querySelectorAll('.editor-fullscreen-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const container = this.closest('.bg-white').querySelector('.editor-container');
+                        const editor = editors[container.dataset.promptId];
+
+                        if (!document.fullscreenElement) {
+                            container.requestFullscreen();
+                        } else {
+                            document.exitFullscreen();
+                        }
+                    });
+                });
+
+                // --- Gestion du plein écran pour l'aperçu ---
+                document.querySelectorAll('.preview-fullscreen-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const container = this.closest('.bg-white').querySelector('.preview-container');
+                        if (!document.fullscreenElement) {
+                            container.requestFullscreen();
+                        } else {
+                            document.exitFullscreen();
+                        }
+                    });
+                });
+                
+                // Fonctions pour afficher les messages de succès et d'erreur
+                function showSuccess(message) {
+                    const successMessage = document.createElement('div');
+                    successMessage.className = 'alert alert-success fixed top-4 right-4 z-50 p-4 rounded-lg bg-green-100 text-green-800 shadow-lg';
+                    successMessage.textContent = message;
+                    document.body.appendChild(successMessage);
+                    
+                    // Supprimer le message après 3 secondes
+                    setTimeout(() => {
+                        successMessage.remove();
+                    }, 3000);
+                }
+                
+                function showError(message) {
+                    const errorMessage = document.createElement('div');
+                    errorMessage.className = 'alert alert-danger fixed top-4 right-4 z-50 p-4 rounded-lg bg-red-100 text-red-800 shadow-lg';
+                    errorMessage.textContent = message;
+                    document.body.appendChild(errorMessage);
+                    
+                    // Supprimer le message après 5 secondes
+                    setTimeout(() => {
+                        errorMessage.remove();
+                    }, 5000);
+                }
+
+                // --- Gestion de l'édition visuelle ---
+                // Créer un objet pour stocker l'état d'édition pour chaque iframe
+                const visualEditState = {};
+
+                // Fonction pour injecter le CSS d'édition visuelle dans l'iframe
+                function injectVisualEditCSS(iframe) {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    let styleEl = iframeDoc.getElementById('visual-edit-styles');
+                    
+                    if (!styleEl) {
+                        styleEl = iframeDoc.createElement('style');
+                        styleEl.id = 'visual-edit-styles';
+                        iframeDoc.head.appendChild(styleEl);
+                    }
+                    
+                    styleEl.textContent = `
+                        .visual-edit-highlight {
+                            outline: 2px dashed #3b82f6 !important;
+                            cursor: pointer !important;
+                            position: relative;
+                        }
+                        .visual-edit-highlight:hover {
+                            outline: 2px solid #2563eb !important;
+                            background-color: rgba(59, 130, 246, 0.1) !important;
+                        }
+                        .visual-edit-highlight.dragging {
+                            opacity: 0.6 !important;
+                            outline: 2px solid #2563eb !important;
+                        }
+                        .visual-edit-highlight.drop-before {
+                            border-top: 3px solid #3b82f6 !important;
+                            margin-top: -3px !important;
+                        }
+                        .visual-edit-highlight.drop-after {
+                            border-bottom: 3px solid #3b82f6 !important;
+                            margin-bottom: -3px !important;
+                        }
+                        .visual-edit-panel {
+                            position: fixed;
+                            top: 10px;
+                            right: 10px;
+                            background: white;
+                            border: 1px solid #e5e7eb;
+                            border-radius: 8px;
+                            padding: 12px;
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                            z-index: 9999;
+                            width: 300px;
+                        }
+                        .visual-edit-panel h3 {
+                            margin-top: 0;
+                            margin-bottom: 10px;
+                            font-weight: bold;
+                            font-size: 16px;
+                        }
+                        .visual-edit-panel label {
+                            display: block;
+                            margin-bottom: 5px;
+                            font-size: 14px;
+                        }
+                        .visual-edit-panel input, .visual-edit-panel select {
+                            width: 100%;
+                            padding: 6px;
+                            margin-bottom: 10px;
+                            border: 1px solid #d1d5db;
+                            border-radius: 4px;
+                        }
+                        .visual-edit-panel button {
+                            background: #3b82f6;
+                            color: white;
+                            border: none;
+                            padding: 6px 12px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            margin-right: 5px;
+                        }
+                        .visual-edit-panel button:hover {
+                            background: #2563eb;
+                        }
+                        .visual-edit-panel .cancel {
+                            background: #6b7280;
+                        }
+                        .visual-edit-panel .cancel:hover {
+                            background: #4b5563;
+                        }
+                        .visual-edit-buttons {
+                            display: flex;
+                            justify-content: flex-end;
+                            margin-top: 10px;
+                        }
+                    `;
+                }
+
+                // Fonction pour injecter le JavaScript d'édition visuelle dans l'iframe
+                function injectVisualEditJS(iframe, promptId) {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const iframeWin = iframe.contentWindow;
+                    
+                    // Supprimer les anciens event listeners si nécessaire
+                    if (visualEditState[promptId] && visualEditState[promptId].cleanup) {
+                        visualEditState[promptId].cleanup();
+                    }
+                    
+                    // Stocker les éléments modifiables et leurs valeurs originales
+                    const editableElements = {};
+                    const editableSelectors = 'h1, h2, h3, h4, h5, h6, p, span, a, button, li';
+                    
+                    // Ajouter des event listeners aux éléments modifiables
+                    const elements = iframeDoc.querySelectorAll(editableSelectors);
+                    elements.forEach(el => {
+                        // Stocker le contenu original
+                        editableElements[getElementPath(el)] = {
+                            originalContent: el.innerHTML,
+                            originalStyle: el.getAttribute('style') || ''
+                        };
+                        
+                        // Ajouter la classe de surbrillance
+                        el.classList.add('visual-edit-highlight');
+                        
+                        // Ajouter l'event listener pour l'édition
+                        el.addEventListener('click', handleElementClick);
+                        
+                        // Ajouter les event listeners pour le drag and drop
+                        el.setAttribute('draggable', 'true');
+                        el.addEventListener('dragstart', handleDragStart);
+                        el.addEventListener('dragend', handleDragEnd);
+                    });
+                    
+                    // Ajouter les event listeners pour les zones de drop
+                    iframeDoc.body.addEventListener('dragover', handleDragOver);
+                    iframeDoc.body.addEventListener('drop', handleDrop);
+                    
+                    // Fonction pour obtenir le chemin unique d'un élément
+                    function getElementPath(el) {
+                        let path = '';
+                        while (el && el !== iframeDoc.body) {
+                            let selector = el.tagName.toLowerCase();
+                            if (el.id) {
+                                selector += '#' + el.id;
+                            } else {
+                                let sibling = el;
+                                let nth = 1;
+                                while (sibling = sibling.previousElementSibling) {
+                                    if (sibling.tagName === el.tagName) nth++;
+                                }
+                                selector += ':nth-of-type(' + nth + ')';
+                            }
+                            path = selector + (path ? ' > ' + path : '');
+                            el = el.parentElement;
+                        }
+                        return path;
+                    }
+                    
+                    // Fonction pour gérer le clic sur un élément
+                    function handleElementClick(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        const el = e.currentTarget;
+                        const path = getElementPath(el);
+                        
+                        // Supprimer le panel d'édition existant s'il y en a un
+                        const existingPanel = iframeDoc.querySelector('.visual-edit-panel');
+                        if (existingPanel) {
+                            existingPanel.remove();
+                        }
+                        
+                        // Créer le panel d'édition
+                        const panel = iframeDoc.createElement('div');
+                        panel.className = 'visual-edit-panel';
+                        panel.innerHTML = `
+                            <h3>Modifier l'élément</h3>
+                            <label for="content-edit">Contenu:</label>
+                            <input type="text" id="content-edit" value="${el.textContent}">
+                            
+                            <label for="color-edit">Couleur du texte:</label>
+                            <input type="color" id="color-edit" value="${getComputedStyle(el).color ? rgbToHex(getComputedStyle(el).color) : '#000000'}">
+                            
+                            <label for="bg-color-edit">Couleur de fond:</label>
+                            <input type="color" id="bg-color-edit" value="${getComputedStyle(el).backgroundColor && getComputedStyle(el).backgroundColor !== 'rgba(0, 0, 0, 0)' ? rgbToHex(getComputedStyle(el).backgroundColor) : '#ffffff'}">
+                            
+                            <label for="font-size-edit">Taille de police:</label>
+                            <select id="font-size-edit">
+                                <option value="">Par défaut</option>
+                                <option value="12px">Très petit</option>
+                                <option value="14px">Petit</option>
+                                <option value="16px">Normal</option>
+                                <option value="18px">Grand</option>
+                                <option value="24px">Très grand</option>
+                                <option value="32px">Énorme</option>
+                            </select>
+                            
+                            <label for="font-weight-edit">Graisse de police:</label>
+                            <select id="font-weight-edit">
+                                <option value="">Par défaut</option>
+                                <option value="normal">Normal</option>
+                                <option value="bold">Gras</option>
+                            </select>
+                            
+                            <div class="visual-edit-buttons">
+                                <button class="apply">Appliquer</button>
+                                <button class="cancel">X</button>
+                            </div>
+                        `;
+                        
+                        iframeDoc.body.appendChild(panel);
+                        
+                        // Définir les valeurs actuelles dans le formulaire
+                        const fontSizeSelect = panel.querySelector('#font-size-edit');
+                        const fontWeightSelect = panel.querySelector('#font-weight-edit');
+                        
+                        const computedStyle = getComputedStyle(el);
+                        fontSizeSelect.value = computedStyle.fontSize || '';
+                        fontWeightSelect.value = computedStyle.fontWeight === '700' ? 'bold' : (computedStyle.fontWeight === '400' ? 'normal' : '');
+                        
+                        // Gérer le bouton Appliquer
+                        panel.querySelector('.apply').addEventListener('click', () => {
+                            const content = panel.querySelector('#content-edit').value;
+                            const color = panel.querySelector('#color-edit').value;
+                            const bgColor = panel.querySelector('#bg-color-edit').value;
+                            const fontSize = panel.querySelector('#font-size-edit').value;
+                            const fontWeight = panel.querySelector('#font-weight-edit').value;
+                            
+                            // Appliquer les modifications
+                            el.textContent = content;
+                            
+                            let styleStr = el.getAttribute('style') || '';
+                            if (color && color !== '#000000') {
+                                styleStr = updateStyle(styleStr, 'color', color);
+                            }
+                            if (bgColor && bgColor !== '#ffffff') {
+                                styleStr = updateStyle(styleStr, 'background-color', bgColor);
+                            }
+                            if (fontSize) {
+                                styleStr = updateStyle(styleStr, 'font-size', fontSize);
+                            }
+                            if (fontWeight) {
+                                styleStr = updateStyle(styleStr, 'font-weight', fontWeight);
+                            }
+                            
+                            el.setAttribute('style', styleStr);
+                            
+                            // Mettre à jour le contenu dans l'éditeur CodeMirror
+                            updateCodeMirrorContent(promptId);
+                            
+                            panel.remove();
+                        });
+                        
+                        // Gérer le bouton Annuler
+                        panel.querySelector('.cancel').addEventListener('click', () => {
+                            panel.remove();
+                        });
+                    }
+                    
+                    // Variables pour le drag and drop
+                    let draggedElement = null;
+                    
+                    // Fonction pour gérer le début du drag
+                    function handleDragStart(e) {
+                        // Stocker l'élément en cours de déplacement
+                        draggedElement = e.target;
+                        
+                        // Définir les données de transfert (nécessaire pour Firefox)
+                        e.dataTransfer.setData('text/plain', '');
+                        
+                        // Ajouter une classe pour indiquer l'élément en cours de déplacement
+                        draggedElement.classList.add('dragging');
+                        
+                        // Supprimer le panel d'édition s'il existe
+                        const existingPanel = iframeDoc.querySelector('.visual-edit-panel');
+                        if (existingPanel) {
+                            existingPanel.remove();
+                        }
+                    }
+                    
+                    // Fonction pour gérer la fin du drag
+                    function handleDragEnd(e) {
+                        // Supprimer la classe de l'élément déplacé
+                        if (draggedElement) {
+                            draggedElement.classList.remove('dragging');
+                            draggedElement = null;
+                        }
+                    }
+                    
+                    // Fonction pour gérer le survol pendant le drag
+                    function handleDragOver(e) {
+                        // Empêcher le comportement par défaut pour permettre le drop
+                        e.preventDefault();
+                        
+                        // Ajouter un indicateur visuel de la zone de drop
+                        const dropTarget = getDropTarget(e.clientX, e.clientY);
+                        if (dropTarget) {
+                            // Supprimer les indicateurs précédents
+                            iframeDoc.querySelectorAll('.drop-before, .drop-after').forEach(el => {
+                                el.classList.remove('drop-before', 'drop-after');
+                            });
+                            
+                            // Déterminer si on doit placer avant ou après l'élément cible
+                            const rect = dropTarget.getBoundingClientRect();
+                            const middle = rect.top + rect.height / 2;
+                            
+                            if (e.clientY < middle) {
+                                dropTarget.classList.add('drop-before');
+                            } else {
+                                dropTarget.classList.add('drop-after');
+                            }
+                        }
+                    }
+                    
+                    // Fonction pour gérer le drop
+                    function handleDrop(e) {
+                        // Empêcher le comportement par défaut
+                        e.preventDefault();
+                        
+                        // Vérifier qu'on a un élément à déplacer
+                        if (!draggedElement) return;
+                        
+                        // Trouver la cible du drop
+                        const dropTarget = getDropTarget(e.clientX, e.clientY);
+                        if (!dropTarget) return;
+                        
+                        // Déterminer si on doit placer avant ou après l'élément cible
+                        const rect = dropTarget.getBoundingClientRect();
+                        const middle = rect.top + rect.height / 2;
+                        
+                        // Déplacer l'élément
+                        if (e.clientY < middle) {
+                            dropTarget.parentNode.insertBefore(draggedElement, dropTarget);
+                        } else {
+                            dropTarget.parentNode.insertBefore(draggedElement, dropTarget.nextSibling);
+                        }
+                        
+                        // Supprimer les indicateurs visuels
+                        iframeDoc.querySelectorAll('.drop-before, .drop-after').forEach(el => {
+                            el.classList.remove('drop-before', 'drop-after');
+                        });
+                        
+                        // Mettre à jour le contenu dans l'éditeur CodeMirror
+                        updateCodeMirrorContent(promptId);
+                    }
+                    
+                    // Fonction pour trouver l'élément cible du drop
+                    function getDropTarget(x, y) {
+                        // Obtenir l'élément à la position donnée
+                        const elementsAtPoint = iframeDoc.elementsFromPoint(x, y);
+                        
+                        // Trouver le premier élément modifiable
+                        for (const el of elementsAtPoint) {
+                            if (el.classList.contains('visual-edit-highlight') && el !== draggedElement) {
+                                return el;
+                            }
+                        }
+                        
+                        return null;
+                    }
+                    
+                    // Fonction pour mettre à jour une propriété de style
+                    function updateStyle(styleStr, property, value) {
+                        const styleObj = {};
+                        
+                        // Analyser la chaîne de style existante
+                        if (styleStr) {
+                            styleStr.split(';').forEach(style => {
+                                if (style.trim()) {
+                                    const [prop, val] = style.split(':').map(s => s.trim());
+                                    styleObj[prop] = val;
+                                }
+                            });
+                        }
+                        
+                        // Mettre à jour ou ajouter la propriété
+                        styleObj[property] = value;
+                        
+                        // Reconstruire la chaîne de style
+                        return Object.entries(styleObj)
+                            .map(([prop, val]) => `${prop}: ${val}`)
+                            .join('; ');
+                    }
+                    
+                    // Fonction pour convertir RGB en HEX
+                    function rgbToHex(rgb) {
+                        if (!rgb || rgb === 'rgba(0, 0, 0, 0)') return '#ffffff';
+                        
+                        // Extraire les valeurs RGB
+                        const rgbValues = rgb.match(/\d+/g);
+                        if (!rgbValues || rgbValues.length < 3) return '#000000';
+                        
+                        return '#' + rgbValues.slice(0, 3).map(x => {
+                            const hex = parseInt(x).toString(16);
+                            return hex.length === 1 ? '0' + hex : hex;
+                        }).join('');
+                    }
+                    
+                    // Fonction pour mettre à jour le contenu dans l'éditeur CodeMirror
+                    function updateCodeMirrorContent(promptId) {
+                        // Récupérer le contenu HTML modifié
+                        const htmlContent = iframeDoc.documentElement.outerHTML;
+                        
+                        // Mettre à jour l'éditeur CodeMirror avec le nouveau contenu
+                        const editor = editors[promptId];
+                        if (editor) {
+                            // Trouver le fichier HTML actif
+                            const activeFile = currentFiles[promptId].find(file => file.type === 'html' || file.path.endsWith('.html.twig'));
+                            if (activeFile) {
+                                // Mettre à jour le contenu du fichier
+                                activeFile.content = htmlContent;
+                                
+                                // Mettre à jour l'éditeur si c'est le fichier actuellement affiché
+                                const activeTab = document.querySelector(`.file-tab[data-prompt-id="${promptId}"][data-active="true"]`);
+                                if (activeTab && activeTab.dataset.path === activeFile.path) {
+                                    editor.setValue(htmlContent);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Fonction de nettoyage pour supprimer les event listeners
+                    function cleanup() {
+                        elements.forEach(el => {
+                            el.classList.remove('visual-edit-highlight');
+                            el.classList.remove('dragging');
+                            el.classList.remove('drop-before');
+                            el.classList.remove('drop-after');
+                            el.removeEventListener('click', handleElementClick);
+                            el.removeEventListener('dragstart', handleDragStart);
+                            el.removeEventListener('dragend', handleDragEnd);
+                            el.removeAttribute('draggable');
+                        });
+                        
+                        // Supprimer les event listeners du body
+                        iframeDoc.body.removeEventListener('dragover', handleDragOver);
+                        iframeDoc.body.removeEventListener('drop', handleDrop);
+                        
+                        const panel = iframeDoc.querySelector('.visual-edit-panel');
+                        if (panel) {
+                            panel.remove();
+                        }
+                    }
+                    
+                    // Stocker la fonction de nettoyage pour une utilisation ultérieure
+                    visualEditState[promptId] = {
+                        cleanup: cleanup,
+                        editableElements: editableElements
+                    };
+                }
+
+                // Gérer les boutons d'édition visuelle
+                document.querySelectorAll('.visual-edit-btn, .visual-preview-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const promptId = this.dataset.promptId;
+                        const mode = this.dataset.mode;
+                        const iframe = document.querySelector(`.preview-frame[data-prompt-id="${promptId}"]`);
+                        const saveBtn = document.querySelector(`.visual-save-btn[data-prompt-id="${promptId}"]`);
+                        
+                        // Mettre à jour l'apparence des boutons
+                        document.querySelector(`.visual-edit-btn[data-prompt-id="${promptId}"]`).classList.toggle('bg-blue-600', mode === 'edit');
+                        document.querySelector(`.visual-edit-btn[data-prompt-id="${promptId}"]`).classList.toggle('bg-gray-600', mode !== 'edit');
+                        document.querySelector(`.visual-preview-btn[data-prompt-id="${promptId}"]`).classList.toggle('bg-blue-600', mode === 'preview');
+                        document.querySelector(`.visual-preview-btn[data-prompt-id="${promptId}"]`).classList.toggle('bg-gray-600', mode !== 'preview');
+                        
+                        // Afficher ou masquer le bouton de sauvegarde
+                        if (saveBtn) {
+                            saveBtn.style.display = mode === 'edit' ? 'inline-block' : 'none';
+                        }
+                        
+                        if (mode === 'edit') {
+                            // Activer le mode d'édition visuelle
+                            iframe.addEventListener('load', function onLoad() {
+                                injectVisualEditCSS(iframe);
+                                injectVisualEditJS(iframe, promptId);
+                                iframe.removeEventListener('load', onLoad);
+                            });
+                            
+                            // Recharger l'iframe pour s'assurer que tout est propre
+                            iframe.src = iframe.src;
+                        } else {
+                            // Désactiver le mode d'édition visuelle
+                            if (visualEditState[promptId] && visualEditState[promptId].cleanup) {
+                                visualEditState[promptId].cleanup();
+                            }
+                            
+                            // Recharger l'iframe pour revenir à l'état normal
+                            iframe.src = iframe.src;
+                        }
+                    });
+                });
+                
+                // Gérer le bouton de sauvegarde
+                document.querySelectorAll('.visual-save-btn').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const promptId = this.dataset.promptId;
+                        
+                        // Récupérer l'iframe et son contenu
+                        const iframe = document.querySelector(`.preview-frame[data-prompt-id="${promptId}"]`);
+                        if (!iframe) {
+                            showError('Iframe non trouvé');
+                            return;
+                        }
+                        
+                        const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+                        if (!iframeDocument) {
+                            showError('Impossible d\'accéder au contenu de l\'iframe');
+                            return;
+                        }
+                        
+                        // Nettoyer les éléments d'édition visuelle avant de sauvegarder
+                        const editableElements = iframeDocument.querySelectorAll('.visual-edit-highlight');
+                        editableElements.forEach(el => {
+                            el.classList.remove('visual-edit-highlight');
+                            el.classList.remove('dragging');
+                            el.classList.remove('drop-before');
+                            el.classList.remove('drop-after');
+                            el.removeAttribute('draggable');
+                        });
+                        
+                        // Supprimer le panneau d'édition s'il existe
+                        const editPanel = iframeDocument.querySelector('.visual-edit-panel');
+                        if (editPanel) {
+                            editPanel.remove();
+                        }
+                        
+                        // Supprimer les styles d'édition visuelle
+                        const visualStyles = iframeDocument.getElementById('visual-edit-styles');
+                        if (visualStyles) {
+                            visualStyles.remove();
+                        }
+                        
+                        // Récupérer le contenu HTML complet après nettoyage
+                        const htmlContent = iframeDocument.documentElement.outerHTML;
+                        
+                        // Récupérer le chemin du fichier HTML actif à partir de l'URL de l'iframe
+                        let htmlPath = 'index.html.twig'; // Chemin par défaut
+                        try {
+                            const iframeSrc = new URL(iframe.src);
+                            const pathParam = iframeSrc.searchParams.get('path');
+                            if (pathParam) {
+                                htmlPath = pathParam;
+                            }
+                        } catch (e) {
+                            console.error('Erreur lors de la récupération du chemin du fichier:', e);
+                        }
+                        
+                        try {
+                            // Désactiver le bouton pendant la sauvegarde
+                            this.disabled = true;
+                            const originalText = this.innerHTML;
+                            this.innerHTML = `
+                                <span class="inline-flex items-center">
+                                    <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Sauvegarde...
+                                </span>
+                            `;
+                            
+                            console.log('Envoi du contenu HTML au serveur:', htmlContent.substring(0, 100) + '...');
+                            
+                            // Envoyer le contenu modifié au serveur
+                            const response = await fetch(`/api/file-content/${promptId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: JSON.stringify({
+                                    path: htmlPath,
+                                    content: htmlContent
+                                })
+                            });
+                            
+                            const data = await response.json();
+                            
+                            if (data.success) {
+                                // Afficher un message de succès
+                                showSuccess('Modifications sauvegardées avec succès');
+                                
+                                // Mettre à jour l'état pour indiquer que les modifications sont sauvegardées
+                                if (visualEditState[promptId]) {
+                                    visualEditState[promptId].savedContent = htmlContent;
+                                    
+                                    // Nettoyer les éléments d'édition visuelle
+                                    if (visualEditState[promptId].cleanup) {
+                                        visualEditState[promptId].cleanup();
+                                    }
+                                }
+                                
+                                // Mettre à jour currentFiles pour que les modifications persistent
+                                if (currentFiles[promptId]) {
+                                    // Mettre à jour directement l'objet avec le chemin comme clé
+                                    currentFiles[promptId][htmlPath] = htmlContent;
+                                }
+                                
+                                // Mettre à jour l'éditeur de code avec le nouveau contenu
+                                const editor = editors[promptId];
+                                if (editor) {
+                                    // Vérifier si l'onglet HTML est actif
+                                    const activeTab = document.querySelector(`.tab-btn[data-prompt-id="${promptId}"].active`);
+                                    if (activeTab && activeTab.dataset.file === 'html') {
+                                        editor.setValue(htmlContent);
+                                    }
+                                }
+                                
+                                // Recharger l'iframe pour s'assurer que tout est propre
+                                iframe.src = iframe.src;
+                            } else {
+                                throw new Error(data.message || 'Erreur lors de la sauvegarde');
+                            }
+                        } catch (error) {
+                            console.error('Erreur de sauvegarde:', error);
+                            showError('Erreur: ' + error.message);
+                        } finally {
+                            // Réactiver le bouton
+                            this.disabled = false;
+                            this.innerHTML = `<i class="fas fa-save mr-1"></i> Sauvegarder`;
+                        }
+                    });
+                });
+            });
+            </script>
+        {% endblock %}
+
+        {% block javascripts %}
+            {% block importmap %}
+                {{ importmap('app') }}
+            {% endblock %}
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        {% endblock %}
+    </head>
+    <body class="h-full bg-gray-800 transition-colors duration-200">
+<div class="min-h-screen transition-colors duration-200">
+        {% if not app.user.isSubscribed is defined or not app.user.isSubscribed %}
+            <div class="max-w-3xl mx-auto mb-8 bg-yellow-50 dark:bg-yellow-900 border-l-4 border-yellow-400 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700 dark:text-yellow-200">
+                            Version gratuite limitée à 3 générations. <a href="{{ path('app_subscription') }}" class="font-medium underline hover:text-yellow-600 dark:hover:text-yellow-300">Passez à la version premium</a> pour des générations illimitées.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">Mes Sites Web</h1>
+            <p class="text-lg text-gray-600 dark:text-gray-300">Gérez vos sites web générés par Webrovia</p>
+            <div class="flex justify-center space-x-4 mt-4">
+                <a href="{{ path('app_home') }}" class="inline-block bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">
+                    <i class="fas fa-plus-circle mr-2"></i>Générer un nouveau site
+                </a>
+                <a href="{{ path('app_my_sites') }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200 ml-4">
+                    <i class="fa-solid fa-square-pen mr-2"></i>Mode Standard
+                </a>
+            </div>
+        </div>
+
+        {% set domain_name_widget = form_widget(domain_form.domainName) %}
+        {% set extension_widget = form_widget(domain_form.extension) %}
+
+        {% if prompts is empty %}
+            <div class="text-center py-12">
+                <p class="text-gray-600 dark:text-gray-300">Vous n'avez pas encore généré de sites web.</p>
+                <a href="{{ path('app_home') }}" class="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Commencer à générer</a>
+            </div>
+        {% else %}
+            {% for prompt in prompts %}
+                {% if prompt.status == 'completed' or prompt.status == 'error' %}
+                        <div class="mb-6">
+                            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Site #{{ prompt.id }}</h2>
+                            <div class="bg-gray-100 dark:bg-gray-700 rounded p-4 mb-4">
+                                <h3 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">Prompt :</h3>
+                                <p class="text-gray-600 dark:text-gray-400">{{ prompt.content }}</p>
+                                {% if prompt.status == 'error' %}
+                                    <div class="mt-4 bg-red-100 dark:bg-red-900 border-l-4 border-red-500 p-4">
+                                        <div class="flex">
+                                            <div class="flex-shrink-0">
+                                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                                </svg>
+                                            </div>
+                                            <div class="ml-3">
+                                                <p class="text-sm text-red-700 dark:text-red-200">
+                                                    Une erreur est survenue : {{ prompt.error }}
+                                                </p>
+                                                <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Historique des versions</h4>
+                                    <div>
+                                    {% if prompt.allVersions is defined and prompt.allVersions is not empty %}
+                                        {% for version in prompt.allVersions %}
+                                            <div class="version-item p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2 {% if version.status == 'archived' %}opacity-75{% endif %}">
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <div class="version-header">
+                                                        <span class="font-medium text-white text-lg">Version {{ version.version }}</span>
+                                                        <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">{{ version.createdAt|date('d/m/Y H:i') }}</span>
+                                                        {% if version.status == 'archived' %}
+                                                            <span class="ml-2 px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs rounded">Archivée</span>
+                                                        {% elseif version.status == 'completed' %}
+                                                            <span class="ml-2 px-2 py-1 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 text-xs rounded">Version actuelle</span>
+                                                        {% elseif version.status == 'error_archived' %}
+                                                            <span class="ml-2 px-2 py-1 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 text-xs rounded">Version en erreur</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if version.status == 'archived' and version.id != prompt.id %}
+                                                        <button type="button" class="restore-version-btn bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-200 px-3 py-1 rounded-full text-sm transition-colors duration-200" data-version-id="{{ version.id }}">
+                                                            Restaurer cette version
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+
+                                                {% if version.modificationRequest %}
+                                                    <div class="version-content mt-2 p-2 bg-white dark:bg-gray-600 rounded">
+                                                        <p class="text-sm text-gray-600 dark:text-gray-300">
+                                                            <span class="font-medium">Modifications apportées :</span><br>
+                                                            {{ version.modificationRequest }}
+                                                        </p>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-gray-500 dark:text-gray-400 text-sm">Aucune version disponible</p>
+                                    {% endif %}
+                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-6">
+                            {% if prompt.status != 'error' %}
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Code généré</h3>
+                                <div class="flex justify-end mb-4">
+                                    <button class="editor-fullscreen-btn text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5m-7 11h4m-4 0v4m0-4l5 5m5-9v4m0-4h4m-4 0l5 5-5-5z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="editor-container h-[600px] relative" data-prompt-id="{{ prompt.id }}"></div>
+                                <div class="flex space-x-4 mt-4">
+                            {% endif %}
+                                {% if not app.user.isSubscribed %}
+                                    <div class="w-full bg-yellow-300 dark:bg-yellow-900 rounded-lg p-4 text-center">
+                                        <p class="text-yellow-700 dark:text-yellow-300 mb-3">Pour télécharger et déployer votre site, abonnez-vous à Webrovia !</p>
+                                        <a href="{{ path('app_subscription') }}" class="inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Découvrir l'abonnement</a>
+                                    </div>
+                                {% else %}
+                                    {% if prompt.status != 'error' %}
+                                    <div class="flex space-x-3">
+                                        <button class="download-btn bg-green-600 hover:bg-green-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center" data-prompt-id="{{ prompt.id }}">
+                                            <i class="fas fa-download mr-1.5"></i>Télécharger
+                                        </button>
+                                        <a href="{{ path('app_cpanel_database_index', {'promptId': prompt.id}) }}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center">
+                                            <i class="fas fa-database mr-1.5"></i>Base de données
+                                        </a>
+                                        <button class="delete-site-btn bg-red-600 hover:bg-red-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center" data-prompt-id="{{ prompt.id }}">
+                                            <i class="fas fa-trash-alt mr-1.5"></i>Supprimer
+                                        </button>
+                                    </div>
+
+                                        <!-- Modal de confirmation de suppression -->
+                                        <div id="deleteConfirmationModal-{{ prompt.id }}" class="delete-confirmation-modal">
+                                            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm mx-auto">
+                                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Confirmer la suppression</h3>
+                                                <p class="text-gray-600 dark:text-gray-400 mb-6">Êtes-vous sûr de vouloir supprimer ce site ? Pour une restauration, merci de nous contacter.</p>
+                                                <div class="flex justify-end space-x-3">
+                                                    <button class="cancel-delete-confirmation px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Annuler</button>
+                                                    <button class="confirm-delete-site px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700" data-prompt-id="{{ prompt.id }}">Confirmer la suppression</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    <div class="flex flex-col space-y-4 mt-4">
+                                        {% if prompt.deployed %}
+                                            <div class="flex items-center space-x-4 bg-green-50 dark:bg-green-900/30 p-3 rounded-md">
+                                                <div class="text-green-600 dark:text-green-400 font-semibold">
+                                                    <i class="fas fa-check-circle mr-2"></i>Site publié sur {{ prompt.domainName }}
+                                                </div>
+                                                <form action="{{ path('app_deploy_site', {'promptId': prompt.id}) }}" method="post" class="inline">
+                                                    <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center">
+                                                        <i class="fas fa-sync-alt mr-1.5"></i>Redéployer
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        {% else %}
+                                            {% if prompt.status != 'error' %}
+                                            <div class="mt-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                                                <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Déployer votre site</h4>
+                                                {{ form_start(domain_form, {'action': path('payDomain', {'type': 'site', 'id': prompt.id}), 'attr': {'class': 'space-y-3'}}) }}
+                                                    <div class="flex space-x-2">
+                                                        {{ domain_name_widget|raw }}
+                                                        {{ extension_widget|raw }}
+                                                    </div>
+                                                    <div id="domain-availability-message-{{ prompt.id }}" class="mt-2 hidden"></div>
+                                                    <div class="flex space-x-2 mt-2">
+                                                        <button type="button" id="check-domain-{{ prompt.id }}" class="bg-gray-600 hover:bg-gray-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center">
+                                                            <i class="fas fa-search mr-1.5"></i>Vérifier la disponibilité
+                                                        </button>
+                                                        <button type="submit" id="publish-button-{{ prompt.id }}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm py-1.5 px-3 rounded-md shadow-sm transition duration-200 flex items-center" disabled>
+                                                            <i class="fas fa-globe mr-1.5"></i>Publier le site
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                        {% endif %}
+                                                    <script>
+                                                        document.addEventListener('DOMContentLoaded', function() {
+                                                            const domainInput = document.querySelector('#{{ domain_form.domainName.vars.id }}');
+                                                            const extensionSelect = document.querySelector('#{{ domain_form.extension.vars.id }}');
+                                                            const publishButton = document.querySelector('#publish-button-{{ prompt.id }}');
+                                                            const checkDomainButton = document.querySelector('#check-domain-{{ prompt.id }}');
+                                                            const availabilityMessage = document.querySelector('#domain-availability-message-{{ prompt.id }}');
+                                                            let domainChecked = false;
+
+                                                            function updateButtonText() {
+                                                                const domain = domainInput.value;
+                                                                const extension = extensionSelect.value;
+                                                                if (domain) {
+                                                                    publishButton.textContent = `Publier sur ${domain}${extension}`;
+                                                                    checkDomainButton.textContent = `Vérifier ${domain}${extension}`;
+                                                                } else {
+                                                                    publishButton.textContent = 'Publier le site';
+                                                                    checkDomainButton.textContent = 'Vérifier la disponibilité';
+                                                                }
+                                                                // Réinitialiser l'état de vérification du domaine
+                                                                domainChecked = false;
+                                                                publishButton.disabled = true;
+                                                                availabilityMessage.classList.add('hidden');
+                                                            }
+
+                                                            domainInput.addEventListener('input', updateButtonText);
+                                                            extensionSelect.addEventListener('change', updateButtonText);
+                                                            
+                                                            checkDomainButton.addEventListener('click', function() {
+                                                                const domain = domainInput.value;
+                                                                const extension = extensionSelect.value;
+                                                                
+                                                                if (!domain) {
+                                                                    availabilityMessage.textContent = 'Veuillez entrer un nom de domaine';
+                                                                    availabilityMessage.classList.remove('hidden');
+                                                                    availabilityMessage.classList.add('text-red-600');
+                                                                    return;
+                                                                }
+                                                                
+                                                                // Désactiver le bouton pendant la vérification
+                                                                checkDomainButton.disabled = true;
+                                                                checkDomainButton.textContent = 'Vérification en cours...';
+                                                                availabilityMessage.textContent = 'Vérification de la disponibilité...';
+                                                                availabilityMessage.classList.remove('hidden', 'text-red-600', 'text-green-600');
+                                                                availabilityMessage.classList.add('text-gray-600');
+                                                                
+                                                                fetch('/check-domain-availability', {
+                                                                    method: 'POST',
+                                                                    headers: {
+                                                                        'Content-Type': 'application/json',
+                                                                        'X-Requested-With': 'XMLHttpRequest'
+                                                                    },
+                                                                    body: JSON.stringify({
+                                                                        domainName: domain,
+                                                                        extension: extension
+                                                                    })
+                                                                })
+                                                                .then(response => response.json())
+                                                                .then(data => {
+                                                                    checkDomainButton.disabled = false;
+                                                                    checkDomainButton.textContent = `Vérifier ${domain}${extension}`;
+                                                                    
+                                                                    // Logs détaillés pour le débogage
+                                                                    console.log('Réponse API complète:', data);
+                                                                    console.log('Prix reçu (data.price):', data.price);
+                                                                    console.log('Type de data.price:', typeof data.price);
+                                                                    
+                                                                    if (data.error) {
+                                                                        availabilityMessage.textContent = `Erreur: ${data.error}`;
+                                                                        availabilityMessage.classList.add('text-red-600');
+                                                                        availabilityMessage.classList.remove('text-green-600');
+                                                                        publishButton.disabled = true;
+                                                                    } else if (data.avail) {
+                                                                        // Construction du message avec prix
+                                                                        let message = `Le domaine ${data.domain} est disponible`;
+                                                                        
+                                                                        // Vérification explicite du prix
+                                                                        if (data.price && data.price !== null && data.price !== undefined && data.price !== '') {
+                                                                            message += ` pour ${data.price}$/an`;
+                                                                            console.log('Prix ajouté au message:', data.price);
+                                                                        } else {
+                                                                            console.log('Prix non disponible ou invalide dans la réponse');
+                                                                        }
+                                                                        
+                                                                        message += '!';
+                                                                        console.log('Message final:', message);
+                                                                        
+                                                                        availabilityMessage.textContent = message;
+                                                                        availabilityMessage.classList.add('text-green-600');
+                                                                        availabilityMessage.classList.remove('text-red-600');
+                                                                        publishButton.disabled = false;
+                                                                        domainChecked = true;
+                                                                        
+                                                                        // Mise à jour du champ caché pour le prix du domaine si présent
+                                                                        const domainPriceInput = document.querySelector('.domain-price-input');
+                                                                        if (domainPriceInput && data.price) {
+                                                                            domainPriceInput.value = data.price;
+                                                                            console.log('Champ prix mis à jour avec:', data.price);
+                                                                        }
+                                                                    } else {
+                                                                        availabilityMessage.textContent = `Le domaine ${data.domain} n'est pas disponible. Veuillez en choisir un autre.`;
+                                                                        availabilityMessage.classList.add('text-red-600');
+                                                                        availabilityMessage.classList.remove('text-green-600');
+                                                                        publishButton.disabled = true;
+                                                                    }
+                                                                    
+                                                                    availabilityMessage.classList.remove('hidden');
+                                                                })
+                                                                .catch(error => {
+                                                                    checkDomainButton.disabled = false;
+                                                                    checkDomainButton.textContent = `Vérifier ${domain}${extension}`;
+                                                                    availabilityMessage.textContent = 'Erreur lors de la vérification du domaine. Veuillez réessayer.';
+                                                                    availabilityMessage.classList.add('text-red-600');
+                                                                    publishButton.disabled = true;
+                                                                });
+                                                            });
+                                                        });
+                                                    </script>
+                                                </div>
+                                            {{ form_end(domain_form) }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const restoreButtons = document.querySelectorAll('.restore-version-btn');
+                                    
+                                    restoreButtons.forEach(button => {
+                                        button.addEventListener('click', function() {
+                                            const promptId = this.getAttribute('data-prompt-id');
+                                            
+                                            // Désactiver le bouton pendant la requête
+                                            this.disabled = true;
+                                            this.innerHTML = 'Restauration en cours...';
+                                            
+                                            fetch(`/restore-version/${promptId}`, {
+                                                method: 'POST',
+                                                headers: {
+                                                    'X-Requested-With': 'XMLHttpRequest'
+                                                }
+                                            })
+                                            .then(response => response.json())
+                                            .then(data => {
+                                                if (data.success) {
+                                                    // Recharger la page après la restauration
+                                                    window.location.reload();
+                                                } else {
+                                                    // Réactiver le bouton en cas d'erreur
+                                                    this.disabled = false;
+                                                    this.innerHTML = 'Restaurer la version précédente';
+                                                }
+                                            })
+                                            .catch(error => {
+                                                // Réactiver le bouton en cas d'erreur
+                                                this.disabled = false;
+                                                this.innerHTML = 'Restaurer la version précédente';
+                                            });
+                                        });
+                                    });
+                                });
+                            </script>
+
+                            {% if prompt.status != 'error' %}
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                                <div class="flex justify-between items-center mb-4">
+                                    <div class="flex items-center">
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Aperçu en direct</h3>
+                                        <div class="visual-edit-buttons ml-4">
+                                            <button class="visual-edit-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded text-sm mr-2" data-prompt-id="{{ prompt.id }}" data-mode="edit">
+                                                <i class="fas fa-edit mr-1"></i> Edit
+                                            </button>
+                                            <button class="visual-save-btn bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm mr-2" data-prompt-id="{{ prompt.id }}" style="display: none;">
+                                                <i class="fas fa-save mr-1"></i> Sauvegarder
+                                            </button>
+                                            <button class="visual-preview-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm" data-prompt-id="{{ prompt.id }}" data-mode="preview">
+                                                <i class="fas fa-eye mr-1"></i> Preview
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button class="preview-fullscreen-btn text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5m-7 11h4m-4 0v4m0-4l5 5m5-9v4m0-4h4m-4 0l5 5-5-5z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="preview-container h-[500px] w-full bg-white border rounded-lg overflow-hidden relative" data-prompt-id="{{ prompt.id }}">
+                                    <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}" src="{{ path('app_preview_template', {'id': prompt.id, 'template': 'index.html.twig'}) }}"></iframe>
+                                </div>
+                            {% endif %}
+
+                                <!-- Modal de création de fichier -->
+                                <div id="newFileModal-{{ prompt.id }}" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center" data-modal-type="creation">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Nouveau fichier Twig</h3>
+                                        <div class="mb-4">
+                                            <label for="fileName-{{ prompt.id }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nom du fichier</label>
+                                            <input type="text" id="fileName-{{ prompt.id }}" class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="mon-template">
+                                        </div>
+                                        {# <div class="mb-4">
+                                            <label for="fileContent-{{ prompt.id }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Contenu de la page</label>
+                                            <textarea id="fileContent-{{ prompt.id }}" class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white h-32" placeholder="Décrivez le contenu souhaité pour votre page (structure, style, fonctionnalités...)"></textarea>
+                                        </div> #}
+                                        <div class="flex justify-end space-x-3">
+                                            <button type="button" class="cancel-file-btn px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600" data-prompt-id="{{ prompt.id }}">Annuler</button>
+                                            <button type="button" class="create-file-btn px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center space-x-2" data-prompt-id="{{ prompt.id }}">
+                                                <span class="create-btn-text">Créer</span>
+                                                <svg class="animate-spin h-4 w-4 text-white hidden create-btn-spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Modal de confirmation de suppression -->
+                                <div id="deleteFileModal-{{ prompt.id }}" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center" data-modal-type="deletion">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Confirmer la suppression</h3>
+                                        <p class="text-gray-600 dark:text-gray-400 mb-6">Êtes-vous sûr de vouloir supprimer ce fichier ? Cette action est irréversible.</p>
+                                        <div class="flex justify-end space-x-3">
+                                            <button type="button" class="cancel-delete-btn px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Non, annuler</button>
+                                            <button type="button" class="confirm-delete-btn px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">Oui, supprimer</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                    </div>
+                                </div>
+                                {% if prompt.status != 'error' %}
+                                <div class="mt-4">
+                                    <div class="modification-section mb-6">
+                                        <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Modifier le site</h4>
+                                            <textarea class="modification-prompt w-full h-24 p-2 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600" data-prompt-id="{{ prompt.id }}" placeholder="Décrivez les modifications que vous souhaitez apporter au site..." oninput="this.nextElementSibling.disabled = !this.value.trim()"></textarea>
+                                            <button class="modify-btn mt-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-lg" data-prompt-id="{{ prompt.id }}" {% if app.user.count >= 3 and not app.user.isSubscribed %}disabled{% endif %} disabled>
+                                            Appliquer les modifications {% if not app.user.isSubscribed %}({{ 3 - app.user.count }} restante{% if 3 - app.user.count != 1 %}s{% endif %}){% endif %}
+                                        </button>
+                                    </div>
+                                    <div class="mb-6">
+                                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Explorateur de fichiers</h3>
+                                            <div data-prompt-id="{{ prompt.id }}">
+                                                <div class="flex justify-between items-center mb-4">
+                                                    <button class="add-file-btn bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm" data-prompt-id="{{ prompt.id }}">
+                                                        <i class="fas fa-plus mr-1"></i> Nouveau template
+                                                    </button>
+                                                </div>
+                                                <div class="file-tree">
+                                                    {% set fileTypes = {
+                                                        'html.twig': 'Template',
+                                                        'css': 'Style',
+                                                        'js': 'Script',
+                                                        'json': 'JSON',
+                                                        'lock': 'LOCK',
+                                                        'env': 'Environnement',
+                                                        'md': 'Documentation',
+                                                        'yaml': 'YAML',
+                                                        'php': 'PHP'
+                                                    } %}
+
+                                                    {% for type, label in fileTypes %}
+                                                        {% set typeFiles = [] %}
+                                                        {% for template in templates %}
+                                                            {% if template.path ends with type and template.promptId == prompt.id %}
+                                                                {% set typeFiles = typeFiles|merge([template]) %}
+                                                            {% endif %}
+                                                        {% endfor %}
+
+                                                        {% if typeFiles is not empty %}
+                                                            <div class="file-category mb-4">
+                                                                <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                                                                    <span class="mr-2">
+                                                                        {% if type == 'html.twig' %}
+                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path></svg>
+                                                                        {% elseif type == 'css' %}
+                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path></svg>
+                                                                        {% elseif type == 'js' %}
+                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>
+                                                                        {% else %}
+                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
+                                                                        {% endif %}
+                                                                    </span>
+                                                                    {{ label }}s
+                                                                </h4>
+                                                                <ul class="pl-4 space-y-1">
+                                                                    {% for file in typeFiles %}
+                                                                        <li>
+                                                                            <div class="flex items-center justify-between w-full px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 group">
+                                                                                <button class="file-btn text-left flex-grow flex items-center"
+                                                                                        data-prompt-id="{{ prompt.id }}"
+                                                                                        data-file-path="{{ file.path }}">
+                                                                                    <span class="flex-grow text-gray-700 dark:text-gray-300 truncate">{{ file.name }}</span>
+                                                                                    <span class="hidden group-hover:inline-flex ml-2 text-gray-500 dark:text-gray-400">
+                                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                                                        </svg>
+                                                                                    </span>
+                                                                                </button>
+                                                                                {% if type == 'html.twig' and file.name != 'index.html.twig' %}
+                                                                                    <button class="delete-file-btn hidden group-hover:inline-flex text-red-500 hover:text-red-700 ml-2" 
+                                                                                            data-prompt-id="{{ prompt.id }}"
+                                                                                            data-file-path="{{ file.path }}">
+                                                                                        <i class="fas fa-trash-alt"></i>
+                                                                                    </button>
+                                                                                {% endif %}
+                                                                            </div>
+                                                                        </li>
+                                                                    {% endfor %}
+                                                                </ul>
+                                                            </div>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    {% if prompt.status != 'error' %}
+                                    <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Historique des versions</h4>
+                                    <div>
+                                    {% if prompt.allVersions is defined and prompt.allVersions is not empty %}
+                                        {% for version in prompt.allVersions %}
+                                            <div class="version-item p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2 {% if version.status == 'archived' %}opacity-75{% endif %}">
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <div class="version-header">
+                                                        <span class="font-medium text-black dark:text-white text-lg">Version {{ version.version }}</span>
+                                                        <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">{{ version.createdAt|date('d/m/Y H:i') }}</span>
+                                                        {% if version.status == 'archived' %}
+                                                            <span class="ml-2 px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs rounded">Archivée</span>
+                                                        {% elseif version.status == 'completed' %}
+                                                            <span class="ml-2 px-2 py-1 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 text-xs rounded">Version actuelle</span>
+                                                        {% elseif version.status == 'error_archived' %}
+                                                            <span class="ml-2 px-2 py-1 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 text-xs rounded">Version en erreur</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if version.status == 'archived' and version.id != prompt.id %}
+                                                        <button type="button" class="restore-version-btn bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-200 px-3 py-1 rounded-full text-sm transition-colors duration-200" data-version-id="{{ version.id }}">
+                                                            Restaurer cette version
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+
+                                                {% if version.modificationRequest %}
+                                                    <div class="version-content mt-2 p-2 bg-white dark:bg-gray-600 rounded">
+                                                        <p class="text-sm text-gray-600 dark:text-gray-300">
+                                                            <span class="font-medium">Modifications apportées :</span><br>
+                                                            {{ version.modificationRequest }}
+                                                        </p>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-gray-500 dark:text-gray-400 text-sm">Aucune version disponible</p>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                {% elseif prompt.status == 'error' %}
+                    <div class="max-w-5xl mx-auto mb-12 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                        <div class="mb-6">
+                            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Site #{{ prompt.id }}</h2>
+                            <div class="bg-gray-100 dark:bg-gray-700 rounded p-4 mb-4">
+                                <h3 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">Prompt :</h3>
+                                <p class="text-gray-600 dark:text-gray-400">{{ prompt.content }}</p>
+                                {% if prompt.status == 'error' %}
+                                    <div class="mt-4 bg-red-100 dark:bg-red-900 border-l-4 border-red-500 p-4">
+                                        <div class="flex">
+                                            <div class="flex-shrink-0">
+                                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                                </svg>
+                                            </div>
+                                            <div class="ml-3">
+                                                <p class="text-sm text-red-700 dark:text-red-200">
+                                                    Une erreur est survenue : {{ prompt.error }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-6">
+                            {% if prompt.status != 'error' %}
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Code généré</h3>
+                                <div class="flex justify-end mb-4">
+                                    <button class="editor-fullscreen-btn text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5m-7 11h4m-4 0v4m0-4l5 5m5-9v4m0-4h4m-4 0l5 5-5-5z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="editor-container h-[600px] relative" data-prompt-id="{{ prompt.id }}"></div>
+                                <div class="flex space-x-4 mt-4">
+                            {% endif %}
+                            
+                                    <div class="flex space-x-4">
+                                        <button class="download-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
+                                            Télécharger le site
+                                        </button>
+                                        <a href="{{ path('app_cpanel_database_index', {'promptId': prompt.id}) }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                                            <i class="fas fa-database mr-2"></i>Bases de données
+                                        </a>
+                                        <button class="delete-site-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
+                                            <i class="fas fa-trash-alt mr-2"></i>Supprimer le site
+                                        </button>
+
+                                        <!-- Modal de confirmation de suppression -->
+                                        <div id="deleteConfirmationModal-{{ prompt.id }}" class="delete-confirmation-modal">
+                                            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm mx-auto">
+                                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Confirmer la suppression</h3>
+                                                <p class="text-gray-600 dark:text-gray-400 mb-6">Êtes-vous sûr de vouloir supprimer ce site ? Pour une restauration, merci de nous contacter.</p>
+                                                <div class="flex justify-end space-x-3">
+                                                    <button class="cancel-delete-confirmation px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Annuler</button>
+                                                    <button class="confirm-delete-site px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700" data-prompt-id="{{ prompt.id }}">Confirmer la suppression</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col space-y-2">
+                                        <div class="flex space-x-2">
+                                            <input type="text" class="custom-domain-input flex-grow px-4 py-2 border rounded-l-lg dark:bg-gray-700 dark:text-white dark:border-gray-600" data-prompt-id="{{ prompt.id }}" placeholder="Votre nom de domaine">
+                                            <select class="domain-extension px-4 py-2 border rounded-r-lg bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600">
+                                                <option value=".com">.com</option>
+                                                <option value=".fr">.fr</option>
+                                                <option value=".org">.org</option>
+                                                <option value=".net">.net</option>
+                                                <option value=".eu">.eu</option>
+                                            </select>
+                                        </div>
+                                        <button class="deploy-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
+                                            Publier le site
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                                <div class="flex justify-between items-center mb-4">
+                                    <div class="flex items-center">
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Aperçu en direct</h3>
+                                        <div class="visual-edit-buttons ml-4">
+                                            <button class="visual-edit-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm mr-2" data-prompt-id="{{ prompt.id }}" data-mode="edit">
+                                                <i class="fas fa-edit mr-1"></i> Edit
+                                            </button>
+                                            <button class="visual-save-btn bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm mr-2" data-prompt-id="{{ prompt.id }}" style="display: none;">
+                                                <i class="fas fa-save mr-1"></i> Sauvegarder
+                                            </button>
+                                            <button class="visual-preview-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded text-sm" data-prompt-id="{{ prompt.id }}" data-mode="preview">
+                                                <i class="fas fa-eye mr-1"></i> Preview
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button class="preview-fullscreen-btn text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5m-7 11h4m-4 0v4m0-4l5 5m5-9v4m0-4h4m-4 0l5 5-5-5z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="preview-container h-[500px] w-full bg-white border rounded-lg overflow-hidden relative" data-prompt-id="{{ prompt.id }}">
+                                    <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}" src="{{ path('app_preview_template', {'id': prompt.id, 'template': 'index.html.twig'}) }}"></iframe>
+                                </div>
+
+                                <!-- Modal pour la création de fichier -->
+                                <!-- Modal de création de fichier -->
+                                <div id="newFileModal-{{ prompt.id }}" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center" data-modal-type="creation">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Nouveau fichier Twig</h3>
+                                        <div class="mb-4">
+                                            <label for="fileName-{{ prompt.id }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nom du fichier</label>
+                                            <input type="text" id="fileName-{{ prompt.id }}" class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="mon-template">
+                                        </div>
+                                        {# <div class="mb-4">
+                                            <label for="fileContent-{{ prompt.id }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Contenu de la page</label>
+                                            <textarea id="fileContent-{{ prompt.id }}" class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white h-32" placeholder="Décrivez le contenu souhaité pour votre page (structure, style, fonctionnalités...)"></textarea>
+                                        </div> #}
+                                        <div class="flex justify-end space-x-3">
+                                            <button type="button" class="cancel-file-btn px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600" data-prompt-id="{{ prompt.id }}">Annuler</button>
+                                            <button type="button" class="create-file-btn px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center space-x-2" data-prompt-id="{{ prompt.id }}">
+                                                <span class="create-btn-text">Créer</span>
+                                                <svg class="animate-spin h-4 w-4 text-white hidden create-btn-spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Modal de confirmation de suppression -->
+                                <div id="deleteFileModal-{{ prompt.id }}" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center" data-modal-type="deletion">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Confirmer la suppression</h3>
+                                        <p class="text-gray-600 dark:text-gray-400 mb-6">Êtes-vous sûr de vouloir supprimer ce fichier ? Cette action est irréversible.</p>
+                                        <div class="flex justify-end space-x-3">
+                                            <button type="button" class="cancel-delete-btn px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Non, annuler</button>
+                                            <button type="button" class="confirm-delete-btn px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">Oui, supprimer</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                    </div>
+                                </div>
+                                <div class="mt-4">
+                                    <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Historique des versions</h4>
+                                    <div>
+                                        {% set allVersions = [prompt] %}
+                                        {% set currentPrompt = prompt %}
+                                        {% if currentPrompt.originalPrompt is not null %}
+                                            {% set originalPrompt = currentPrompt.originalPrompt %}
+                                            {% set allVersions = allVersions|merge([originalPrompt]) %}
+                                            {% if originalPrompt.originalPrompt is not null %}
+                                                {% set allVersions = allVersions|merge([originalPrompt.originalPrompt]) %}
+                                            {% endif %}
+                                        {% endif %}
+
+                                        {% for version in allVersions|reverse %}
+                                            <div class="version-item p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2 {% if version.status == 'archived' %}opacity-75{% endif %}">
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <div class="version-header">
+                                                        <span class="font-medium text-black dark:text-white text-lg">Version {{ version.version }}</span>
+                                                        <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">{{ version.createdAt|date('d/m/Y H:i') }}</span>
+                                                        {% if version.status == 'archived' %}
+                                                            <span class="ml-2 px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs rounded">Archivée</span>
+                                                        {% elseif version.status == 'completed' %}
+                                                            <span class="ml-2 px-2 py-1 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 text-xs rounded">Version actuelle</span>
+                                                        {% elseif version.status == 'error_archived' %}
+                                                            <span class="ml-2 px-2 py-1 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 text-xs rounded">Version en erreur</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if version.status == 'archived' and version.id != prompt.id %}
+                                                        <button type="button" class="restore-version-btn bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-200 px-3 py-1 rounded-full text-sm transition-colors duration-200" data-version-id="{{ version.id }}">
+                                                            Restaurer cette version
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                {% if version.modificationRequest %}
+                                                    <div class="version-content mt-2 p-2 bg-white dark:bg-gray-600 rounded">
+                                                        <p class="text-sm text-gray-600 dark:text-gray-300">
+                                                            <span class="font-medium">Modifications apportées :</span><br>
+                                                            {{ version.modificationRequest }}
+                                                        </p>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <p class="text-gray-500 dark:text-gray-400 text-sm">Aucune version disponible</p>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="mb-6">
+                                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Explorateur de fichiers</h3>
+                                            <div class="file-explorer overflow-y-auto h-64" data-prompt-id="{{ prompt.id }}">
+                                                <div class="file-tree">
+                                                    {% set fileTypes = {
+                                                        'html.twig': 'Template',
+                                                        'css': 'Style',
+                                                        'js': 'Script',
+                                                        'json': 'JSON',
+                                                        'lock': 'LOCK',
+                                                        'env': 'Environnement',
+                                                        'md': 'Documentation',
+                                                        'yaml': 'YAML',
+                                                        'php': 'PHP'
+                                                    } %}
+
+                                                    {% for type, label in fileTypes %}
+                                                        {% set typeFiles = [] %}
+                                                        {% for template in templates %}
+                                                            {% if template.path ends with type and template.promptId == prompt.id %}
+                                                                {% set typeFiles = typeFiles|merge([template]) %}
+                                                            {% endif %}
+                                                        {% endfor %}
+
+                                                        {% if typeFiles is not empty %}
+                                                            <div class="file-category mb-4">
+                                                                <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                                                                    <span class="mr-2">
+                                                                        {% if type == 'html.twig' %}
+                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path></svg>
+                                                                        {% elseif type == 'css' %}
+                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path></svg>
+                                                                        {% elseif type == 'js' %}
+                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>
+                                                                        {% else %}
+                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
+                                                                        {% endif %}
+                                                                    </span>
+                                                                    {{ label }}s
+                                                                </h4>
+                                                                <ul class="pl-4 space-y-1">
+                                                                    {% for file in typeFiles %}
+                                                                        <li>
+                                                                            <button class="file-btn text-left w-full px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center group" 
+                                                                                    data-prompt-id="{{ prompt.id }}" 
+                                                                                    data-file-path="{{ file.path }}"
+                                                                                    
+                                                                                    >
+                                                                                <span class="flex-grow text-white truncate">{{ file.name }}</span>
+                                                                                <span class="hidden group-hover:inline-flex ml-2 text-gray-500 dark:text-gray-400">
+                                                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                                                    </svg>
+                                                                                </span>
+                                                                            </button>
+                                                                        </li>
+                                                                    {% endfor %}
+                                                                </ul>
+                                                            </div>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modification-section">
+                                        <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Modifier le site</h4>
+                                        {% if not app.user.isSubscribed and app.user.count >= 3 %}
+                                            <div class="bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 p-4 mb-4">
+                                                <p class="text-yellow-700 dark:text-yellow-200">
+                                                    Vous avez atteint la limite de modifications gratuites. <a href="{{ path('app_subscription') }}" class="underline hover:text-yellow-600">Passez à la version premium</a> pour des modifications illimitées.
+                                                </p>
+                                            </div>
+                                            <textarea class="modification-prompt w-full h-24 p-2 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600 opacity-50 cursor-not-allowed" data-prompt-id="{{ prompt.id }}" placeholder="Décrivez les modifications que vous souhaitez apporter au site..." disabled></textarea>
+                                            <button class="modify-btn mt-2 bg-purple-600 text-white font-bold py-2 px-4 rounded opacity-50 cursor-not-allowed" data-prompt-id="{{ prompt.id }}" disabled>
+                                                Modifications bloquées
+                                            </button>
+                                        {% else %}
+                                            <textarea class="modification-prompt w-full h-24 p-2 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600" data-prompt-id="{{ prompt.id }}" placeholder="Décrivez les modifications que vous souhaitez apporter au site..."></textarea>
+                                            <div class="flex justify-between items-center mt-2">
+                                                <button class="modify-btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200" data-prompt-id="{{ prompt.id }}">
+                                                    Appliquer les modifications
+                                                </button>
+                                                {% if not app.user.isSubscribed %}
+                                                    <span class="text-gray-600 dark:text-gray-400">
+                                                        {{ 3 - app.user.count }} modification{% if 3 - app.user.count != 1 %}s{% endif %} restante{% if 3 - app.user.count != 1 %}s{% endif %}
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {# <div id="error-alert" class="max-w-3xl mx-auto mt-5 mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                            <strong class="font-bold">Erreur!</strong>
+                            <span id="error-message" class="block sm:inline">Veuillez réessayer</span>
+                        </div> #}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+</div>
+    </body>
+</html>

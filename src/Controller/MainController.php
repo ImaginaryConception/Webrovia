@@ -11,7 +11,6 @@ use App\Form\DomainType;
 use App\Form\PromptType;
 use Stripe\StripeClient;
 use App\Service\FtpService;
-use App\Entity\WebsiteClone;
 use Stripe\Checkout\Session;
 use App\Service\PorkbunService;
 use App\Message\GenerateWebsiteMessage;
@@ -31,6 +30,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 class MainController extends AbstractController
 {
@@ -52,6 +52,93 @@ class MainController extends AbstractController
         return $this->render('main/index.html.twig', [
             'form' => $form->createView(),
             'prompt' => $lastPrompt
+        ]);
+    }
+
+    #[Route('/my-focus/{id}', name: 'app_my_focus')]
+    #[IsGranted('ROLE_USER')]
+    public function myFocus(Request $request, EntityManagerInterface $em, ?int $id = null): Response
+    {
+        if ($id !== null) {
+            $prompt = $em->getRepository(Prompt::class)->find($id);
+            if (!$prompt || $prompt->getUser() !== $this->getUser()) {
+                throw $this->createNotFoundException('Site non trouvé');
+            }
+            
+            // Si le prompt actuel n'est pas complété, chercher la dernière version complétée
+            if ($prompt->getStatus() == 'archived' || $prompt->getStatus() == 'error_archived') {
+                $latestPrompt = $em->getRepository(Prompt::class)->findOneBy(
+                    [
+                        'user' => $this->getUser(),
+                        'websiteIdentification' => $prompt->getWebsiteIdentification(),
+                        'status' => 'completed'
+                    ],
+                    ['version' => 'DESC']
+                );
+                
+                // Si on ne trouve pas de prompt avec status "completed", chercher celui avec status "error"
+                if (!$latestPrompt) {
+                    $latestPrompt = $em->getRepository(Prompt::class)->findOneBy(
+                        [
+                            'user' => $this->getUser(),
+                            'websiteIdentification' => $prompt->getWebsiteIdentification(),
+                            'status' => 'error'
+                        ],
+                        ['version' => 'DESC']
+                    );
+                }
+                
+                if ($latestPrompt && $latestPrompt->getId() !== $prompt->getId()) {
+                    return $this->redirectToRoute('app_my_sites', ['id' => $latestPrompt->getId()]);
+                }
+            }
+            
+            $prompts = [$prompt];
+        } else {
+            $prompts = $em->getRepository(Prompt::class)->findBy(
+                ['user' => $this->getUser()],
+                ['createdAt' => 'DESC']
+            );
+        }
+
+        // Injecte allVersions dans chaque prompt
+        foreach ($prompts as $prompt) {
+            // Récupérer toutes les versions liées au même websiteIdentification
+            $versions = $em->getRepository(Prompt::class)->findBy(
+                ['websiteIdentification' => $prompt->getWebsiteIdentification()],
+                ['version' => 'DESC']
+            );
+            $prompt->allVersions = $versions;
+        }
+
+        $templates = [];
+        foreach ($prompts as $prompt) {
+            if ($prompt->getGeneratedFiles()) {
+                foreach ($prompt->getGeneratedFiles() as $path => $content) {
+                    $templates[] = [
+                        'name' => basename($path),
+                        'path' => $path,
+                        'promptId' => $prompt->getId()
+                    ];
+                }
+            }
+        }
+
+        $domainForm = $this->createForm(DomainType::class);
+        $domainForm->handleRequest($request);
+
+        if ($domainForm->isSubmitted() && $domainForm->isValid()) {
+            $data = $domainForm->getData();
+            $domainName = $data['domainName'] . $data['extension'];
+            
+            $this->addFlash('success', 'Le nom de domaine ' . $domainName . ' a été enregistré avec succès.');
+            return $this->redirectToRoute('app_my_sites', ['id' => $id]);
+        }
+
+        return $this->render('main/my_focus.html.twig', [
+            'prompts' => $prompts,
+            'templates' => $templates,
+            'domain_form' => $domainForm->createView()
         ]);
     }
 
@@ -289,7 +376,6 @@ class MainController extends AbstractController
     public function adminPrompts(EntityManagerInterface $em, Request $request, \App\Service\CpanelService $cpanelService): Response
     {
         $prompts = $em->getRepository(Prompt::class)->findAllOrderedByDate();
-        $clones = $em->getRepository(WebsiteClone::class)->findAll();
         
         try {
             // Récupérer les bases de données depuis cPanel
@@ -319,7 +405,6 @@ class MainController extends AbstractController
             
             return $this->render('main/admin_prompts.html.twig', [
                 'prompts' => $prompts,
-                'clones' => $clones,
                 'visibleDatabases' => $visibleDatabases,
                 'hiddenDatabases' => $hiddenDbList,
                 'hiddenDatabaseNames' => $hiddenDatabases
@@ -328,7 +413,6 @@ class MainController extends AbstractController
             // En cas d'erreur, continuer sans les bases de données
             return $this->render('main/admin_prompts.html.twig', [
                 'prompts' => $prompts,
-                'clones' => $clones,
                 'error' => 'Erreur lors de la récupération des bases de données: ' . $e->getMessage()
             ]);
         }
@@ -422,27 +506,6 @@ class MainController extends AbstractController
             'domainName' => $domainName,
             'extension' => $extension
         ]);
-    }
-
-    #[Route('/test/', name: 'pasyDomain')]
-    public function testPorkbun(PorkbunService $porkbunService): JsonResponse
-    {
-        try {
-            $domain = 'webrovia.com';
-            $result = $porkbunService->checkDomainAvailability($domain);
-
-            return new JsonResponse([
-                'success' => true,
-                'domain' => $domain,
-                'available' => $result['available'] ?? false,
-                'price' => $result['price'] ?? 'N/A'
-            ]);
-        } catch (\Exception $e) {
-            return new JsonResponse([
-                'success' => false,
-                'error' => $e->getMessage()
-            ]);
-        }
     }
 
     #[Route('/create-stripe-session-domain/{type}/{id}', name: 'payDomain')]

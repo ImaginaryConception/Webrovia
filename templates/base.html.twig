@@ -75,17 +75,9 @@
                         <i class="fas fa-magic text-xl"></i>
                         <span class="ml-4 lg:ml-4 lg:block">Générer</span>
                     </a>
-                    <a href="{{ path('app_clone') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 200ms;" title="Cloner">
-                        <i class="fas fa-clone text-xl"></i>
-                        <span class="ml-4 lg:ml-4 lg:block">Cloner</span>
-                    </a>
                     <a href="{{ path('app_list_sites') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 300ms;" title="Mes Sites Web">
                         <i class="fas fa-globe text-xl"></i>
                         <span class="ml-4 lg:ml-4 lg:block">Mes Sites Web</span>
-                    </a>
-                    <a href="{{ path('app_my_clones') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 400ms;" title="Mes Clones">
-                        <i class="fas fa-copy text-xl"></i>
-                        <span class="ml-4 lg:ml-4 lg:block">Mes Clones</span>
                     </a>
                     <a href="{{ path('app_model_maker') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 450ms;" title="Model Maker">
                         <i class="fas fa-image text-xl"></i>
@@ -105,6 +97,10 @@
                             <span class="ml-4 lg:ml-4 lg:block">Mon compte</span>
                         </a>
                     {% endif %}
+                    <a href="{{ path('app_contact') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 650ms;" title="Contact">
+                        <i class="fas fa-envelope text-xl"></i>
+                        <span class="ml-4 lg:ml-4 lg:block">Contact</span>
+                    </a>
                     
                     {% if is_granted('ROLE_ADMIN') %}
                         <a href="{{ path('app_admin_prompts') }}" class="flex items-center px-4 py-2 mb-4 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg lg:justify-center lg:px-3 fade-in group" style="animation-delay: 700ms;" title="Administration">
@@ -153,6 +149,10 @@
                         </a>
                     {% endif %}
 
+                    <a href="{{ path('app_contact') }}" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mb-2">
+                        <i class="fas fa-envelope text-xl"></i>
+                        <span class="ml-4">Contact</span>
+                    </a>
                     <a href="https://www.imaginaryconception.com/" target="_blank" class="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mt-2">
                         <i class="fas fa-code text-xl"></i>
                         <span class="ml-4">Imaginary Conception</span>
@@ -180,8 +180,8 @@
                         <div class="flex h-16 justify-between items-center">
                             <div class="flex items-center ml-16 lg:ml-0">
                                 <div class="flex flex-shrink-0 items-center">
-                                    <a href="{{ path('app_home') }}"><span class="font-bold text-2xl bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">Webrovia</span></a>
-                                    <a href="https://www.imaginaryconception.com/" target="_blank"><span class="text-1xl bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent ms-3">by Imaginary Conception</span></a>
+                                    <a href="{{ path('app_home') }}"><span class="font-bold text-2xl bg-gradient-to-r from-indigo-500 to-pink-500 to-accent bg-clip-text text-transparent">Webrovia</span></a>
+                                    <a href="https://www.imaginaryconception.com/" target="_blank"><span class="text-1xl bg-gradient-to-r from-indigo-500 to-pink-500 to-accent bg-clip-text text-transparent ms-3">by Imaginary Conception</span></a>
                                 </div>
                             </div>
                         </div>

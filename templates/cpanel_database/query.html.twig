@@ -31,7 +31,7 @@
         </div>
         <div class="db-card-body">
             <div class="alert alert-info mb-4">
-                <p><i class="fas fa-info-circle"></i> Gérez votre base de données MySQL facilement. Attention : les modifications sont définitives.</p>
+                <p class="dark:text-white text-black"><i class="fas fa-info-circle"></i> Gérez votre base de données MySQL facilement. Attention : les modifications sont définitives.</p>
             </div>
             
             {% for label, messages in app.flashes %}
@@ -43,7 +43,7 @@
             {% endfor %}
             
             <!-- Mot de passe de la base de données (commun à tous les onglets) -->
-            <div class="db-form-section">
+            <div class="db-form-section dark:bg-dark bg-white">
                 <form action="{{ path('app_cpanel_database_query', {'dbName': dbName}) }}" method="post">
                     <div class="db-form-group">
                         <label for="db_password" class="db-label">Mot de passe de la base de données (optionnel)</label>
@@ -70,7 +70,7 @@
             
             <!-- Contenu de l'onglet Requêtes SQL -->
             <div id="tab-sql" class="tab-content active">
-                <div class="db-form-section">
+                <div class="db-form-section dark:bg-dark bg-white">
                     <h3 class="db-form-header">Exécuter une requête SQL</h3>
                     <form action="{{ path('app_cpanel_database_query', {'dbName': dbName}) }}" method="post">
                         <div class="db-form-group">
@@ -99,11 +99,11 @@
                                 <p><i class="fas fa-check-circle"></i> {{ result.message }}</p>
                             </div>
                         {% elseif result.data is defined and result.data is not empty %}
-                            <h3 class="text-xl font-semibold mb-4">Résultats</h3>
+                            <h3 class="text-xl font-semibold mb-4 dark:text-white text-black">Résultats</h3>
                             <div class="result-table mb-3 db-table-container">
                                 <table class="db-table">
                                     <thead>
-                                        <tr>
+                                        <tr class="text-black">
                                             {% for column in result.data[0]|keys %}
                                                 <th>{{ column }}</th>
                                             {% endfor %}
@@ -111,7 +111,7 @@
                                     </thead>
                                     <tbody>
                                         {% for row in result.data %}
-                                            <tr>
+                                            <tr class="text-black">
                                                 {% for value in row %}
                                                     <td>{{ value }}</td>
                                                 {% endfor %}
@@ -123,11 +123,11 @@
                         {% else %}
                             {% if success is defined and success is not empty %}
                                 <div class="alert alert-success mb-3">
-                                    <p><i class="fas fa-check-circle"></i> {{ success }}</p>
+                                    <p class="dark:text-white text-black"><i class="fas fa-check-circle"></i> {{ success }}</p>
                                 </div>
                             {% else %}
                                 <div class="alert hidden alert-info mb-3">
-                                    <p><i class="fas fa-info-circle"></i> La requête a été exécutée avec succès, mais n'a retourné aucun résultat.</p>
+                                    <p class="dark:text-white text-black"><i class="fas fa-info-circle"></i> La requête a été exécutée avec succès, mais n'a retourné aucun résultat.</p>
                                 </div>
                             {% endif %}
                         {% endif %}
@@ -137,7 +137,7 @@
             
             <!-- Contenu de l'onglet Créer une table -->
             <div id="tab-create-table" class="tab-content">
-                <div class="db-form-section">
+                <div class="db-form-section dark:bg-dark bg-white">
                     <h3 class="db-form-header">Créer une nouvelle table</h3>
                     <form action="{{ path('app_cpanel_database_query', {'dbName': dbName}) }}" method="post" id="create-table-form">
                         <div class="db-form-group">
@@ -197,7 +197,7 @@
             
             <!-- Contenu de l'onglet Gérer les données -->
             <div id="tab-manage-data" class="tab-content">
-                <div class="db-form-section">
+                <div class="db-form-section dark:bg-dark bg-white">
                     <h3 class="db-form-header">Sélectionner une table</h3>
                     <div class="table-select">
                         <form action="{{ path('app_cpanel_database_query', {'dbName': dbName}) }}" method="post" id="select-table-form">
@@ -273,7 +273,7 @@
             
             <!-- Liste des tables (visible dans tous les onglets) -->
             <div class="mt-6">
-                <h3 class="text-xl font-semibold mb-4">Tables dans {{ dbName }}</h3>
+                <h3 class="text-xl font-semibold mb-4 dark:text-white text-black">Tables dans {{ dbName }}</h3>
                 {% if tables is empty %}
                     <p class="text-gray-500">Aucune table trouvée dans cette base de données.</p>
                 {% else %}
@@ -290,9 +290,6 @@
                                         </button>
                                         <button onclick="document.getElementById('query').value = 'DESCRIBE {{ table }};'; switchToTab('sql');" class="db-btn db-btn-sm db-btn-secondary db-btn-icon">
                                             <i class="fas fa-info-circle"></i> Structure
-                                        </button>
-                                        <button onclick="selectTableForManagement('{{ table }}');" class="db-btn db-btn-sm db-btn-secondary db-btn-icon">
-                                            <i class="fas fa-database"></i> Gérer
                                         </button>
                                         <form action="{{ path('app_cpanel_database_drop_table', {'dbName': dbName, 'tableName': table}) }}" method="post" class="inline delete-table-form">
                                             <button type="submit" class="db-btn db-btn-sm db-btn-danger db-btn-icon" data-table-name="{{ table }}">

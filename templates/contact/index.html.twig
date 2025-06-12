@@ -1,0 +1,41 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Contactez-nous{% endblock %}
+{% block page_title %}Contactez-nous{% endblock %}
+{% block page_subtitle %}Nous sommes là pour vous aider.{% endblock %}
+
+{% block body %}
+    <div class="max-w-3xl mx-auto p-8 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700">
+        <h2 class="text-3xl font-extrabold text-gray-900 dark:text-white mb-6 text-center">Contactez-nous</h2>
+        <p class="text-lg text-gray-700 dark:text-gray-300 mb-8 text-center">N'hésitez pas à nous contacter pour toute question, suggestion ou problème. Remplissez le formulaire ci-dessous et nous vous répondrons dans les plus brefs délais.</p>
+
+        {{ form_start(contactForm, {'attr': {'class': 'space-y-6'}} ) }}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    {{ form_label(contactForm.name, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1'}} ) }}
+                    {{ form_widget(contactForm.name) }}
+                    {{ form_errors(contactForm.name, {'attr': {'class': 'text-red-500 text-xs mt-1'}} ) }}
+                </div>
+                <div>
+                    {{ form_label(contactForm.email, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1'}} ) }}
+                    {{ form_widget(contactForm.email) }}
+                    {{ form_errors(contactForm.email, {'attr': {'class': 'text-red-500 text-xs mt-1'}} ) }}
+                </div>
+            </div>
+            <div>
+                {{ form_label(contactForm.subject, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1'}} ) }}
+                {{ form_widget(contactForm.subject) }}
+                {{ form_errors(contactForm.subject, {'attr': {'class': 'text-red-500 text-xs mt-1'}} ) }}
+            </div>
+            <div>
+                {{ form_label(contactForm.message, null, {'label_attr': {'class': 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1'}} ) }}
+                {{ form_widget(contactForm.message) }}
+                {{ form_errors(contactForm.message, {'attr': {'class': 'text-red-500 text-xs mt-1'}} ) }}
+            </div>
+
+            <button type="submit" class="w-full flex justify-center py-3 px-6 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-200 ease-in-out transform hover:scale-105">
+                Envoyer le message
+            </button>
+        {{ form_end(contactForm) }}
+    </div>
+{% endblock %}

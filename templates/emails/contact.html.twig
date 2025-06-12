@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Nouveau message de contact</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { width: 80%; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; }
+        h1, h2 { color: #0056b3; }
+        p { margin-bottom: 10px; }
+        .footer { margin-top: 20px; font-size: 0.9em; color: #777; border-top: 1px solid #eee; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Nouveau message de contact</h1>
+        <p><strong>De:</strong> {{ contactData.name }} ({{ contactData.email }})</p>
+        <p><strong>Sujet:</strong> {{ contactData.subject }}</p>
+        <h2>Message:</h2>
+        <p>{{ contactData.message|nl2br }}</p>
+        <div class="footer">
+            <p>Ceci est un message automatique, merci de ne pas y répondre directement.</p>
+        </div>
+    </div>
+</body>
+</html>
