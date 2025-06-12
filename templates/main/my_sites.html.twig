@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Mes Sites Web Générés - Webrovia{% endblock %}
+{% block title %}Mes Sites Web Générés - Webyvia{% endblock %}
 
 {% block stylesheets %}
     {{ parent() }}
@@ -59,7 +59,7 @@
         {% endif %}
         <div class="text-center mb-12">
             <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">Mes Sites Web</h1>
-            <p class="text-lg text-gray-600 dark:text-gray-300">Gérez vos sites web générés par Webrovia</p>
+            <p class="text-lg text-gray-600 dark:text-gray-300">Gérez vos sites web générés par Webyvia</p>
             <div class="flex justify-center space-x-4 mt-4">
                 <a href="{{ path('app_home') }}" class="inline-block bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">
                     <i class="fas fa-plus-circle mr-2"></i>Générer un nouveau site
@@ -160,7 +160,7 @@
                             {% endif %}
                                 {% if not app.user.isSubscribed %}
                                     <div class="w-full bg-yellow-300 dark:bg-yellow-900 rounded-lg p-4 text-center">
-                                        <p class="text-yellow-700 dark:text-yellow-300 mb-3">Pour télécharger et déployer votre site, abonnez-vous à Webrovia !</p>
+                                        <p class="text-yellow-700 dark:text-yellow-300 mb-3">Pour télécharger et déployer votre site, abonnez-vous à Webyvia !</p>
                                         <a href="{{ path('app_subscription') }}" class="inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded-lg transition duration-200">Découvrir l'abonnement</a>
                                     </div>
                                 {% else %}

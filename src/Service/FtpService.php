@@ -9,7 +9,7 @@ class FtpService
 {
     private $curlHandle = null;
     private string $projectRoot;
-    private string $ftpBasePath = '/WebroviaProjects';
+    private string $ftpBasePath = '/WebyviaProjects';
     private string $ftpHost;
     private string $ftpUser;
     private string $ftpPassword;
@@ -142,7 +142,7 @@ class FtpService
 
             return [
                 'success' => true,
-                'url' => 'https://' . rtrim($domain, '/') . '/WebroviaProjects/' . $promptId . '/'
+                'url' => 'https://' . rtrim($domain, '/') . '/WebyviaProjects/' . $promptId . '/'
             ];
 
         } catch (\Exception $e) {

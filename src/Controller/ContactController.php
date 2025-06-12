@@ -24,7 +24,7 @@ class ContactController extends AbstractController
             $email = (new Email())
                 ->from($contactData['email'])
                 ->to('support@imaginaryconception.com', 'anishamouche@gmail.com')
-                ->subject('Nouveau message de contact de Webrovia')
+                ->subject('Nouveau message de contact de Webyvia')
                 ->html($this->renderView('emails/contact.html.twig', ['contactData' => $contactData]));
 
             $mailer->send($email);

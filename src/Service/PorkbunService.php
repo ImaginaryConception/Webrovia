@@ -28,7 +28,7 @@ class PorkbunService
     /**
      * Vérifie la disponibilité d'un nom de domaine
      *
-     * @param string $domain Le nom de domaine à vérifier (ex: webrovia.com)
+     * @param string $domain Le nom de domaine à vérifier (ex: webyvia.com)
      * @return array Tableau contenant les informations de disponibilité et de prix
      * @throws \Exception En cas d'erreur lors de la vérification
      */
@@ -78,8 +78,8 @@ class PorkbunService
             }
             
             if ($statusCode === 200 && isset($data['status']) && $data['status'] === 'SUCCESS') {
-                // Forcer la disponibilité pour webrovia.com
-                $isAvailable = ($domain === 'webrovia.com') ? true : ($data['avail'] ?? false);
+                // Forcer la disponibilité pour webyvia.com
+                $isAvailable = ($domain === 'webyvia.com') ? true : ($data['avail'] ?? false);
                 
                 // Vérifier si la clé pricing existe et contient registration
                 if (isset($data['pricing']) && isset($data['pricing']['registration'])) {
@@ -106,10 +106,10 @@ class PorkbunService
                         error_log("Structure complète de la réponse: " . print_r($data, true));
                     }
                     
-                    // Pour les tests, définir un prix par défaut pour webrovia.com
-                    if ($domain === 'webrovia.com') {
+                    // Pour les tests, définir un prix par défaut pour webyvia.com
+                    if ($domain === 'webyvia.com') {
                         $price = '9.99';
-                        error_log("Prix par défaut défini pour webrovia.com: $price");
+                        error_log("Prix par défaut défini pour webyvia.com: $price");
                     } else {
                         $price = null;
                     }
@@ -139,7 +139,7 @@ class PorkbunService
     /**
      * Achète un nom de domaine via l'API Porkbun
      *
-     * @param string $domain Le nom de domaine à acheter (ex: webrovia.com)
+     * @param string $domain Le nom de domaine à acheter (ex: webyvia.com)
      * @return array Les informations sur l'achat du domaine
      * @throws \Exception En cas d'erreur lors de l'achat
      */

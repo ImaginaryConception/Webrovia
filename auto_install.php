@@ -45,19 +45,19 @@ function deleteDir(string $dir) {
 // === Fonction principale === //
 for ($i = 1; $i <= $maxProjects; $i++) {
     $projectDir = $baseDir . "/$i";
-    $webroviaPath = "$projectDir/webroviaproject";
+    $webyviaPath = "$projectDir/webyviaproject";
 
-    if (is_dir($projectDir) && !is_dir($webroviaPath)) {
+    if (is_dir($projectDir) && !is_dir($webyviaPath)) {
         file_put_contents($logFile, "[" . date('Y-m-d H:i:s') . "] Création projet dans $projectDir\n", FILE_APPEND);
 
         // 1. Créer le projet Symfony (squelette)
-        $cmd = "$phpPath $composerPath create-project symfony/skeleton webroviaproject";
+        $cmd = "$phpPath $composerPath create-project symfony/skeleton webyviaproject";
         exec("cd " . escapeshellarg($projectDir) . " && $cmd 2>&1", $output1, $code1);
         file_put_contents($logFile, implode("\n", $output1) . "\n", FILE_APPEND);
 
         // 2. Installer le pack webapp
         $cmdWebapp = "$phpPath $composerPath require symfony/webapp-pack";
-        exec("cd " . escapeshellarg($webroviaPath) . " && $cmdWebapp 2>&1", $output2, $code2);
+        exec("cd " . escapeshellarg($webyviaPath) . " && $cmdWebapp 2>&1", $output2, $code2);
         file_put_contents($logFile, implode("\n", $output2) . "\n", FILE_APPEND);
 
         // 3. Déplacer les fichiers .twig, app.js, app.css
@@ -67,24 +67,24 @@ for ($i = 1; $i <= $maxProjects; $i++) {
             if (is_file($fullPath)) {
                 $ext = pathinfo($file, PATHINFO_EXTENSION);
                 if ($ext === 'twig') {
-                    rename($fullPath, "$webroviaPath/templates/$file");
+                    rename($fullPath, "$webyviaPath/templates/$file");
                     file_put_contents($logFile, "Déplacé $file → templates/\n", FILE_APPEND);
                 } elseif ($file === 'app.js') {
-                    rename($fullPath, "$webroviaPath/assets/app.js");
+                    rename($fullPath, "$webyviaPath/assets/app.js");
                     file_put_contents($logFile, "Déplacé app.js → assets/\n", FILE_APPEND);
                 } elseif ($file === 'app.css') {
-                    @mkdir("$webroviaPath/assets/styles", 0775, true);
-                    rename($fullPath, "$webroviaPath/assets/styles/app.css");
+                    @mkdir("$webyviaPath/assets/styles", 0775, true);
+                    rename($fullPath, "$webyviaPath/assets/styles/app.css");
                     file_put_contents($logFile, "Déplacé app.css → assets/styles/\n", FILE_APPEND);
                 }
             }
         }
 
-        // 4. Déplacer dossiers Controller, Entity, Repository, Form depuis $projectDir/src vers $webroviaPath/src
+        // 4. Déplacer dossiers Controller, Entity, Repository, Form depuis $projectDir/src vers $webyviaPath/src
         $dirsToMove = ['Controller', 'Entity', 'Repository', 'Form'];
         foreach ($dirsToMove as $dirName) {
             $srcPath = "$projectDir/src/$dirName";
-            $destPath = "$webroviaPath/src/$dirName";
+            $destPath = "$webyviaPath/src/$dirName";
 
             if (is_dir($srcPath)) {
                 if (is_dir($destPath)) {
@@ -115,7 +115,7 @@ for ($i = 1; $i <= $maxProjects; $i++) {
         }
 
         // 5. Modifier config/packages/mailer.yaml
-        $mailerYamlPath = "$webroviaPath/config/packages/mailer.yaml";
+        $mailerYamlPath = "$webyviaPath/config/packages/mailer.yaml";
         $mailerContent = <<<YAML
 framework:
     mailer:
@@ -127,7 +127,7 @@ YAML;
         file_put_contents($logFile, "Mis à jour mailer.yaml\n" . "Contenu mailer.yaml généré :\n" . file_get_contents($mailerYamlPath), FILE_APPEND);
 
         // 6. Modifier templates/base.html.twig pour assets (app.css et app.js)
-        $baseTwigPath = "$webroviaPath/templates/base.html.twig";
+        $baseTwigPath = "$webyviaPath/templates/base.html.twig";
         if (file_exists($baseTwigPath)) {
             $baseTwigContent = file_get_contents($baseTwigPath);
 
@@ -146,7 +146,7 @@ TWIG;
         }
 
         // 7. Modifier .env
-        $envPath = "$webroviaPath/.env";
+        $envPath = "$webyviaPath/.env";
         if (file_exists($envPath)) {
             $envContent = file_get_contents($envPath);
 
@@ -167,7 +167,7 @@ TWIG;
             }
 
             $databaseUrl = sprintf(
-                'DATABASE_URL="mysql://root:@127.0.0.1:3306/webroviaprojectdatabase%d?serverVersion=5.7&charset=utf8mb4"',
+                'DATABASE_URL="mysql://root:@127.0.0.1:3306/webyviaprojectdatabase%d?serverVersion=5.7&charset=utf8mb4"',
                 $i
             );
             if (preg_match('/^DATABASE_URL=.*/m', $envContent)) {
@@ -182,7 +182,7 @@ TWIG;
             file_put_contents($logFile, ".env non trouvé\n", FILE_APPEND);
         }
 
-        file_put_contents($logFile, "Projet Symfony prêt dans : $webroviaPath\n\n", FILE_APPEND);
+        file_put_contents($logFile, "Projet Symfony prêt dans : $webyviaPath\n\n", FILE_APPEND);
         break;
     }
 }

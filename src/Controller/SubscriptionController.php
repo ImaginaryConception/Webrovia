@@ -23,7 +23,7 @@ class SubscriptionController extends AbstractController
         return $this->render('subscription/index.html.twig', [
             'subscription_price' => 26.99,
             'features' => [
-                'Accès illimité à Webrovia',
+                'Accès illimité à Webyvia',
                 'Génération de sites web personnalisés',
                 'Support prioritaire',
                 'Mises à jour en temps réel',

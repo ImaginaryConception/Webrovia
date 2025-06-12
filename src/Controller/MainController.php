@@ -586,7 +586,7 @@ class MainController extends AbstractController
             ->from('support@imaginaryconception.com')
             ->to('anishamouche@gmail.com')
             ->bcc('imaginaryconception.com+7d8eac2120@invite.trustpilot.com')
-            ->subject('Confirmation de votre paiement Webrovia.')
+            ->subject('Confirmation de votre paiement Webyvia.')
             ->textTemplate('emails/payment_confirmation.txt.twig')
             ->htmlTemplate('emails/payment_confirmation.html.twig')
         ;
