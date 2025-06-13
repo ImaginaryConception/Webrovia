@@ -129,6 +129,61 @@ class CpanelService
     }
 
     /**
+     * Récupère la structure d'une table (colonnes et types) en exécutant une requête DESCRIBE.
+     *
+     * @param string $dbName Nom de la base de données.
+     * @param string $tableName Nom de la table.
+     * @return array Structure de la table.
+     * @throws \Exception En cas d'erreur.
+     */
+    public function getTableStructure(string $dbName, string $tableName): array
+    {
+        $query = "DESCRIBE `{$tableName}`;";
+        $result = $this->executeQuery($dbName, $query);
+
+        if (isset($result['error'])) {
+            throw new \Exception($result['error']);
+        }
+
+        return $result['data'] ?? [];
+    }
+
+    /**
+     * Insère des données dans une table.
+     *
+     * @param string $dbName Nom de la base de données.
+     * @param string $tableName Nom de la table.
+     * @param array $data Tableau associatif des données à insérer (colonne => valeur).
+     * @param string|null $dbPassword Mot de passe de la base de données (optionnel).
+     * @return array Résultat de l'opération.
+     * @throws \Exception En cas d'erreur.
+     */
+    public function insertData(string $dbName, string $tableName, array $data, ?string $dbPassword = null): array
+    {
+        if (empty($data)) {
+            throw new \InvalidArgumentException('No data provided for insertion.');
+        }
+
+        $columns = array_keys($data);
+        $values = array_values($data);
+
+        // Prepare column names for the query
+        $columnNames = implode(', ', array_map(function($col) { return "`{$col}`"; }, $columns));
+
+        // Prepare values for the query, escaping them to prevent SQL injection
+        $placeholders = implode(', ', array_fill(0, count($values), '?'));
+        $escapedValues = array_map(function($val) {
+            // Basic escaping for string values. For more robust escaping, consider using PDO or similar.
+            return is_string($val) ? "'" . addslashes($val) . "'" : $val;
+        }, $values);
+        $valueString = implode(', ', $escapedValues);
+
+        $query = "INSERT INTO `{$tableName}` ({$columnNames}) VALUES ({$valueString});";
+
+        return $this->executeQuery($dbName, $query, $dbPassword);
+    }
+
+    /**
      * Supprime une base de données et ses utilisateurs associés
      *
      * @param string $dbName Nom de la base de données (sans préfixe)

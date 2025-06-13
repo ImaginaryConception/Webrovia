@@ -139,6 +139,58 @@ class CpanelDatabaseController extends AbstractController
     }
 
     /**
+     * Récupère la structure d'une table (colonnes et types) via l'API cPanel
+     */
+    #[Route('/table-structure/{dbName}', name: 'app_cpanel_database_get_table_structure', methods: ['GET'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function getTableStructure(Request $request, string $dbName): JsonResponse
+    {
+        $tableName = $request->query->get('table_name');
+        if (empty($tableName)) {
+            return $this->json(['error' => 'Table name is required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $structure = $this->cpanelService->getTableStructure($dbName, $tableName);
+            return $this->json($structure);
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Ajoute des données à une table via l'API cPanel
+     */
+    #[Route('/add-data/{dbName}', name: 'app_cpanel_database_add_data', methods: ['POST'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function addData(Request $request, string $dbName): JsonResponse
+    {
+        $data = $request->request->all();
+        $tableName = $data['table_name'] ?? null;
+        $dbPassword = $data['db_password'] ?? null;
+
+        if (empty($tableName)) {
+            return $this->json(['error' => 'Table name is required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Remove table_name and db_password from data, remaining are column_name => value
+        unset($data['table_name']);
+        unset($data['db_password']);
+
+        if (empty($data)) {
+            return $this->json(['error' => 'No data provided to insert'], Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $response = $this->cpanelService->insertData($dbName, $tableName, $data, $dbPassword);
+            $this->addFlash('success', 'Données ajoutées avec succès à la table ' . $tableName);
+            return $this->json(['success' => true, 'message' => 'Données ajoutées avec succès', 'response' => $response]);
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
      * Génère un mot de passe aléatoire
      */
     private function generateRandomPassword(int $length = 12): string

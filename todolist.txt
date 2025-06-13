@@ -7,7 +7,5 @@ Secondaires :
 - Clones
 - Model Maker
 - Mode Focus
-- Interface d'ajout d'enregistrements en base de données
 - Traduction anglais/français du site
 - Modifier code en direct
-- Utiliser Gemini 2.0 Flash en + de GPT4o.
