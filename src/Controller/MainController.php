@@ -384,7 +384,8 @@ class MainController extends AbstractController
             // Liste des bases de données à cacher par défaut
             $defaultHiddenDatabases = [
                 'haan7883_imaginaryconception',
-                'haan7883_lhannz'
+                'haan7883_lhannz',
+                'haan7883_webyvia'
             ];
             
             // Récupérer les bases de données cachées depuis la session

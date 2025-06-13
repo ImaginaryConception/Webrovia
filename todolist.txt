@@ -9,3 +9,5 @@ Secondaires :
 - Mode Focus
 - Traduction anglais/français du site
 - Modifier code en direct
+- Liste des base de données privée.
+- Responsive design
