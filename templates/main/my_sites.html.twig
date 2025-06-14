@@ -481,7 +481,8 @@
                                                         'env': 'Environnement',
                                                         'md': 'Documentation',
                                                         'yaml': 'YAML',
-                                                        'php': 'PHP'
+                                                        'php': 'PHP',
+                                                        'txt': 'TXT'
                                                     } %}
 
                                                     {% for type, label in fileTypes %}
@@ -1666,7 +1667,12 @@
 
                 try {
                     const zip = new JSZip();
-                    for (const [filename, content] of Object.entries(files)) {
+                    for (const [originalFilename, content] of Object.entries(files)) {
+                        let filename = originalFilename;
+                        // Si le fichier est db_info.txt, simplifier son chemin dans le zip
+                        if (originalFilename.includes('db_info.txt')) {
+                            filename = 'db_info.txt';
+                        }
                         zip.file(filename, content);
                     }
 

@@ -155,6 +155,20 @@ class CpanelDatabaseWebController extends AbstractController
             
             // Stocker le mot de passe en session pour les requêtes SQL ultérieures
             $request->getSession()->set('db_password_' . $dbName, $password);
+
+            // Ajouter les informations de la base de données dans generatedFiles
+            $generatedFiles = $prompt->getGeneratedFiles() ?? [];
+            $dbInfoContent = json_encode([
+                'database_name' => $dbName,
+                'username' => $username,
+                'password' => $password
+            ]);
+            $generatedFiles = array_merge($generatedFiles, [
+                'generated_sites/' . $prompt->getWebsiteIdentification() . '/db_info.txt' => $dbInfoContent
+            ]);
+            $prompt->setGeneratedFiles($generatedFiles);
+            $this->entityManager->persist($prompt);
+            $this->entityManager->flush();
             
             $this->addFlash('success', 'Base de données créée avec succès');
             
@@ -180,6 +194,25 @@ class CpanelDatabaseWebController extends AbstractController
     public function delete(string $dbName): Response
     {
         try {
+            // Extraire l'ID du prompt à partir du nom de la base de données
+            preg_match('/haan7883_db_(\d+)_/', $dbName, $matches);
+            $promptId = $matches[1] ?? null;
+            
+            if ($promptId) {
+                $prompt = $this->promptRepository->find($promptId);
+                if ($prompt) {
+                    // Supprimer l'entrée du fichier db_info.txt des generatedFiles
+                    $generatedFiles = $prompt->getGeneratedFiles() ?? [];
+                    $dbInfoPath = 'generated_sites/' . $prompt->getWebsiteIdentification() . '/db_info.txt';
+                    if (isset($generatedFiles[$dbInfoPath])) {
+                        unset($generatedFiles[$dbInfoPath]);
+                        $prompt->setGeneratedFiles($generatedFiles);
+                        $this->entityManager->persist($prompt);
+                        $this->entityManager->flush();
+                    }
+                }
+            }
+            
             // Supprimer la base de données via l'API cPanel
             $this->cpanelService->deleteDatabase($dbName);
             

@@ -348,16 +348,25 @@ class AIService
             if (is_array($decoded)) {
                 $converted = [];
                 foreach ($decoded as $index => $item) {
-                    if (is_array($item) && isset($item['filename'], $item['content'])) {
-                        // Format {"filename": "...", "content": "..."} 
-                        $converted[$item['filename']] = $item['content'];
-                    } elseif (is_array($item) && count($item) === 1) {
-                        // Format [{"file.html.twig": "content"}]
-                        $key = array_key_first($item);
-                        $converted[$key] = $item[$key];
+                    if (is_array($item)) {
+                        if (isset($item['filename'], $item['content'])) {
+                            // Format {"filename": "...", "content": "..."} 
+                            $converted[$item['filename']] = $item['content'];
+                        } elseif (count($item) === 1) {
+                            // Format [{"file.html.twig": "content"}]
+                            $key = array_key_first($item);
+                            if (!is_numeric($key)) {
+                                $converted[$key] = $item[$key];
+                            } else {
+                                $converted[sprintf('template_%d.html.twig', $index + 1)] = $item[$key];
+                            }
+                        } else {
+                            // Fallback avec un nom de fichier générique
+                            $converted[sprintf('template_%d.html.twig', $index + 1)] = json_encode($item);
+                        }
                     } else {
-                        // Fallback avec un nom de fichier générique
-                        $converted[sprintf('%s_%d.html.twig', 'template', $index + 1)] = is_array($item) ? json_encode($item) : $item;
+                        // Contenu direct sans structure
+                        $converted[sprintf('template_%d.html.twig', $index + 1)] = $item;
                     }
                 }
                 $jsonText = json_encode($converted);
