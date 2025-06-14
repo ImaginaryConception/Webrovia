@@ -1672,6 +1672,10 @@
                         // Si le fichier est db_info.txt, simplifier son chemin dans le zip
                         if (originalFilename.includes('db_info.txt')) {
                             filename = 'db_info.txt';
+                            // Vérifier que le contenu est une chaîne de caractères valide
+                            if (typeof content !== 'string') {
+                                continue; // Ignorer ce fichier s'il n'est pas valide
+                            }
                         }
                         zip.file(filename, content);
                     }
