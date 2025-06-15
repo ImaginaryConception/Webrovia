@@ -1830,32 +1830,96 @@
                 <div class="p-4 border-b border-gray-700">
                     <div class="flex items-center justify-between">
                         <h1 class="text-xl font-bold text-white">Webyvia IDE</h1>
-                        <button @click="darkMode = !darkMode" class="p-2 hover:bg-gray-700 rounded">
+                        {# <button @click="darkMode = !darkMode" class="p-2 hover:bg-gray-700 rounded">
                             <i class="fas" :class="{ 'fa-sun': !darkMode, 'fa-moon': darkMode }"></i>
-                        </button>
+                        </button> #}
                     </div>
                 </div>
-                
-                <!-- File Explorer -->
-                <div class="flex-1 overflow-y-auto">
-                    <div class="p-4">
-                        <h2 class="text-sm font-semibold mb-2 text-gray-400 uppercase">Explorateur</h2>
-                        {% if prompts is empty %}
-                            <p class="text-gray-500 text-sm">Aucun projet</p>
-                        {% else %}
-                            {% for prompt in prompts %}
-                                <div class="mb-4">
-                                    <div class="flex items-center text-gray-400 mb-2">
-                                        <i class="fas fa-folder-open mr-2"></i>
-                                        <span>Site #{{ prompt.id }}</span>
+
+            <!-- File Explorer -->
+            <div class="flex-1 overflow-y-auto">
+                <div class="p-4">
+                    <h2 class="text-sm font-semibold mb-2 text-gray-400 uppercase">Explorateur</h2>
+                    {% if prompts is empty %}
+                        <p class="text-gray-500 text-sm">Aucun projet</p>
+                    {% else %}
+                        {% for prompt in prompts %}
+                            <div class="mb-6">
+                                        <div data-prompt-id="{{ prompt.id }}">
+                                            <div class="flex justify-between items-center mb-4">
+                                                <button class="add-file-btn bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm" data-prompt-id="{{ prompt.id }}">
+                                                    <i class="fas fa-plus mr-1"></i> Nouveau template
+                                                </button>
+                                            </div>
+                                            <div class="file-tree">
+                                                {% set fileTypes = {
+                                                    'html.twig': 'Template',
+                                                    'css': 'Style',
+                                                    'js': 'Script',
+                                                    'json': 'JSON',
+                                                    'lock': 'LOCK',
+                                                    'env': 'Environnement',
+                                                    'md': 'Documentation',
+                                                    'yaml': 'YAML',
+                                                    'php': 'PHP'
+                                                } %}
+
+                                                {% for type, label in fileTypes %}
+                                                    {% set typeFiles = [] %}
+                                                    {% for template in templates %}
+                                                        {% if template.path ends with type and template.promptId == prompt.id %}
+                                                            {% set typeFiles = typeFiles|merge([template]) %}
+                                                        {% endif %}
+                                                    {% endfor %}
+
+                                                    {% if typeFiles is not empty %}
+                                                        <div class="file-category mb-4">
+                                                            <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                                                                <span class="mr-2">
+                                                                    {% if type == 'html.twig' %}
+                                                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path></svg>
+                                                                    {% elseif type == 'css' %}
+                                                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path></svg>
+                                                                    {% elseif type == 'js' %}
+                                                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>
+                                                                    {% else %}
+                                                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
+                                                                    {% endif %}
+                                                                </span>
+                                                                {{ label }}s
+                                                            </h4>
+                                                            <ul class="pl-4 space-y-1">
+                                                                {% for file in typeFiles %}
+                                                                    <li>
+                                                                        <div class="flex items-center justify-between w-full px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 group">
+                                                                            <button class="file-btn text-left flex-grow flex items-center"
+                                                                                    data-prompt-id="{{ prompt.id }}"
+                                                                                    data-file-path="{{ file.path }}">
+                                                                                <span class="flex-grow text-gray-700 dark:text-gray-300" style="word-break: break-all;">{{ file.name }}</span>
+                                                                                <span class="hidden group-hover:inline-flex ml-2 text-gray-500 dark:text-gray-400">
+                                                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                                                    </svg>
+                                                                                </span>
+                                                                            </button>
+                                                                            {% if type == 'html.twig' and file.name != 'index.html.twig' %}
+                                                                                <button class="delete-file-btn hidden group-hover:inline-flex text-red-500 hover:text-red-700 ml-2" 
+                                                                                        data-prompt-id="{{ prompt.id }}"
+                                                                                        data-file-path="{{ file.path }}">
+                                                                                    <i class="fas fa-trash-alt"></i>
+                                                                                </button>
+                                                                            {% endif %}
+                                                                        </div>
+                                                                    </li>
+                                                                {% endfor %}
+                                                            </ul>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="ml-4 space-y-1">
-                                        <button class="file-btn w-full text-left px-2 py-1 rounded hover:bg-gray-700 flex items-center text-sm" data-prompt-id="{{ prompt.id }}" data-file-path="index.html">
-                                            <i class="fas fa-file-code text-blue-400 mr-2"></i>
-                                            <span class="text-gray-300">index.html</span>
-                                        </button>
-                                    </div>
-                                </div>
                             {% endfor %}
                         {% endif %}
                     </div>
@@ -1867,15 +1931,11 @@
                         <i class="fas fa-plus mr-2"></i>
                         Nouveau Projet
                     </a>
-                    <a href="{{ path('app_home') }}" class="mt-3 flex items-center justify-center w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-200 text-white">
-                        <i class="fa-solid fa-square-pen mr-2"></i>
-                        Mode Standard
-                    </a>
                 </div>
             </div>
 
             <!-- Main content -->
-            <div class="flex-1 flex flex-col overflow-hidden bg-gray-900">
+            <div class="flex-1 flex flex-col overflow-hidden bg-gray-900" x-data="{ showEditor: true }">
                 <!-- Top bar with tabs -->
                 <div class="h-12 bg-gray-800 border-b border-gray-700 flex items-center px-4">
                     <div class="flex space-x-2">
@@ -1885,10 +1945,62 @@
                             </div>
                         {% endif %}
                     </div>
+                    <div class="ml-auto flex space-x-2">
+                        <button @click="showEditor = true" :class="{ 'bg-blue-600': showEditor, 'bg-gray-700': !showEditor }" class="px-4 py-1 rounded text-white transition-colors duration-200">
+                            <i class="fas fa-code mr-2"></i>Éditeur
+                        </button>
+                        <button @click="showEditor = false" :class="{ 'bg-blue-600': !showEditor, 'bg-gray-700': showEditor }" class="px-4 py-1 rounded text-white transition-colors duration-200">
+                            <i class="fas fa-eye mr-2"></i>Prévisualisation
+                        </button>
+                    </div>
                 </div>
 
+                {% set prompt = prompts[0] %}
                 <!-- Editor area -->
                 <div class="flex-1 overflow-hidden">
+                    <!-- Editor section -->
+                    <div x-show="showEditor" class="h-full">
+                        {% if not app.user.isSubscribed is defined or not app.user.isSubscribed %}
+                            <div class="max-w-3xl mx-auto mb-8 bg-yellow-50 dark:bg-yellow-900 border-l-4 border-yellow-400 p-4">
+                                <div class="flex">
+                                    <div class="flex-shrink-0">
+                                        <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-sm text-yellow-700 dark:text-yellow-200">
+                                            Version gratuite limitée à 3 générations. <a href="{{ path('app_subscription') }}" class="font-medium underline hover:text-yellow-600 dark:hover:text-yellow-300">Passez à la version premium</a> pour des générations illimitées.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        {% if prompts is empty %}
+                            <div class="h-full flex items-center justify-center">
+                                <div class="text-center">
+                                    <i class="fas fa-code text-6xl text-gray-600 mb-4"></i>
+                                    <p class="text-gray-400 mb-4">Aucun projet ouvert</p>
+                                    <a href="{{ path('app_home') }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">
+                                        Créer un nouveau projet
+                                    </a>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="editor-container h-full relative" data-prompt-id="{{ prompt.id }}"></div>
+                        {% endif %}
+                    </div>
+                    <!-- Preview section -->
+                    <div x-show="!showEditor" class="h-full bg-white dark:bg-gray-900 flex flex-col">
+                        <div class="flex-1 overflow-hidden">
+                            <iframe class="w-full h-full" id="preview-frame" src="{{ path('app_preview_template', {'id': prompt.id, 'template': 'index.html.twig'}) }}"></iframe>
+                        </div>
+                        <div class="p-4 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                            <div class="text-center text-gray-600 dark:text-gray-400">
+                                <p>La prévisualisation sera disponible après la sauvegarde du code.</p>
+                            </div>
+                        </div>
+                    </div>
         {% if not app.user.isSubscribed is defined or not app.user.isSubscribed %}
             <div class="max-w-3xl mx-auto mb-8 bg-yellow-50 dark:bg-yellow-900 border-l-4 border-yellow-400 p-4">
                 <div class="flex">
@@ -2009,7 +2121,7 @@
                                     </div>
                                 {% else %}
                                     {% if prompt.status != 'error' %}
-                                    <div class="absolute bottom-8 right-4 flex space-x-3 z-10">
+                                    {# <div class="absolute bottom-8 right-4 flex space-x-3 z-10">
                                         <button class="download-btn bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm py-2 px-4 rounded-lg shadow-sm transition duration-200 flex items-center" data-prompt-id="{{ prompt.id }}">
                                             <i class="fas fa-download mr-2"></i>Télécharger
                                         </button>
@@ -2019,7 +2131,7 @@
                                         <button class="delete-site-btn bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-4 rounded-lg shadow-sm transition duration-200 flex items-center" data-prompt-id="{{ prompt.id }}">
                                             <i class="fas fa-trash-alt mr-2"></i>Supprimer
                                         </button>
-                                    </div>
+                                    </div> #}
 
                                         <!-- Modal de confirmation de suppression -->
                                         <div id="deleteConfirmationModal-{{ prompt.id }}" class="delete-confirmation-modal">
@@ -2231,34 +2343,18 @@
                                 });
                             </script>
 
-                            {% if prompt.status != 'error' %}
                             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <div class="flex items-center">
-                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Aperçu en direct</h3>
-                                        <div class="visual-edit-buttons ml-4">
-                                            <button class="visual-edit-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded text-sm mr-2" data-prompt-id="{{ prompt.id }}" data-mode="edit">
-                                                <i class="fas fa-edit mr-1"></i> Edit
-                                            </button>
-                                            <button class="visual-save-btn bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm mr-2" data-prompt-id="{{ prompt.id }}" style="display: none;">
-                                                <i class="fas fa-save mr-1"></i> Sauvegarder
-                                            </button>
-                                            <button class="visual-preview-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm" data-prompt-id="{{ prompt.id }}" data-mode="preview">
-                                                <i class="fas fa-eye mr-1"></i> Preview
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <button class="preview-fullscreen-btn text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5m-7 11h4m-4 0v4m0-4l5 5m5-9v4m0-4h4m-4 0l5 5-5-5z" />
-                                        </svg>
+                                <div class="flex space-x-3">
+                                    <button class="download-btn bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm py-2 px-4 rounded-lg shadow-sm transition duration-200 flex items-center" data-prompt-id="{{ prompt.id }}">
+                                        <i class="fas fa-download mr-2"></i>Télécharger
+                                    </button>
+                                    <a href="{{ path('app_cpanel_database_index', {'promptId': prompt.id}) }}" class="bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm py-2 px-4 rounded-lg shadow-sm transition duration-200 flex items-center">
+                                        <i class="fas fa-database mr-2"></i>Base de données
+                                    </a>
+                                    <button class="delete-site-btn bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-4 rounded-lg shadow-sm transition duration-200 flex items-center" data-prompt-id="{{ prompt.id }}">
+                                        <i class="fas fa-trash-alt mr-2"></i>Supprimer
                                     </button>
                                 </div>
-                                <div class="preview-container h-[500px] w-full bg-white border rounded-lg overflow-hidden relative" data-prompt-id="{{ prompt.id }}">
-                                    <iframe class="preview-frame w-full h-full" data-prompt-id="{{ prompt.id }}" src="{{ path('app_preview_template', {'id': prompt.id, 'template': 'index.html.twig'}) }}"></iframe>
-                                </div>
-                            {% endif %}
-
                                 <!-- Modal de création de fichier -->
                                 <div id="newFileModal-{{ prompt.id }}" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center" data-modal-type="creation">
                                     <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
@@ -2305,85 +2401,6 @@
                                             <button class="modify-btn mt-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-lg" data-prompt-id="{{ prompt.id }}" {% if app.user.count >= 3 and not app.user.isSubscribed %}disabled{% endif %} disabled>
                                             Appliquer les modifications {% if not app.user.isSubscribed %}({{ 3 - app.user.count }} restante{% if 3 - app.user.count != 1 %}s{% endif %}){% endif %}
                                         </button>
-                                    </div>
-                                    <div class="mb-6">
-                                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Explorateur de fichiers</h3>
-                                            <div data-prompt-id="{{ prompt.id }}">
-                                                <div class="flex justify-between items-center mb-4">
-                                                    <button class="add-file-btn bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm" data-prompt-id="{{ prompt.id }}">
-                                                        <i class="fas fa-plus mr-1"></i> Nouveau template
-                                                    </button>
-                                                </div>
-                                                <div class="file-tree">
-                                                    {% set fileTypes = {
-                                                        'html.twig': 'Template',
-                                                        'css': 'Style',
-                                                        'js': 'Script',
-                                                        'json': 'JSON',
-                                                        'lock': 'LOCK',
-                                                        'env': 'Environnement',
-                                                        'md': 'Documentation',
-                                                        'yaml': 'YAML',
-                                                        'php': 'PHP'
-                                                    } %}
-
-                                                    {% for type, label in fileTypes %}
-                                                        {% set typeFiles = [] %}
-                                                        {% for template in templates %}
-                                                            {% if template.path ends with type and template.promptId == prompt.id %}
-                                                                {% set typeFiles = typeFiles|merge([template]) %}
-                                                            {% endif %}
-                                                        {% endfor %}
-
-                                                        {% if typeFiles is not empty %}
-                                                            <div class="file-category mb-4">
-                                                                <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
-                                                                    <span class="mr-2">
-                                                                        {% if type == 'html.twig' %}
-                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path></svg>
-                                                                        {% elseif type == 'css' %}
-                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path></svg>
-                                                                        {% elseif type == 'js' %}
-                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>
-                                                                        {% else %}
-                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
-                                                                        {% endif %}
-                                                                    </span>
-                                                                    {{ label }}s
-                                                                </h4>
-                                                                <ul class="pl-4 space-y-1">
-                                                                    {% for file in typeFiles %}
-                                                                        <li>
-                                                                            <div class="flex items-center justify-between w-full px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 group">
-                                                                                <button class="file-btn text-left flex-grow flex items-center"
-                                                                                        data-prompt-id="{{ prompt.id }}"
-                                                                                        data-file-path="{{ file.path }}">
-                                                                                    <span class="flex-grow text-gray-700 dark:text-gray-300 truncate">{{ file.name }}</span>
-                                                                                    <span class="hidden group-hover:inline-flex ml-2 text-gray-500 dark:text-gray-400">
-                                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                                                                        </svg>
-                                                                                    </span>
-                                                                                </button>
-                                                                                {% if type == 'html.twig' and file.name != 'index.html.twig' %}
-                                                                                    <button class="delete-file-btn hidden group-hover:inline-flex text-red-500 hover:text-red-700 ml-2" 
-                                                                                            data-prompt-id="{{ prompt.id }}"
-                                                                                            data-file-path="{{ file.path }}">
-                                                                                        <i class="fas fa-trash-alt"></i>
-                                                                                    </button>
-                                                                                {% endif %}
-                                                                            </div>
-                                                                        </li>
-                                                                    {% endfor %}
-                                                                </ul>
-                                                            </div>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
                                     {% endif %}
                                     {% if prompt.status != 'error' %}
@@ -2622,73 +2639,6 @@
                                         {% else %}
                                             <p class="text-gray-500 dark:text-gray-400 text-sm">Aucune version disponible</p>
                                         {% endfor %}
-                                    </div>
-                                    <div class="mb-6">
-                                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Explorateur de fichiers</h3>
-                                            <div class="file-explorer overflow-y-auto h-64" data-prompt-id="{{ prompt.id }}">
-                                                <div class="file-tree">
-                                                    {% set fileTypes = {
-                                                        'html.twig': 'Template',
-                                                        'css': 'Style',
-                                                        'js': 'Script',
-                                                        'json': 'JSON',
-                                                        'lock': 'LOCK',
-                                                        'env': 'Environnement',
-                                                        'md': 'Documentation',
-                                                        'yaml': 'YAML',
-                                                        'php': 'PHP'
-                                                    } %}
-
-                                                    {% for type, label in fileTypes %}
-                                                        {% set typeFiles = [] %}
-                                                        {% for template in templates %}
-                                                            {% if template.path ends with type and template.promptId == prompt.id %}
-                                                                {% set typeFiles = typeFiles|merge([template]) %}
-                                                            {% endif %}
-                                                        {% endfor %}
-
-                                                        {% if typeFiles is not empty %}
-                                                            <div class="file-category mb-4">
-                                                                <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
-                                                                    <span class="mr-2">
-                                                                        {% if type == 'html.twig' %}
-                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path></svg>
-                                                                        {% elseif type == 'css' %}
-                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path></svg>
-                                                                        {% elseif type == 'js' %}
-                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>
-                                                                        {% else %}
-                                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
-                                                                        {% endif %}
-                                                                    </span>
-                                                                    {{ label }}s
-                                                                </h4>
-                                                                <ul class="pl-4 space-y-1">
-                                                                    {% for file in typeFiles %}
-                                                                        <li>
-                                                                            <button class="file-btn text-left w-full px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center group" 
-                                                                                    data-prompt-id="{{ prompt.id }}" 
-                                                                                    data-file-path="{{ file.path }}"
-                                                                                    
-                                                                                    >
-                                                                                <span class="flex-grow text-white truncate">{{ file.name }}</span>
-                                                                                <span class="hidden group-hover:inline-flex ml-2 text-gray-500 dark:text-gray-400">
-                                                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                                                                    </svg>
-                                                                                </span>
-                                                                            </button>
-                                                                        </li>
-                                                                    {% endfor %}
-                                                                </ul>
-                                                            </div>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
                                     <div class="modification-section">
                                         <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Modifier le site</h4>
