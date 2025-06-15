@@ -82,13 +82,7 @@ class DeploymentController extends AbstractController
                     }
                 }
             }
-            
-            // Pour les tests, définir un prix par défaut pour webyvia.com si non défini
-            if ($fullDomain === 'webyvia.com' && $price === null) {
-                $price = '9.99';
-                error_log("Prix par défaut défini pour webyvia.com: $price");
-            }
-            
+
             $response = [
                 'available' => $result['avail'] ?? false,
                 'avail' => $result['avail'] ?? false,
