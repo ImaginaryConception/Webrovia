@@ -164,7 +164,7 @@ class CpanelDatabaseWebController extends AbstractController
                 'password' => $password
             ]);
             $generatedFiles = array_merge($generatedFiles, [
-                'generated_sites/' . $prompt->getWebsiteIdentification() . '/db_info.txt' => $dbInfoContent
+                'db_info.txt' => $dbInfoContent
             ]);
             $prompt->setGeneratedFiles($generatedFiles);
             $this->entityManager->persist($prompt);
@@ -203,7 +203,7 @@ class CpanelDatabaseWebController extends AbstractController
                 if ($prompt) {
                     // Supprimer l'entrée du fichier db_info.txt des generatedFiles
                     $generatedFiles = $prompt->getGeneratedFiles() ?? [];
-                    $dbInfoPath = 'generated_sites/' . $prompt->getWebsiteIdentification() . '/db_info.txt';
+                    $dbInfoPath = 'db_info.txt';
                     if (isset($generatedFiles[$dbInfoPath])) {
                         unset($generatedFiles[$dbInfoPath]);
                         $prompt->setGeneratedFiles($generatedFiles);
