@@ -724,6 +724,8 @@
                 // --- Initialisation des éditeurs CodeMirror ---
                 document.querySelectorAll('.editor-container').forEach(container => {
                     const promptId = container.dataset.promptId;
+                    console.log('Initialisation de CodeMirror pour promptId:', promptId);
+                    
                     const editor = CodeMirror(container, {
                         mode: 'xml',
                         theme: 'monokai',
@@ -739,6 +741,25 @@
                     editors[promptId] = editor; // Stockage de l'instance de CodeMirror
 
                     editor.on('change', () => handleEditorChange(promptId)); // Simplification de l'appel de fonction
+
+                    // Charger le contenu initial
+                    fetch(`/prompt/${promptId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Données reçues pour promptId:', promptId, data);
+                            if (data.files && data.files['index.html.twig']) {
+                                editor.setValue(data.files['index.html.twig']);
+                                console.log('Contenu chargé dans l\'éditeur');
+                                currentFiles[promptId] = data.files;
+                                updatePreview(promptId, 'index.html.twig');
+                            } else {
+                                console.warn('Aucun contenu trouvé pour le fichier index.html.twig');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors du chargement du contenu:', error);
+                            showError('Erreur lors du chargement du contenu de l\'éditeur');
+                        });
                 });
 
 
@@ -1000,6 +1021,87 @@
                     });
                 });
 
+                // --- Gestion de la modale de déploiement ---
+                document.querySelectorAll('[data-modal-type="deployment"]').forEach(modal => {
+                    modal.addEventListener('click', function(e) {
+                        if (e.target === this) {
+                            this.classList.add('hidden');
+                        }
+                    });
+                });
+
+                // Fonction pour valider le format du domaine
+                function isValidDomain(domain) {
+                    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
+                    return domainRegex.test(domain);
+                }
+
+                // --- Gestion du déploiement ---
+                document.querySelectorAll('.deploy-site-btn').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const promptId = this.dataset.promptId;
+                        const domainInput = document.querySelector(`#domain-${promptId}`);
+                        const domain = domainInput.value.trim();
+                        const deployBtnText = this.querySelector('.deploy-btn-text');
+                        const deployBtnSpinner = this.querySelector('.deploy-btn-spinner');
+
+                        // Validation du domaine
+                        if (!isValidDomain(domain)) {
+                            showError('Format de domaine invalide. Exemple: monsite.com');
+                            return;
+                        }
+
+                        try {
+                            this.disabled = true;
+                            deployBtnText.textContent = 'Vérification...';
+                            deployBtnSpinner.classList.remove('hidden');
+
+                            // Vérification du domaine
+                            const checkResponse = await fetch(`/check-domain/${promptId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: JSON.stringify({ domain })
+                            });
+
+                            const checkData = await checkResponse.json();
+
+                            if (checkData.requiresPayment) {
+                                // Redirection vers la page de paiement
+                                window.location.href = checkData.paymentUrl;
+                                return;
+                            }
+
+                            // Déploiement du site
+                            deployBtnText.textContent = 'Déploiement...';
+                            const deployResponse = await fetch(`/deploy/${promptId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: JSON.stringify({ domain })
+                            });
+
+                            const deployData = await deployResponse.json();
+
+                            if (deployData.success) {
+                                window.location.href = "{{ path('app_my_sites') }}";
+                            } else {
+                                throw new Error(deployData.error || 'Une erreur est survenue lors du déploiement');
+                            }
+                        } catch (error) {
+                            console.error('Erreur:', error);
+                            showError(error.message || 'Une erreur est survenue');
+                            deployBtnText.textContent = 'Déployer';
+                            deployBtnSpinner.classList.add('hidden');
+                            this.disabled = false;
+                        }
+                    });
+                });
+
                 // --- Redéploiement ---
                 document.querySelectorAll('.redeploy-btn').forEach(btn => {
                     btn.addEventListener('click', async function() {
@@ -1056,13 +1158,7 @@
                                 Modification en cours...
                             </span>
                         `;
-                        
-                        // Créer un élément pour afficher le message de génération juste après le formulaire de modification
-                        const generationMessageContainer = document.createElement('div');
-                        generationMessageContainer.id = 'generation-message-container';
-                        generationMessageContainer.className = 'mt-4 mb-4 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 text-center';
-                        generationMessageContainer.innerHTML = '<p id="generation-message" class="text-gray-700 dark:text-gray-300 text-lg font-medium">Modification en cours...</p>';
-                        
+
                         // Insérer le message après le textarea de modification
                         textarea.parentNode.insertBefore(generationMessageContainer, textarea.nextSibling);
 
@@ -1956,6 +2052,20 @@
                 </div>
 
                 {% set prompt = prompts[0] %}
+                <div class="flex items-center">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Aperçu en direct</h3>
+                    <div class="visual-edit-buttons ml-4">
+                        <button class="visual-edit-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm mr-2" data-prompt-id="{{ prompt.id }}" data-mode="edit">
+                            <i class="fas fa-edit mr-1"></i> Edit
+                        </button>
+                        <button class="visual-save-btn bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm mr-2" data-prompt-id="{{ prompt.id }}" style="display: none;">
+                            <i class="fas fa-save mr-1"></i> Sauvegarder
+                        </button>
+                        <button class="visual-preview-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded text-sm" data-prompt-id="{{ prompt.id }}" data-mode="preview">
+                            <i class="fas fa-eye mr-1"></i> Preview
+                        </button>
+                    </div>
+                </div>
                 <!-- Editor area -->
                 <div class="flex-1 overflow-hidden">
                     <!-- Editor section -->
@@ -1994,11 +2104,6 @@
                     <div x-show="!showEditor" class="h-full bg-white dark:bg-gray-900 flex flex-col">
                         <div class="flex-1 overflow-hidden">
                             <iframe class="w-full h-full" id="preview-frame" src="{{ path('app_preview_template', {'id': prompt.id, 'template': 'index.html.twig'}) }}"></iframe>
-                        </div>
-                        <div class="p-4 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-                            <div class="text-center text-gray-600 dark:text-gray-400">
-                                <p>La prévisualisation sera disponible après la sauvegarde du code.</p>
-                            </div>
                         </div>
                     </div>
         {% if not app.user.isSubscribed is defined or not app.user.isSubscribed %}
@@ -2351,6 +2456,30 @@
                                     <a href="{{ path('app_cpanel_database_index', {'promptId': prompt.id}) }}" class="bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm py-2 px-4 rounded-lg shadow-sm transition duration-200 flex items-center">
                                         <i class="fas fa-database mr-2"></i>Base de données
                                     </a>
+                                    <button class="deploy-site-trigger-btn bg-gray-700 hover:bg-blue-600 text-white text-sm py-2 px-4 rounded-lg shadow-sm transition duration-200 flex items-center" data-prompt-id="{{ prompt.id }}" onclick="document.getElementById('deployModal-{{ prompt.id }}').classList.remove('hidden');">
+                                        <i class="fa-solid fa-square-arrow-up-right mr-2"></i>Déployer
+                                    </button>
+                                    <!-- Modal de déploiement -->
+                                    <div id="deployModal-{{ prompt.id }}" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center" data-modal-type="deployment">
+                                        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
+                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Déployer le site</h3>
+                                            <div class="mb-4">
+                                                <label for="domain-{{ prompt.id }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nom de domaine</label>
+                                                <input type="text" id="domain-{{ prompt.id }}" class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="monsite.com">
+                                                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Entrez votre nom de domaine sans www ou http://</p>
+                                            </div>
+                                            <div class="flex justify-end space-x-3">
+                                                <button type="button" class="cancel-deploy-btn px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600" onclick="this.closest('[data-modal-type]').classList.add('hidden');">Annuler</button>
+                                                <button type="button" class="deploy-site-btn px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center space-x-2" data-prompt-id="{{ prompt.id }}">
+                                                    <span class="deploy-btn-text">Déployer</span>
+                                                    <svg class="animate-spin h-4 w-4 text-white hidden deploy-btn-spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <button class="delete-site-btn bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-4 rounded-lg shadow-sm transition duration-200 flex items-center" data-prompt-id="{{ prompt.id }}">
                                         <i class="fas fa-trash-alt mr-2"></i>Supprimer
                                     </button>

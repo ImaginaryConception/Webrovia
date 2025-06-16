@@ -1,7 +1,7 @@
 TODO :
 
 Principal :
-- Synchronisation de la base de données correspondante à un site généré.
+- à chaque création de table, il faut générer entités, repository et formtype sur le site généré, et adapter le controller et les twig.
 
 Secondaires :
 - Clones
@@ -10,4 +10,5 @@ Secondaires :
 - Traduction anglais/français du site
 - Modifier code en direct
 - Liste des base de données privée.
+- 1 base par site
 - Responsive design
