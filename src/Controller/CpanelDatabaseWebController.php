@@ -66,10 +66,23 @@ class CpanelDatabaseWebController extends AbstractController
                 return in_array($database['database'], $hiddenDatabases);
             });
             
+            /** @var \App\Entity\User $user */
+            $user = $this->getUser();
+            $userPrompts = $user->getPrompts();
+            $promptsWithDbStatus = [];
+            foreach ($userPrompts as $prompt) {
+                $hasDatabase = isset($prompt->getGeneratedFiles()['db_info.txt']);
+                $promptsWithDbStatus[] = [
+                    'prompt' => $prompt,
+                    'hasDatabase' => $hasDatabase
+                ];
+            }
+
             return $this->render('cpanel_database/index.html.twig', [
                 'cpanelDatabases' => $visibleDatabases,
                 'hiddenDatabases' => $hiddenDbList,
-                'hiddenDatabaseNames' => $hiddenDatabases
+                'hiddenDatabaseNames' => $hiddenDatabases,
+                'promptsWithDbStatus' => $promptsWithDbStatus
             ]);
         } catch (\Exception $e) {
             $this->addFlash('error', 'Erreur lors de la récupération des bases de données: ' . $e->getMessage());
@@ -108,9 +121,12 @@ class CpanelDatabaseWebController extends AbstractController
         // Utiliser le préfixe haan7883_ pour les bases de données et utilisateurs
         $dbPrefix = 'haan7883_';
         
+        $hasDatabase = isset($prompt->getGeneratedFiles()['db_info.txt']);
+
         return $this->render('cpanel_database/new.html.twig', [
             'prompt' => $prompt,
-            'dbPrefix' => $dbPrefix
+            'dbPrefix' => $dbPrefix,
+            'hasDatabase' => $hasDatabase
         ]);
     }
     
@@ -321,21 +337,57 @@ class CpanelDatabaseWebController extends AbstractController
     }
 
     /**
-     * Supprime une table d'une base de données
+     * Supprime une table d'une base de données et restaure les fichiers générés à leur état précédent
      */
     #[Route('/drop-table/{dbName}/{tableName}', name: 'app_cpanel_database_drop_table', methods: ['POST'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function dropTable(Request $request, string $dbName, string $tableName): Response
     {
         try {
-            // Récupérer le mot de passe de la base de données depuis la session, s'il existe
+            // Extraire l'ID du prompt à partir du nom de la base de données
+            preg_match('/haan7883_db_(\d+)_/', $dbName, $matches);
+            $promptId = $matches[1] ?? null;
+            
+            if ($promptId) {
+                $prompt = $this->promptRepository->find($promptId);
+                if ($prompt) {
+                    // Sauvegarder les fichiers générés actuels
+                    $currentFiles = $prompt->getGeneratedFiles() ?? [];
+                    
+                    // Identifier et supprimer les fichiers liés à la table
+                    $tableNameLower = strtolower($tableName);
+                    $tableNameUpper = ucfirst($tableNameLower);
+                    $filesToRemove = [
+                        "src/Entity/{$tableNameUpper}.php",
+                        "src/Repository/{$tableNameUpper}Repository.php",
+                        "src/Form/{$tableNameUpper}Type.php",
+                        "src/Controller/{$tableNameUpper}Controller.php",
+                        "templates/{$tableNameLower}/new.html.twig",
+                        "templates/{$tableNameLower}/edit.html.twig",
+                        "templates/{$tableNameLower}/show.html.twig"
+                    ];
+                    
+                    foreach ($filesToRemove as $file) {
+                        if (isset($currentFiles[$file])) {
+                            unset($currentFiles[$file]);
+                        }
+                    }
+                    
+                    // Mettre à jour les fichiers générés
+                    $prompt->setGeneratedFiles($currentFiles);
+                    $this->entityManager->persist($prompt);
+                    $this->entityManager->flush();
+                }
+            }
+            
+            // Récupérer le mot de passe de la base de données depuis la session
             $dbPassword = $request->getSession()->get('db_password_' . $dbName, null);
             
             // Exécuter la requête SQL pour supprimer la table
             $query = "DROP TABLE `{$tableName}`;";
             $this->cpanelService->executeQuery($dbName, $query, $dbPassword);
             
-            $this->addFlash('success', "Table {$tableName} supprimée avec succès");
+            $this->addFlash('success', "Table {$tableName} et ses fichiers associés ont été supprimés avec succès");
         } catch (\Exception $e) {
             $this->addFlash('error', 'Erreur lors de la suppression de la table: ' . $e->getMessage());
         }

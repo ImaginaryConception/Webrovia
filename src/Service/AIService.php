@@ -47,7 +47,7 @@ class AIService
         $this->logError('Début de la génération d\'entité pour la table: ' . $tableName);
         
         // Préparer le prompt pour Gemini
-        $entityPrompt = "Tu es un expert en développement Symfony qui va générer une entité et son repository à partir de la structure de table suivante:\n";
+        $entityPrompt = "Tu es un expert en développement Symfony qui va générer une entité et son repository, ainsi que le formtype et le contrôleur à partir de la structure de table suivante:\n";
         $entityPrompt .= "\nNOM DE LA TABLE: {$tableName}\n";
         $entityPrompt .= "\nCHAMPS:\n" . json_encode($fields, JSON_PRETTY_PRINT) . "\n\n";
         $entityPrompt .= "Génère une entité Doctrine et son repository qui:\n";
@@ -60,12 +60,28 @@ class AIService
         $entityPrompt .= "4. Implémentent les méthodes repository utiles pour:\n";
         $entityPrompt .= "   - Les requêtes de base (findBy, findOneBy)\n";
         $entityPrompt .= "   - Les requêtes personnalisées courantes\n";
+        $entityPrompt .= "Ainsi que le formtype complet, à faire si besoin.\n";
+        $entityPrompt .= "Et le contrôleur complet.\n";
         
         // Ajouter les informations sur les stubs
         $entityPrompt .= "\nUtilise les structures suivantes pour l'entité et le repository:\n";
         $entityPrompt .= "ENTITY STUB:\n" . file_get_contents(__DIR__ . '/Stubs/entity.stub') . "\n\n";
         $entityPrompt .= "REPOSITORY STUB:\n" . file_get_contents(__DIR__ . '/Stubs/repository.stub') . "\n\n";
+        $entityPrompt .= "FORM STUB:\n" . file_get_contents(__DIR__ . '/Stubs/form.stub') . "\n\n";
+        $entityPrompt .= "CONTROLLER STUB:\n" . file_get_contents(__DIR__ . '/Stubs/controller.stub') . "\n\n";
         
+        // Ajouter les instructions pour les templates Twig
+        $entityPrompt .= "Génère également les templates Twig suivants:\n";
+        $entityPrompt .= "1. templates/new.html.twig : Formulaire de création\n";
+        $entityPrompt .= "2. templates/edit.html.twig : Formulaire d'édition\n";
+        $entityPrompt .= "3. templates/show.html.twig : Affichage détaillé\n\n";
+        $entityPrompt .= "Les templates doivent:\n";
+        $entityPrompt .= "- Étendre base.html.twig\n";
+        $entityPrompt .= "- Utiliser le système de formulaires Symfony\n";
+        $entityPrompt .= "- Avoir un design moderne et responsive\n";
+        $entityPrompt .= "- Inclure des messages flash pour les actions CRUD\n";
+        $entityPrompt .= "- Utiliser les classes Tailwind CSS pour le style\n";
+
         $entityPrompt .= "Retourne UNIQUEMENT un objet JSON valide avec les clés étant les chemins des fichiers (ex: 'src/Entity/Product.php') et les valeurs étant le contenu complet des fichiers.\n\n";
         $entityPrompt .= "IMPORTANT: Ta réponse doit être un JSON valide et bien formaté. Utilise le format suivant:\n";
         $entityPrompt .= "```json\n{\n  \"src/Entity/NomEntite.php\": \"<?php\\n\\nnamespace App\\\\Entity;\\n...\",\n  \"src/Repository/NomEntiteRepository.php\": \"<?php\\n\\nnamespace App\\\\Repository;\\n...\"\n}\n```\n\n";
@@ -187,6 +203,9 @@ class AIService
                     $repositoryName = basename($filePath, '.php');
                     $this->logError('Enregistrement du repository', ['name' => $repositoryName]);
                     $this->stubProcessor->setRepositoryCode($fileContent, $repositoryName);
+                } elseif (str_starts_with($filePath, 'templates/')) {
+                    $this->logError('Enregistrement du template Twig', ['path' => $filePath]);
+                    // Les templates sont automatiquement inclus dans $files
                 }
                 
                 $files[$filePath] = $fileContent;

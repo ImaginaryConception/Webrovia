@@ -1328,15 +1328,15 @@ class CpanelService
                     } else {
                         $errorMsg = $apiResponse['errors'][0] ?? 'Erreur inconnue';
                         error_log("Échec de la création via l'API cPanel: $errorMsg");
-                        throw new \Exception('cErreur lors de l\'exécution de la requête SQL: ' . $e->getMessage() . '. Tentative de création de la base de données échouée: ' . $errorMsg);
+                        throw new \Exception('Erreur lors de l\'exécution de la requête SQL: ' . $e->getMessage() . '. Tentative de création de la base de données échouée: ' . $errorMsg);
                     }
                 } catch (\Exception $createException) {
                     error_log("Exception lors de la création via l'API cPanel: " . $createException->getMessage());
-                    throw new \Exception('cErreur lors de l\'exécution de la requête SQL: ' . $e->getMessage() . '. ' . $createException->getMessage());
+                    throw new \Exception('Erreur lors de l\'exécution de la requête SQL: ' . $e->getMessage() . '. ' . $createException->getMessage());
                 }
             }
             
-            throw new \Exception('cErreur lors de l\'exécution de la requête SQL: ' . $e->getMessage());
+            throw new \Exception('Erreur lors de l\'exécution de la requête SQL: ' . $e->getMessage());
         }
     }
 

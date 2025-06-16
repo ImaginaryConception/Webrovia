@@ -1,14 +1,9 @@
 TODO :
 
-Principal :
-- à chaque création de table, il faut générer entités, repository et formtype sur le site généré, et adapter le controller et les twig.
-
-Secondaires :
 - Clones
 - Model Maker
 - Mode Focus
 - Traduction anglais/français du site
 - Modifier code en direct
 - Liste des base de données privée.
-- 1 base par site
 - Responsive design
