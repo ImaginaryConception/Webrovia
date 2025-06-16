@@ -56,8 +56,8 @@ class CpanelDatabaseWebController extends AbstractController
             $sessionHiddenDatabases = $request->getSession()->get('hidden_databases', []);
             $hiddenDatabases = array_merge($defaultHiddenDatabases, $sessionHiddenDatabases);
             
-            // Filtrer les bases de données visibles
-            $visibleDatabases = array_filter($allDatabases, function($database) use ($hiddenDatabases) {
+            // Filter cPanel databases to show only those owned by the current user and not hidden
+            $cpanelDatabases = array_filter($allDatabases, function($database) use ($hiddenDatabases) {
                 return !in_array($database['database'], $hiddenDatabases);
             });
             
@@ -69,17 +69,29 @@ class CpanelDatabaseWebController extends AbstractController
             /** @var \App\Entity\User $user */
             $user = $this->getUser();
             $userPrompts = $user->getPrompts();
+            $userOwnedDbNames = [];
             $promptsWithDbStatus = [];
             foreach ($userPrompts as $prompt) {
                 $hasDatabase = isset($prompt->getGeneratedFiles()['db_info.txt']);
+                if ($hasDatabase) {
+                    $dbInfo = json_decode($prompt->getGeneratedFiles()['db_info.txt'], true);
+                    if (isset($dbInfo['database_name'])) {
+                        $userOwnedDbNames[] = $dbInfo['database_name'];
+                    }
+                }
                 $promptsWithDbStatus[] = [
                     'prompt' => $prompt,
                     'hasDatabase' => $hasDatabase
                 ];
             }
 
+            // Apply user ownership filter to the already hidden-filtered databases
+            $cpanelDatabases = array_filter($cpanelDatabases, function($database) use ($userOwnedDbNames) {
+                return in_array($database['database'], $userOwnedDbNames);
+            });
+
             return $this->render('cpanel_database/index.html.twig', [
-                'cpanelDatabases' => $visibleDatabases,
+                'cpanelDatabases' => $cpanelDatabases,
                 'hiddenDatabases' => $hiddenDbList,
                 'hiddenDatabaseNames' => $hiddenDatabases,
                 'promptsWithDbStatus' => $promptsWithDbStatus
