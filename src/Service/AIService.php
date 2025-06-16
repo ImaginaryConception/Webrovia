@@ -40,6 +40,175 @@ class AIService
     }
 
     /**
+     * Génère une entité et son repository à partir d'une table de base de données
+     */
+    public function generateEntitiesFromTable(string $tableName, array $fields): array
+    {
+        $this->logError('Début de la génération d\'entité pour la table: ' . $tableName);
+        
+        // Préparer le prompt pour Gemini
+        $entityPrompt = "Tu es un expert en développement Symfony qui va générer une entité et son repository à partir de la structure de table suivante:\n";
+        $entityPrompt .= "\nNOM DE LA TABLE: {$tableName}\n";
+        $entityPrompt .= "\nCHAMPS:\n" . json_encode($fields, JSON_PRETTY_PRINT) . "\n\n";
+        $entityPrompt .= "Génère une entité Doctrine et son repository qui:\n";
+        $entityPrompt .= "1. Correspondent exactement à la structure de la table\n";
+        $entityPrompt .= "2. Utilisent les bons types de données Doctrine pour chaque champ\n";
+        $entityPrompt .= "3. Incluent les annotations/attributs appropriés pour:\n";
+        $entityPrompt .= "   - Les types de champs\n";
+        $entityPrompt .= "   - Les contraintes de validation\n";
+        $entityPrompt .= "   - Les options de colonne (nullable, length, etc.)\n";
+        $entityPrompt .= "4. Implémentent les méthodes repository utiles pour:\n";
+        $entityPrompt .= "   - Les requêtes de base (findBy, findOneBy)\n";
+        $entityPrompt .= "   - Les requêtes personnalisées courantes\n";
+        
+        // Ajouter les informations sur les stubs
+        $entityPrompt .= "\nUtilise les structures suivantes pour l'entité et le repository:\n";
+        $entityPrompt .= "ENTITY STUB:\n" . file_get_contents(__DIR__ . '/Stubs/entity.stub') . "\n\n";
+        $entityPrompt .= "REPOSITORY STUB:\n" . file_get_contents(__DIR__ . '/Stubs/repository.stub') . "\n\n";
+        
+        $entityPrompt .= "Retourne UNIQUEMENT un objet JSON valide avec les clés étant les chemins des fichiers (ex: 'src/Entity/Product.php') et les valeurs étant le contenu complet des fichiers.\n\n";
+        $entityPrompt .= "IMPORTANT: Ta réponse doit être un JSON valide et bien formaté. Utilise le format suivant:\n";
+        $entityPrompt .= "```json\n{\n  \"src/Entity/NomEntite.php\": \"<?php\\n\\nnamespace App\\\\Entity;\\n...\",\n  \"src/Repository/NomEntiteRepository.php\": \"<?php\\n\\nnamespace App\\\\Repository;\\n...\"\n}\n```\n\n";
+        
+        // Appeler Gemini pour générer l'entité et le repository
+        $response = $this->client->request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
+            'headers' => [
+                'Content-Type' => 'application/json',
+            ],
+            'query' => [
+                'key' => $this->apiKey,
+            ],
+            'json' => [
+                'contents' => [[
+                    'parts' => [[
+                        'text' => $entityPrompt
+                    ]]
+                ]],
+                'generationConfig' => [
+                    'temperature' => 0.7,
+                    'maxOutputTokens' => 8192,
+                    'topP' => 0.8,
+                    'topK' => 40
+                ]
+            ],
+        ]);
+        
+        $data = $response->toArray(false);
+
+        // Vérifications détaillées de la structure de la réponse
+        if (!is_array($data)) {
+            throw new \RuntimeException('La réponse de Gemini n\'est pas un tableau');
+        }
+        if (!isset($data['candidates']) || !is_array($data['candidates']) || empty($data['candidates'])) {
+            throw new \RuntimeException('Pas de candidats dans la réponse de Gemini');
+        }
+        if (!isset($data['candidates'][0]) || !is_array($data['candidates'][0])) {
+            throw new \RuntimeException('Premier candidat invalide dans la réponse de Gemini');
+        }
+        if (!isset($data['candidates'][0]['content']) || !is_array($data['candidates'][0]['content'])) {
+            throw new \RuntimeException('Contenu du candidat invalide dans la réponse de Gemini');
+        }
+        if (!isset($data['candidates'][0]['content']['parts']) || !is_array($data['candidates'][0]['content']['parts']) || empty($data['candidates'][0]['content']['parts'])) {
+            throw new \RuntimeException('Parties du contenu invalides dans la réponse de Gemini');
+        }
+        if (!isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+            throw new \RuntimeException('Texte manquant dans la réponse de Gemini');
+        }
+        
+        $text = $data['candidates'][0]['content']['parts'][0]['text'];
+        
+        if (!$text) {
+            $this->logError('Réponse vide de Gemini', ['data' => json_encode($data)]);
+            throw new \RuntimeException('Réponse vide de Gemini pour la génération d\'entité');
+        }
+        
+        $this->logError('Texte extrait de la réponse', ['text' => $text]);
+        
+        // Extraire le JSON de la réponse
+        $this->logError('Tentative d\'extraction du JSON');
+        
+        // Nettoyer la réponse pour extraire uniquement le JSON
+        // Extraire le JSON de la réponse en utilisant une expression régulière plus robuste
+        // qui capture le premier bloc JSON complet.
+        if (preg_match('/```json\s*({[\s\S]*?})\s*```/', $text, $matches)) {
+            $jsonString = $matches[1];
+        } elseif (preg_match('/^\s*({[\s\S]*?})\s*$/', $text, $matches)) {
+            $jsonString = $matches[1];
+        } else {
+            $this->logError('Format de réponse invalide', ['text' => $text]);
+            throw new \RuntimeException('Format de réponse invalide de Gemini');
+        }
+
+        // Vérifier que le JSON extrait commence et se termine par des accolades
+        if (!preg_match('/^\s*{.*}\s*$/s', $jsonString)) {
+            throw new \RuntimeException('Le JSON extrait n\'est pas un objet valide');
+        }
+
+        if (empty($jsonString)) {
+            $this->logError('Échec de l\'extraction du JSON', ['text' => $text]);
+            throw new \RuntimeException('Aucun JSON trouvé dans la réponse de Gemini');
+        }
+        
+        $this->logError('JSON extrait avec succès', ['json' => $jsonString]);
+        
+        $jsonText = $jsonString;
+        
+        // Nettoyer et décoder le JSON
+        try {
+            // Supprimer les caractères non-JSON au début et à la fin
+            $jsonText = trim($jsonText);
+            
+
+            
+            // Essayer de décoder le JSON
+            $decoded = json_decode($jsonText, true, 512, JSON_THROW_ON_ERROR);
+            
+            if (!is_array($decoded) || empty($decoded)) {
+                throw new \RuntimeException('Le JSON décodé n\'est pas un tableau valide ou est vide');
+            }
+        } catch (\JsonException $e) {
+            throw new \RuntimeException('Erreur lors du décodage du JSON: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            throw new \RuntimeException('Erreur lors du traitement du JSON: ' . $e->getMessage());
+        }
+        
+        $files = [];
+        
+        try {
+            // Stocker les fichiers générés
+            foreach ($decoded as $filePath => $fileContent) {
+                $this->logError('Traitement du fichier', ['path' => $filePath]);
+                
+                if (str_starts_with($filePath, 'src/Entity/')) {
+                    $entityName = basename($filePath, '.php');
+                    $this->logError('Enregistrement de l\'entité', ['name' => $entityName]);
+                    $this->stubProcessor->setEntityCode($fileContent, $entityName);
+                } elseif (str_starts_with($filePath, 'src/Repository/')) {
+                    $repositoryName = basename($filePath, '.php');
+                    $this->logError('Enregistrement du repository', ['name' => $repositoryName]);
+                    $this->stubProcessor->setRepositoryCode($fileContent, $repositoryName);
+                }
+                
+                $files[$filePath] = $fileContent;
+            }
+            
+            if (empty($files)) {
+                throw new \RuntimeException('Aucun fichier généré');
+            }
+            
+            $this->logError('Génération terminée avec succès', ['files' => array_keys($files)]);
+            return $files;
+            
+        } catch (\Exception $e) {
+            $this->logError('Erreur lors du traitement des fichiers générés', [
+                'error' => $e->getMessage(),
+                'decoded' => $decoded
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Met à jour le message de génération dans la base de données
      */
     private function updateGenerationMessage(\App\Entity\Prompt $prompt, string $message): void

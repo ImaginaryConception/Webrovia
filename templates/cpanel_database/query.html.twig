@@ -90,7 +90,7 @@
                             </div>
                         {% elseif result.message is defined %}
                             <div class="alert alert-success mb-3">
-                                <p><i class="fas fa-check-circle"></i> {{ result.message }}</p>
+                                <p class="dark:text-white text-black"><i class="fas fa-check-circle"></i> {{ result.message }}</p>
                             </div>
                         {% elseif result.data is defined and result.data is not empty %}
                             <h3 class="text-xl font-semibold mb-4 dark:text-white text-black">Résultats</h3>
@@ -133,6 +133,9 @@
             <div id="tab-create-table" class="tab-content">
                 <div class="db-form-section dark:bg-dark bg-white">
                     <h3 class="db-form-header">Créer une nouvelle table</h3>
+                    <div class="alert alert-info mb-4">
+                        <p class="text-black"><i class="fas fa-magic"></i> Une entité Doctrine et son repository seront automatiquement générés lors de la création de la table.</p>
+                    </div>
                     <form action="{{ path('app_cpanel_database_query', {'dbName': dbName}) }}" method="post" id="create-table-form">
                         <div class="db-form-group">
                             <label for="table_name" class="db-label">Nom de la table</label>
@@ -367,7 +370,7 @@
                         // Display success flash message
                         const alertDiv = document.createElement('div');
                         alertDiv.classList.add('alert', 'alert-success', 'mb-4');
-                        alertDiv.innerHTML = `<p><i class="fas fa-check-circle"></i> ${data.message}</p>`;
+                        alertDiv.innerHTML = `<p class="dark:text-white text-black"><i class="fas fa-check-circle"></i> ${data.message}</p>`;
                         document.querySelector('.db-card-body').prepend(alertDiv);
                         addDataModal.style.display = 'none'; // Close modal on success
                         // Optionally, refresh the table list or data display
@@ -375,7 +378,7 @@
                         // Display error flash message
                         const alertDiv = document.createElement('div');
                         alertDiv.classList.add('alert', 'alert-danger', 'mb-4');
-                        alertDiv.innerHTML = `<p><i class="fas fa-exclamation-triangle"></i> Erreur : ${data.error}</p>`;
+                        alertDiv.innerHTML = `<p class="dark:text-white text-black"><i class="fas fa-exclamation-triangle"></i> Erreur : ${data.error}</p>`;
                         document.querySelector('.db-card-body').prepend(alertDiv);
                     }
                 })

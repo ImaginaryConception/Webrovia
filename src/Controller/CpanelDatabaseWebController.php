@@ -3,15 +3,16 @@
 namespace App\Controller;
 
 use App\Entity\Prompt;
-use App\Repository\PromptRepository;
+use App\Service\AIService;
 use App\Service\CpanelService;
+use App\Repository\PromptRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route('/cpanel/database')]
 class CpanelDatabaseWebController extends AbstractController
@@ -19,15 +20,18 @@ class CpanelDatabaseWebController extends AbstractController
     private EntityManagerInterface $entityManager;
     private PromptRepository $promptRepository;
     private CpanelService $cpanelService;
+    private AIService $aiService;
 
     public function __construct(
         EntityManagerInterface $entityManager,
         PromptRepository $promptRepository,
-        CpanelService $cpanelService
+        CpanelService $cpanelService,
+        AIService $aiService
     ) {
         $this->entityManager = $entityManager;
         $this->promptRepository = $promptRepository;
         $this->cpanelService = $cpanelService;
+        $this->aiService = $aiService;
     }
 
     /**
@@ -251,19 +255,30 @@ class CpanelDatabaseWebController extends AbstractController
             
             if (!empty($query)) {
                 try {
-                    // Vérifier si la requête est une requête de modification (INSERT, UPDATE, DELETE, etc.)
-                    $isModificationQuery = preg_match('/^\s*(INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE)/i', $query);
+                    // Vérifier si la requête est une requête CREATE TABLE
+                    $isCreateTableQuery = preg_match('/^\s*CREATE\s+TABLE\s+`?([\w_]+)`?/i', $query, $matches);
                     
                     // Passer le mot de passe de la base de données s'il est fourni
                     $result = $this->cpanelService->executeQuery($dbName, $query, $dbPassword);
                     
-                    // Pour les requêtes de modification, ajouter un message de succès
-                    if ($isModificationQuery) {
-                        if (isset($result['message'])) {
-                            $success = $result['message'];
-                        } else {
-                            $success = 'La requête a été exécutée avec succès. Les modifications ont été appliquées à la base de données.';
+                    // Pour les requêtes CREATE TABLE, générer l'entité et le repository
+                    if ($isCreateTableQuery) {
+                        $tableName = $matches[1];
+                        $this->generateEntityFromTable($dbName, $tableName, $dbPassword);
+                        $success = 'Table créée avec succès et entité Doctrine générée.';
+                    } else {
+                        // Vérifier si c'est une autre requête de modification
+                        $isModificationQuery = preg_match('/^\s*(INSERT|UPDATE|DELETE|ALTER|DROP|TRUNCATE)/i', $query);
+                        if ($isModificationQuery) {
+                            if (isset($result['message'])) {
+                                $success = $result['message'];
+                            } else {
+                                $success = 'La requête a été exécutée avec succès. Les modifications ont été appliquées à la base de données.';
+                            }
                         }
+                    }
+                    
+                    if ($success) {
                         $this->addFlash('success', $success);
                     }
                 } catch (\Exception $e) {
@@ -366,4 +381,117 @@ class CpanelDatabaseWebController extends AbstractController
         
         return $this->redirectToRoute('app_cpanel_database_index');
     }
+
+    /**
+     * Génère une entité Doctrine et son repository à partir d'une table de base de données
+     */
+    private function generateEntityFromTable(string $dbName, string $tableName, ?string $dbPassword = null): void
+    {
+        try {
+            // Récupérer la structure de la table
+            $describeQuery = "DESCRIBE `{$tableName}`;";
+            $rawTableStructure = $this->cpanelService->executeQuery($dbName, $describeQuery, $dbPassword);
+            
+            if (!is_array($rawTableStructure)) {
+                throw new \RuntimeException('La structure de la table n\'est pas un tableau valide');
+            }
+            
+            if (empty($rawTableStructure)) {
+                throw new \RuntimeException('La structure de la table est vide');
+            }
+            
+            // Extraire la structure de la table du résultat
+            if (isset($rawTableStructure[0]) && is_array($rawTableStructure[0])) {
+                // Si le premier élément est un tableau avec la structure attendue
+                $tableStructure = $rawTableStructure;
+            } elseif (isset($rawTableStructure['data']) && is_array($rawTableStructure['data'])) {
+                // Si la structure est dans data[]
+                $tableStructure = $rawTableStructure['data'];
+            } elseif (isset($rawTableStructure[0][0]) && is_array($rawTableStructure[0][0])) {
+                // Si la structure est dans un tableau imbriqué
+                $tableStructure = $rawTableStructure[0];
+            } else {
+                // Si aucun format reconnu, utiliser directement rawTableStructure
+                $tableStructure = $rawTableStructure;
+            }
+            
+            // Vérifier que chaque colonne a la structure attendue
+            $requiredFields = ['Field', 'Type', 'Null', 'Key', 'Default', 'Extra'];
+            foreach ($tableStructure as $index => $column) {
+                // Ignorer les entrées qui ne sont pas des tableaux ou qui sont des valeurs numériques
+                if (!is_array($column) || (count($column) === 1 && isset($column[0]) && is_numeric($column[0]))) {
+                    continue;
+                }
+                
+                foreach ($requiredFields as $field) {
+                    if (!array_key_exists($field, $column)) {
+                        throw new \RuntimeException("Le champ '{$field}' est manquant dans la colonne : " . print_r($column, true));
+                    }
+                }
+            }
+            
+            // Formater les champs pour l'AIService
+            $fields = [];
+            foreach ($tableStructure as $column) {
+                $field = [
+                    'name' => (string)$column['Field'],
+                    'type' => (string)$column['Type'],
+                    'null' => $column['Null'] === 'YES',
+                    'key' => (string)$column['Key'],
+                    'default' => $column['Default'] !== null ? (string)$column['Default'] : null,
+                    'extra' => (string)$column['Extra']
+                ];
+                
+                // Vérification supplémentaire des valeurs
+                if (empty($field['name'])) {
+                    throw new \RuntimeException('Un nom de colonne est vide');
+                }
+                if (empty($field['type'])) {
+                    throw new \RuntimeException("Le type est manquant pour la colonne {$field['name']}");
+                }
+                
+                $fields[] = $field;
+            }
+            
+            if (empty($fields)) {
+                throw new \RuntimeException('Aucun champ n\'a été extrait de la structure de la table');
+            }
+            
+            // Générer l'entité et le repository via l'AIService
+            $files = $this->aiService->generateEntitiesFromTable($tableName, $fields);
+            
+            if (!is_array($files) || empty($files)) {
+                throw new \RuntimeException('Aucun fichier n\'a été généré par l\'AIService');
+            }
+            
+            // Récupérer le dernier prompt de l'utilisateur
+            $promptRepository = $this->entityManager->getRepository(\App\Entity\Prompt::class);
+            $existingPrompt = $promptRepository->findLatestByUser($this->getUser(), 1);
+            
+            if (!empty($existingPrompt)) {
+                $existingPrompt = $existingPrompt[0];
+                // Fusionner les fichiers générés avec ceux existants
+                $existingFiles = $existingPrompt->getGeneratedFiles() ?? [];
+                $mergedFiles = array_merge($existingFiles, $files);
+                $existingPrompt->setGeneratedFiles($mergedFiles);
+                $prompt = $existingPrompt;
+            } else {
+                // Créer un nouveau prompt si aucun n'existe
+                $prompt = new \App\Entity\Prompt();
+                $prompt->setContent("Génération d'entité pour la table {$tableName}");
+                $prompt->setWebsiteType('entity');
+                $prompt->setGeneratedFiles($files);
+                $prompt->setStatus('completed');
+                $prompt->setUser($this->getUser());
+            }
+            
+            // Persister l'entité
+            $this->entityManager->persist($prompt);
+            $this->entityManager->flush();
+            
+        } catch (\Exception $e) {
+            throw new \RuntimeException('Erreur lors de la génération de l\'entité: ' . $e->getMessage());
+        }
+    }
+    
 }

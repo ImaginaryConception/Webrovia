@@ -2052,20 +2052,6 @@
                 </div>
 
                 {% set prompt = prompts[0] %}
-                <div class="flex items-center">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Aperçu en direct</h3>
-                    <div class="visual-edit-buttons ml-4">
-                        <button class="visual-edit-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm mr-2" data-prompt-id="{{ prompt.id }}" data-mode="edit">
-                            <i class="fas fa-edit mr-1"></i> Edit
-                        </button>
-                        <button class="visual-save-btn bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm mr-2" data-prompt-id="{{ prompt.id }}" style="display: none;">
-                            <i class="fas fa-save mr-1"></i> Sauvegarder
-                        </button>
-                        <button class="visual-preview-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded text-sm" data-prompt-id="{{ prompt.id }}" data-mode="preview">
-                            <i class="fas fa-eye mr-1"></i> Preview
-                        </button>
-                    </div>
-                </div>
                 <!-- Editor area -->
                 <div class="flex-1 overflow-hidden">
                     <!-- Editor section -->
@@ -2448,7 +2434,14 @@
                                 });
                             </script>
 
-                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                                <div class="modification-section mb-6">
+                                    <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Modifier le site</h4>
+                                    <textarea class="modification-prompt w-full h-24 p-2 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600" data-prompt-id="{{ prompt.id }}" placeholder="Décrivez les modifications que vous souhaitez apporter au site..." oninput="this.nextElementSibling.disabled = !this.value.trim()"></textarea>
+                                    <button class="modify-btn mt-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-lg ||| modify-btn bg-purple-600 hover:bg-purple-700 text-gray-200 text-sm py-2 px-4 rounded-lg shadow-sm transition duration-200 flex items-center" data-prompt-id="{{ prompt.id }}" {% if app.user.count >= 3 and not app.user.isSubscribed %}disabled{% endif %} disabled>
+                                        Appliquer les modifications {% if not app.user.isSubscribed %}({{ 3 - app.user.count }} restante{% if 3 - app.user.count != 1 %}s{% endif %}){% endif %}
+                                    </button>
+                                </div>
                                 <div class="flex space-x-3">
                                     <button class="download-btn bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm py-2 px-4 rounded-lg shadow-sm transition duration-200 flex items-center" data-prompt-id="{{ prompt.id }}">
                                         <i class="fas fa-download mr-2"></i>Télécharger
@@ -2523,18 +2516,11 @@
                                     </div>
                                 </div>
                                 {% if prompt.status != 'error' %}
-                                <div class="mt-4">
-                                    <div class="modification-section mb-6">
-                                        <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Modifier le site</h4>
-                                            <textarea class="modification-prompt w-full h-24 p-2 border rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600" data-prompt-id="{{ prompt.id }}" placeholder="Décrivez les modifications que vous souhaitez apporter au site..." oninput="this.nextElementSibling.disabled = !this.value.trim()"></textarea>
-                                            <button class="modify-btn mt-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-lg" data-prompt-id="{{ prompt.id }}" {% if app.user.count >= 3 and not app.user.isSubscribed %}disabled{% endif %} disabled>
-                                            Appliquer les modifications {% if not app.user.isSubscribed %}({{ 3 - app.user.count }} restante{% if 3 - app.user.count != 1 %}s{% endif %}){% endif %}
-                                        </button>
-                                    </div>
+                                <div>
                                     {% endif %}
                                     {% if prompt.status != 'error' %}
-                                    <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Historique des versions</h4>
-                                    <div>
+                                    <h4 class="text-md mx-4 mt-5 font-semibold text-gray-900 dark:text-white mb-2">Historique des versions</h4>
+                                    <div class="versions-list mx-4 space-y-2 overflow-y-auto" style="max-height: 85%;">
                                     {% if prompt.allVersions is defined and prompt.allVersions is not empty %}
                                         {% for version in prompt.allVersions %}
                                             <div class="version-item p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-2 {% if version.status == 'archived' %}opacity-75{% endif %}">
@@ -2550,12 +2536,12 @@
                                                             <span class="ml-2 px-2 py-1 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 text-xs rounded">Version en erreur</span>
                                                         {% endif %}
                                                     </div>
+                                                </div>
                                                     {% if version.status == 'archived' and version.id != prompt.id %}
-                                                        <button type="button" class="restore-version-btn bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-200 px-3 py-1 rounded-full text-sm transition-colors duration-200" data-version-id="{{ version.id }}">
+                                                        <button type="button" class="restore-version-btn ms-2 bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-200 px-3 py-1 rounded-full text-sm transition-colors duration-200" data-version-id="{{ version.id }}">
                                                             Restaurer cette version
                                                         </button>
                                                     {% endif %}
-                                                </div>
 
                                                 {% if version.modificationRequest %}
                                                     <div class="version-content mt-2 p-2 bg-white dark:bg-gray-600 rounded">
