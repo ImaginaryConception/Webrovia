@@ -32,11 +32,13 @@ class ModelMakerService
     {
         $this->updateGenerationMessage($modelMaker, 'Initialisation de la génération de la maquette...');
 
+
         $promptText = "Create a professional website mockup for {$modelMaker->getTitle()} with the following details: {$modelMaker->getPrompt()}. Make it modern, clean, and professional with a responsive design. Include navigation, header, content sections, and footer. Use a professional color scheme and typography.";
 
         $this->updateGenerationMessage($modelMaker, 'Envoi de la demande à Freepik AI...');
 
         try {
+
             $response = $this->client->request('POST', 'https://api.freepik.com/v1/ai/text-to-image', [
                 'headers' => [
                     'Content-Type' => 'application/json',
@@ -52,11 +54,13 @@ class ModelMakerService
             $this->updateGenerationMessage($modelMaker, 'Traitement de la réponse...');
 
             $data = $response->toArray(false);
-            error_log('Réponse: ' . json_encode($data));
+
 
             if (isset($data['data'][0]['base64'])) {
+
                 $imageUrl = $this->saveBase64Image($data['data'][0]['base64'], $modelMaker->getId());
             } else {
+
                 throw new \RuntimeException('Aucune image n\'a été générée par Freepik AI. Réponse: ' . json_encode($data));
             }
 
@@ -69,6 +73,7 @@ class ModelMakerService
             return $imageUrl;
 
         } catch (\Exception $e) {
+
             $modelMaker->setStatus('error');
             $modelMaker->setError($e->getMessage());
             $modelMaker->setGenerationMessage('Erreur lors de la génération de la maquette');

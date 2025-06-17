@@ -108,12 +108,12 @@
 
         <!-- Liste des maquettes générées -->
         {% if models|length > 0 %}
-            <div class="max-w-7xl mx-auto mt-16">
+            <div class="max-w-7xl mx-auto mt-16" id="models-list">
                 <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center">Vos maquettes générées</h3>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {% for model in models %}
-                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden model-card">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden model-card" data-model-id="{{ model.id }}">
                             <div class="relative pb-2/3">
                                 {% if model.imageUrl %}
                                     <img src="{{ model.imageUrl }}" alt="{{ model.title }}" class="w-full h-48 object-cover">
@@ -155,12 +155,9 @@
                                                 <i class="fas fa-download"></i>
                                             </a>
                                         {% endif %}
-                                        <form action="{{ path('app_model_maker_delete', {'id': model.id}) }}" method="post" class="inline delete-form">
-                                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ model.id) }}">
-                                            <button type="submit" class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors duration-200">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors duration-200 delete-button" data-model-id="{{ model.id }}" data-csrf-token="{{ csrf_token('delete' ~ model.id) }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -169,6 +166,29 @@
                 </div>
             </div>
         {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+        <div class="mt-3 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-700">
+                <svg class="h-6 w-6 text-red-600 dark:text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mt-4">Confirmer la suppression</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500 dark:text-gray-300">Êtes-vous sûr de vouloir supprimer cette maquette ? Cette action est irréversible.</p>
+            </div>
+            <div class="items-center px-4 py-3">
+                <button id="confirm-delete-button" class="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm">
+                    Supprimer
+                </button>
+                <button id="cancel-delete-button" class="mt-3 px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Annuler
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -191,6 +211,15 @@
             const previewPrompt = document.getElementById('preview-prompt');
             const downloadLink = document.getElementById('download-link');
             const newModelButton = document.getElementById('new-model-button');
+            const modelsListContainer = document.getElementById('models-list');
+
+            // Modal elements
+            const deleteModal = document.getElementById('delete-modal');
+            const confirmDeleteButton = document.getElementById('confirm-delete-button');
+            const cancelDeleteButton = document.getElementById('cancel-delete-button');
+            let modelToDeleteId = null;
+            let modelToDeleteElement = null;
+            let modelToDeleteCsrfToken = null;
             
             // Gestionnaire pour le formulaire de génération
             form.addEventListener('submit', function(e) {
@@ -221,8 +250,9 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Si la génération a réussi immédiatement (rare)
-                        showPreview(data.modelId, data.imageUrl, form);
+                        // Si la génération a réussi, commencer le polling pour le statut
+                         modelId = data.modelId; // Assurez-vous que modelId est défini ici
+                         checkStatusInterval = setInterval(function() { checkGenerationStatus(modelId, form); }, 2000);
                     } else {
                         // Si la génération a échoué
                         showError(data.error || data.errors.join(', '));
@@ -232,66 +262,42 @@
                     console.error('Erreur:', error);
                     showError('Une erreur est survenue lors de la communication avec le serveur');
                 });
-                
-                // Vérifier périodiquement le statut de la génération
-                let modelId = null;
-                const checkStatus = setInterval(function() {
-                    if (modelId) {
-                        fetch(`{{ path('app_model_maker_status', {'id': 'MODEL_ID'}) }}`.replace('MODEL_ID', modelId), {
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                // Mettre à jour le message de génération
-                                generationMessage.textContent = data.message;
-                                
-                                if (data.status === 'completed' && data.imageUrl) {
-                                    // La génération est terminée avec succès
-                                    clearInterval(checkStatus);
-                                    showPreview(modelId, data.imageUrl, form);
-                                } else if (data.status === 'error') {
-                                    // La génération a échoué
-                                    clearInterval(checkStatus);
-                                    showError(data.error || 'Une erreur est survenue lors de la génération');
-                                }
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Erreur:', error);
-                        });
-                    }
-                }, 2000); // Vérifier toutes les 2 secondes
-                
-                // Récupérer l'ID du modèle après la soumission du formulaire
-                setTimeout(function() {
-                    fetch('{{ path("app_model_maker") }}', {
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => response.text())
-                    .then(html => {
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, 'text/html');
-                        const latestModel = doc.querySelector('.model-card');
-                        if (latestModel) {
-                            const deleteForm = latestModel.querySelector('.delete-form');
-                            if (deleteForm) {
-                                const action = deleteForm.getAttribute('action');
-                                modelId = action.split('/').pop();
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Erreur:', error);
-                    });
-                }, 1000); // Attendre 1 seconde pour que le modèle soit créé
             });
             
-            // Fonction pour afficher la prévisualisation
+            let checkStatusInterval = null;
+
+             function checkGenerationStatus(modelId, form) {
+                 fetch(`{{ path('app_model_maker_status', {'id': 'MODEL_ID'}) }}`.replace('MODEL_ID', modelId), {
+                     headers: {
+                         'X-Requested-With': 'XMLHttpRequest'
+                     }
+                 })
+                 .then(response => response.json())
+                 .then(data => {
+                     if (data.success) {
+                         // Mettre à jour le message de génération
+                         generationMessage.textContent = data.message;
+                         
+                         if (data.status === 'completed' && data.imageUrl) {
+                             // La génération est terminée avec succès
+                             clearInterval(checkStatusInterval);
+                             showPreview(modelId, data.imageUrl, form);
+                             updateModelsList(); // Mettre à jour la liste des modèles
+                         } else if (data.status === 'error') {
+                             // La génération a échoué
+                             clearInterval(checkStatusInterval);
+                             showError(data.error || 'Une erreur est survenue lors de la génération');
+                         }
+                     }
+                 })
+                 .catch(error => {
+                     console.error('Erreur:', error);
+                     clearInterval(checkStatusInterval);
+                     showError('Une erreur est survenue lors de la vérification du statut');
+                 });
+             }
+             
+             // Fonction pour afficher la prévisualisation
             function showPreview(modelId, imageUrl, form) {
                 // Masquer le conteneur de génération
                 generationContainer.classList.add('hidden');
@@ -310,19 +316,14 @@
                 buttonText.classList.remove('hidden');
                 loadingSpinner.classList.add('hidden');
                 generateButton.disabled = false;
-                
-                // Gestionnaire pour le bouton "Nouvelle maquette"
-                newModelButton.addEventListener('click', function() {
-                    previewContainer.classList.add('hidden');
-                    form.parentElement.classList.remove('hidden');
-                });
-                
-                // Recharger la page après 5 secondes pour afficher la nouvelle maquette dans la liste
-                setTimeout(function() {
-                    window.location.reload();
-                }, 5000);
             }
             
+            // Gestionnaire pour le bouton "Nouvelle maquette"
+            newModelButton.addEventListener('click', function() {
+                previewContainer.classList.add('hidden');
+                form.parentElement.classList.remove('hidden');
+            });
+
             // Fonction pour afficher une erreur
             function showError(message) {
                 // Masquer le conteneur de génération
@@ -340,38 +341,95 @@
                 loadingSpinner.classList.add('hidden');
                 generateButton.disabled = false;
             }
-            
-            // Gestionnaire pour les formulaires de suppression
-            document.querySelectorAll('.delete-form').forEach(form => {
-                form.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    if (confirm('Êtes-vous sûr de vouloir supprimer cette maquette ?')) {
-                        const formData = new FormData(this);
-                        
-                        fetch(this.action, {
-                            method: 'POST',
-                            body: formData,
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                // Supprimer la carte du modèle du DOM
-                                this.closest('.model-card').remove();
-                            } else {
-                                alert(data.error || 'Une erreur est survenue lors de la suppression');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Erreur:', error);
-                            alert('Une erreur est survenue lors de la communication avec le serveur');
-                        });
+
+            // Fonction pour mettre à jour la liste des modèles
+            function updateModelsList() {
+                fetch('{{ path("app_model_maker") }}', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newModelsListHtml = doc.querySelector('#models-list .grid').innerHTML;
+                    modelsListContainer.querySelector('.grid').innerHTML = newModelsListHtml;
+                    attachDeleteButtonListeners(); // Rattacher les écouteurs d'événements aux nouveaux boutons de suppression
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la mise à jour de la liste des modèles:', error);
                 });
+            }
+
+            // Gestionnaire pour les boutons de suppression (délégation d'événements)
+            function attachDeleteButtonListeners() {
+                document.querySelectorAll('.delete-button').forEach(button => {
+                    button.removeEventListener('click', handleDeleteButtonClick); // Éviter les écouteurs multiples
+                    button.addEventListener('click', handleDeleteButtonClick);
+                });
+            }
+
+            function handleDeleteButtonClick(e) {
+                modelToDeleteId = e.currentTarget.dataset.modelId;
+                modelToDeleteElement = e.currentTarget.closest('.model-card');
+                modelToDeleteCsrfToken = e.currentTarget.dataset.csrfToken;
+                deleteModal.classList.remove('hidden');
+            }
+
+            // Gestionnaire pour le bouton de confirmation de suppression
+            confirmDeleteButton.addEventListener('click', function() {
+                if (modelToDeleteId && modelToDeleteElement && modelToDeleteCsrfToken) {
+                    fetch(`{{ path('app_model_maker_delete', {'id': 'MODEL_ID'}) }}`.replace('MODEL_ID', modelToDeleteId), {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: `_token=${modelToDeleteCsrfToken}`
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            modelToDeleteElement.remove(); // Supprimer l'élément du DOM
+                            // Optionnel: afficher un message de succès temporaire
+                        } else {
+                            showError(data.error || 'Erreur lors de la suppression de la maquette');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        showError('Une erreur est survenue lors de la communication avec le serveur');
+                    })
+                    .finally(() => {
+                        deleteModal.classList.add('hidden');
+                        modelToDeleteId = null;
+                        modelToDeleteElement = null;
+                        modelToDeleteCsrfToken = null;
+                    });
+                }
             });
+
+            // Gestionnaire pour le bouton d'annulation de suppression
+            cancelDeleteButton.addEventListener('click', function() {
+                deleteModal.classList.add('hidden');
+                modelToDeleteId = null;
+                modelToDeleteElement = null;
+                modelToDeleteCsrfToken = null;
+            });
+
+            // Fermer la modale si l'utilisateur clique en dehors
+            window.addEventListener('click', function(event) {
+                if (event.target === deleteModal) {
+                    deleteModal.classList.add('hidden');
+                    modelToDeleteId = null;
+                    modelToDeleteElement = null;
+                    modelToDeleteCsrfToken = null;
+                }
+            });
+
+            // Attacher les écouteurs au chargement initial
+            attachDeleteButtonListeners();
         });
     </script>
 {% endblock %}

@@ -51,6 +51,7 @@ class ModelMakerController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+
             // Associer le modèle à l'utilisateur connecté
             $modelMaker->setUser($this->getUser());
             $modelMaker->setStatus('pending');
@@ -60,23 +61,19 @@ class ModelMakerController extends AbstractController
             $em->persist($modelMaker);
             $em->flush();
 
-            // Générer le modèle de manière asynchrone
-            $imageUrl = $modelMakerService->generateModelFromPrompt($modelMaker);
 
-            if ($imageUrl) {
-                return $this->json([
-                    'success' => true,
-                    'message' => 'Maquette générée avec succès',
-                    'modelId' => $modelMaker->getId(),
-                    'imageUrl' => $imageUrl
-                ]);
-            } else {
-                return $this->json([
-                    'success' => false,
-                    'error' => 'Erreur lors de la génération de la maquette',
-                    'modelId' => $modelMaker->getId()
-                ], Response::HTTP_INTERNAL_SERVER_ERROR);
-            }
+            // Démarrer la génération en arrière-plan (ou via un message queue si implémenté)
+            // Pour l'instant, nous appelons directement le service, qui mettra à jour le statut du modèle.
+            // Le frontend fera du polling pour récupérer le statut final et l'URL de l'image.
+            $modelMakerService->generateModelFromPrompt($modelMaker);
+
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Génération en cours...', // Message initial pour le frontend
+                'modelId' => $modelMaker->getId(),
+                'status' => 'pending' // Indique que la génération est en attente
+            ]);
         }
 
         // Si le formulaire n'est pas valide, retourner les erreurs
@@ -84,6 +81,7 @@ class ModelMakerController extends AbstractController
         foreach ($form->getErrors(true) as $error) {
             $errors[] = $error->getMessage();
         }
+
 
         return $this->json([
             'success' => false,
