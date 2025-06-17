@@ -3,3 +3,5 @@ TODO :
 - Mode Focus
 - Traduction anglais/français du site
 - Modifier code en direct
+
+- Peaufinage
